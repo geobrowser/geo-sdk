@@ -5,7 +5,7 @@
  * a weighted (scored) rank in the Knowledge Graph.
  */
 
-import { IdUtils, Rank } from '@graphprotocol/grc-20';
+import { IdUtils, Rank } from '@geoprotocol/geo-sdk';
 
 // For this example, we'll generate some entity IDs to represent items we want to rank.
 // In a real application, these would be existing entity IDs from your Knowledge Graph.

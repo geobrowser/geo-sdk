@@ -1,6 +1,6 @@
 # Examples
 
-Example code demonstrating how to use `@graphprotocol/grc-20`.
+Example code demonstrating how to use `@geoprotocol/geo-sdk`.
 
 ## Ranks
 

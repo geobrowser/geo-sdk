@@ -23,7 +23,7 @@ export const IdBase64 = Brand.refined<IdBase64>(
  *
  * @example
  * ```
- * import { ID } from '@graphprotocol/grc-20'
+ * import { ID } from '@geoprotocol/geo-sdk'
  *
  * const id = ID.generate();
  * console.log(id)

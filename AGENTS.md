@@ -4,7 +4,7 @@ This file provides guidance to AI coding agents when working with code in this r
 
 ## Project Overview
 
-This is `@graphprotocol/grc-20`, a TypeScript SDK for interacting with The Graph's Knowledge Graph. The SDK handles creating entities, properties, types, and relations, encoding them as ops, publishing to IPFS, and submitting transactions onchain.
+This is `@geoprotocol/geo-sdk`, a TypeScript SDK for interacting with The Graph's Knowledge Graph. The SDK handles creating entities, properties, types, and relations, encoding them as ops, publishing to IPFS, and submitting transactions onchain.
 
 ## Commands
 

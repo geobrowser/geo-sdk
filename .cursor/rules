@@ -1,7 +1,7 @@
 # GRC-20 Project Cursor Rules
 
 ## Project Overview
-This is a TypeScript library for Graph Protocol GRC-20 operations. The project uses:
+This is a TypeScript library for Geo Protocol. The project uses:
 - TypeScript with strict mode
 - Vitest for testing
 - Biome for linting and formatting

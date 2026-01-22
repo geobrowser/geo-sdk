@@ -52,7 +52,7 @@ type PublishEditResult = {
  *
  * @example
  * ```ts
- * import { IPFS } from '@graphprotocol/grc-20';
+ * import { IPFS } from '@geoprotocol/geo-sdk';
  *
  * const { cid, editId } = await IPFS.publishEdit({
  *   name: 'Edit name',
@@ -154,7 +154,7 @@ export async function uploadImage(params: PublishImageParams, network?: Network,
  *
  * @example
  * ```ts
- * import { Csv } from '@graphprotocol/grc-20';
+ * import { Csv } from '@geoprotocol/geo-sdk';
  *
  * const csvString = Csv.stringify({
  *   data: Array.from({ length: 151_000 }, (_, i: number) => [i.toString(), (i * 2).toString(), (i * 3).toString()]),

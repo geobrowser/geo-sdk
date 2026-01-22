@@ -184,7 +184,7 @@ type CreateDaoSpaceCalldataParams = {
  *
  * @example
  * ```ts
- * import { getCreateDaoSpaceCalldata, TESTNET } from '@graphprotocol/grc-20';
+ * import { getCreateDaoSpaceCalldata, TESTNET } from '@geoprotocol/geo-sdk';
  * import { createWalletClient, http } from 'viem';
  *
  * const calldata = getCreateDaoSpaceCalldata({

@@ -1,4 +1,4 @@
-# @graphprotocol/grc-20
+# @geoprotocol/geo-sdk
 
 ## 0.33.0
 

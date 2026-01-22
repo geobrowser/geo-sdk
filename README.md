@@ -1,11 +1,11 @@
-# Knowledge Graph SDK
+# Geo SDK
 
 A collection of tools for interacting with The Graph.
 
 ## Installing
 
 ```sh
-npm install @graphprotocol/grc-20
+npm install @geoprotocol/geo-sdk
 ```
 
 ## Overview
@@ -46,7 +46,7 @@ When writing data, these ops are grouped into a logical set called an "Edit." An
 Entities throughout The Graph are referenced via globally unique identifiers. The SDK exposes APIs for creating these IDs.
 
 ```ts
-import { Id } from '@graphprotocol/grc-20';
+import { Id } from '@geoprotocol/geo-sdk';
 
 const newId = Id.generate();
 ```
@@ -56,7 +56,7 @@ const newId = Id.generate();
 Working with triple and relations ops is a low level API and give you maximum flexibility. In order to ease the process of creating and updating data, the library also exports APIs for creating properties, types and entities.
 
 ```ts
-import { Graph } from '@graphprotocol/grc-20';
+import { Graph } from '@geoprotocol/geo-sdk';
 
 // create a property
 const propertyResult = Graph.createProperty({
@@ -105,7 +105,7 @@ const { id: restaurantId, ops: createRestaurantOps } = Graph.createEntity({
 Values are passed as typed objects with a `type` field that determines the value format:
 
 ```ts
-import { Graph, Id } from '@graphprotocol/grc-20';
+import { Graph, Id } from '@geoprotocol/geo-sdk';
 
 const { id: personId, ops: createPersonOps } = Graph.createEntity({
   values: [
@@ -168,7 +168,7 @@ const { id: personId, ops: createPersonOps } = Graph.createEntity({
 #### Example Flow
 
 ```ts
-import { Graph, type Op } from '@graphprotocol/grc-20';
+import { Graph, type Op } from '@geoprotocol/geo-sdk';
 
 const ops: Array<Op> = [];
 
@@ -255,7 +255,7 @@ Additionally, the indexer expects that IPFS CIDs be prefixed with `ipfs://` so i
 We've abstracted the IPFS publishing and binary encoding into a single API.
 
 ```ts
-import { Ipfs } from '@graphprotocol/grc-20';
+import { Ipfs } from '@geoprotocol/geo-sdk';
 
 const { cid, editId } = await Ipfs.publishEdit({
   name: 'Edit name',
@@ -271,7 +271,7 @@ Once you've uploaded the binary encoded Edit to IPFS and have correctly formed `
 
 ```ts
 import { createPublicClient, encodeAbiParameters, encodeFunctionData, type Hex, http, keccak256, toHex } from 'viem';
-import { SpaceRegistryAbi, getWalletClient } from '@graphprotocol/grc-20';
+import { SpaceRegistryAbi, getWalletClient } from '@geoprotocol/geo-sdk';
 
 // Contract addresses for testnet
 const SPACE_REGISTRY_ADDRESS = '0xB01683b2f0d38d43fcD4D9aAB980166988924132' as const;
@@ -313,7 +313,7 @@ const txResult = await walletClient.sendTransaction({
 
 ```ts
 import { privateKeyToAccount } from 'viem/accounts';
-import { getWalletClient } from "@graphprotocol/grc-20";
+import { getWalletClient } from "@geoprotocol/geo-sdk";
 
 // IMPORTANT: Be careful with your private key. Don't commit it to version control.
 // You can get your private key using https://www.geobrowser.io/export-wallet
@@ -336,7 +336,7 @@ To use `getSmartAccountWalletClient` you'll need the private key associated with
 Transaction costs from your smart account will be sponsored by the Geo team for the duration of the early access period. Eventually you will need to provide your own API key or provide funds to your smart account.
 
 ```ts
-import { getSmartAccountWalletClient } from '@graphprotocol/grc-20';
+import { getSmartAccountWalletClient } from '@geoprotocol/geo-sdk';
 
 // IMPORTANT: Be careful with your private key. Don't commit it to version control.
 // You can get your private key using https://www.geobrowser.io/export-wallet
@@ -353,7 +353,7 @@ You can create personal spaces using the SpaceRegistry contract. Personal spaces
 
 ```ts
 import { createPublicClient, encodeAbiParameters, encodeFunctionData, type Hex, http, keccak256, toHex } from 'viem';
-import { SpaceRegistryAbi, getWalletClient } from '@graphprotocol/grc-20';
+import { SpaceRegistryAbi, getWalletClient } from '@geoprotocol/geo-sdk';
 
 const SPACE_REGISTRY_ADDRESS = '0xB01683b2f0d38d43fcD4D9aAB980166988924132' as const;
 const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
@@ -415,7 +415,7 @@ This example shows the complete flow for creating a personal space and publishin
 ```ts
 import { createPublicClient, encodeAbiParameters, encodeFunctionData, type Hex, http, keccak256, toHex } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { Graph, Ipfs, SpaceRegistryAbi, getWalletClient } from '@graphprotocol/grc-20';
+import { Graph, Ipfs, SpaceRegistryAbi, getWalletClient } from '@geoprotocol/geo-sdk';
 
 // Contract addresses for testnet
 const SPACE_REGISTRY_ADDRESS = '0xB01683b2f0d38d43fcD4D9aAB980166988924132' as const;

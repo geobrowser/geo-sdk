@@ -17,7 +17,7 @@ const PERSONAL_SPACE_VERSION = '1.0.0';
  *
  * @example
  * ```ts
- * import { getCreatePersonalSpaceCalldata, TESTNET } from '@graphprotocol/grc-20';
+ * import { getCreatePersonalSpaceCalldata, TESTNET } from '@geoprotocol/geo-sdk';
  * import { createWalletClient, http } from 'viem';
  *
  * const calldata = getCreatePersonalSpaceCalldata();
