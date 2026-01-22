@@ -23,9 +23,9 @@ export const IdBase64 = Brand.refined<IdBase64>(
  *
  * @example
  * ```
- * import { ID } from '@geoprotocol/geo-sdk'
+ * import { Id } from '@geoprotocol/geo-sdk'
  *
- * const id = ID.generate();
+ * const id = Id.generate();
  * console.log(id)
  * ```
  *
