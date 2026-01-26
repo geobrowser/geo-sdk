@@ -207,7 +207,7 @@ describe('GRC-20 v2 Encoding', () => {
                 property: propertyId,
                 value: {
                   type: 'date',
-                  value: '2024-01-15',
+                  value: '2024-01-15Z',
                 },
               },
             ],
@@ -221,7 +221,7 @@ describe('GRC-20 v2 Encoding', () => {
       const op = decoded.ops[0] as Extract<Op, { type: 'createEntity' }>;
       expect(op.values[0]?.value.type).toBe('date');
       if (op.values[0]?.value.type === 'date') {
-        expect(op.values[0].value.value).toBe('2024-01-15');
+        expect(op.values[0].value.value).toBe('2024-01-15Z');
       }
     });
 
