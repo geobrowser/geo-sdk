@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@geoprotocol/grc-20':
-        specifier: ^0.1.7
-        version: 0.1.7
+        specifier: ^0.2.2
+        version: 0.2.2
       effect:
         specifier: ^3.17.13
         version: 3.17.13
@@ -325,8 +325,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@geoprotocol/grc-20@0.1.7':
-    resolution: {integrity: sha512-BJGUwG6exJnLkoRzCwzohybxgtwsYwuzEcnyJ2YPQQ1WwDXp7o8oNwLVUjzwEqjEabw1oIRpSnDNrH/LqSEaYA==}
+  '@geoprotocol/grc-20@0.2.2':
+    resolution: {integrity: sha512-2XD4bYokTjHtKsS+uswn3CBsJxtXALxv4NzavMqXawXGdNBwkPuVH/ccKcufjQ7LgNN9XGUVgmEIoB5+are6aQ==}
     engines: {node: '>=18'}
 
   '@inquirer/external-editor@1.0.2':
@@ -1386,7 +1386,7 @@ snapshots:
   '@esbuild/win32-x64@0.25.10':
     optional: true
 
-  '@geoprotocol/grc-20@0.1.7':
+  '@geoprotocol/grc-20@0.2.2':
     dependencies:
       '@bokuweb/zstd-wasm': 0.0.27
 
