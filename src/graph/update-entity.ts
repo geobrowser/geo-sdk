@@ -1,13 +1,29 @@
 import {
   type PropertyValue as GrcPropertyValue,
-  createEntity as grcCreateEntity,
+  type UnsetValue as GrcUnsetValue,
+  updateEntity as grcUpdateEntity,
   languages,
   type Op,
 } from '@geoprotocol/grc-20';
 import { DESCRIPTION_PROPERTY, NAME_PROPERTY } from '../core/ids/system.js';
 import { Id } from '../id.js';
 import { assertValid, toGrcId } from '../id-utils.js';
-import type { CreateResult, UpdateEntityParams } from '../types.js';
+import type { CreateResult, UnsetLanguageParam, UpdateEntityParams } from '../types.js';
+
+/**
+ * Converts an UnsetLanguageParam to the grc-20 UnsetLanguage format.
+ */
+const toGrcUnsetLanguage = (language: UnsetLanguageParam | undefined): GrcUnsetValue['language'] => {
+  if (language === undefined || language === 'all') {
+    return { type: 'all' };
+  }
+  // If it's already a Uint8Array (grc-20 Id from languages.english() or languageId()), use it directly
+  if (language instanceof Uint8Array) {
+    return { type: 'specific', language: language as ReturnType<typeof toGrcId> };
+  }
+  // Otherwise it's a string ID, convert it
+  return { type: 'specific', language: toGrcId(language) };
+};
 
 /**
  * Updates an entity with the given name, description, cover and properties.
@@ -25,15 +41,19 @@ import type { CreateResult, UpdateEntityParams } from '../types.js';
  *       property: propertyId,
  *       value: 'value of the property',
  *     }
- *   ]
- *   },
+ *   ],
+ *   unset: [
+ *     { property: propertyId },                         // unset all languages
+ *     { property: propertyId2, language: 'english' },   // unset english only
+ *     { property: propertyId3, language: { specific: germanLanguageId } },  // specific language
+ *   ],
  * });
  * ```
  * @param params – {@link UpdateEntityParams}
  * @returns – {@link CreateResult}
  * @throws Will throw an error if any provided ID is invalid
  */
-export const updateEntity = ({ id, name, description, values }: UpdateEntityParams): CreateResult => {
+export const updateEntity = ({ id, name, description, values, unset }: UpdateEntityParams): CreateResult => {
   assertValid(id, '`id` in `updateEntity`');
   for (const valueEntry of values ?? []) {
     assertValid(valueEntry.property, '`values` in `updateEntity`');
@@ -43,6 +63,13 @@ export const updateEntity = ({ id, name, description, values }: UpdateEntityPara
     }
     if (valueEntry.type === 'float64' && valueEntry.unit) {
       assertValid(valueEntry.unit, '`unit` in `values` in `updateEntity`');
+    }
+  }
+  for (const unsetEntry of unset ?? []) {
+    assertValid(unsetEntry.property, '`property` in `unset` in `updateEntity`');
+    // Validate language ID if it's a string (not 'all' and not already a Uint8Array)
+    if (typeof unsetEntry.language === 'string' && unsetEntry.language !== 'all') {
+      assertValid(unsetEntry.language, '`language` in `unset` in `updateEntity`');
     }
   }
 
@@ -146,9 +173,15 @@ export const updateEntity = ({ id, name, description, values }: UpdateEntityPara
     }
   }
 
-  const op: Op = grcCreateEntity({
+  const unsetValues: Array<GrcUnsetValue> = (unset ?? []).map(unsetEntry => ({
+    property: toGrcId(unsetEntry.property),
+    language: toGrcUnsetLanguage(unsetEntry.language),
+  }));
+
+  const op: Op = grcUpdateEntity({
     id: toGrcId(id),
-    values: newValues,
+    set: newValues,
+    unset: unsetValues,
   });
 
   return { id: Id(id), ops: [op] };

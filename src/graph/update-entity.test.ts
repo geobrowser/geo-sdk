@@ -1,4 +1,5 @@
-import type { CreateEntity } from '@geoprotocol/grc-20';
+import type { UpdateEntity } from '@geoprotocol/grc-20';
+import { languages } from '@geoprotocol/grc-20';
 import { describe, expect, it } from 'vitest';
 import { DESCRIPTION_PROPERTY, NAME_PROPERTY } from '../core/ids/system.js';
 import { Id } from '../id.js';
@@ -20,12 +21,12 @@ describe('updateEntity', () => {
     expect(result.id).toBe(entityId);
     expect(result.ops).toHaveLength(1);
 
-    const entityOp = result.ops[0] as CreateEntity;
-    expect(entityOp.type).toBe('createEntity');
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
     expect(entityOp.id).toEqual(toGrcId(entityId));
 
     // Verify name value
-    const nameValue = entityOp.values.find(v => {
+    const nameValue = entityOp.set.find(v => {
       const propBytes = v.property;
       return propBytes.every((b, i) => b === toGrcId(NAME_PROPERTY)[i]);
     });
@@ -36,7 +37,7 @@ describe('updateEntity', () => {
     }
 
     // Verify description value
-    const descValue = entityOp.values.find(v => {
+    const descValue = entityOp.set.find(v => {
       const propBytes = v.property;
       return propBytes.every((b, i) => b === toGrcId(DESCRIPTION_PROPERTY)[i]);
     });
@@ -57,13 +58,13 @@ describe('updateEntity', () => {
     expect(result.id).toBe(entityId);
     expect(result.ops).toHaveLength(1);
 
-    const entityOp = result.ops[0] as CreateEntity;
-    expect(entityOp.type).toBe('createEntity');
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
     expect(entityOp.id).toEqual(toGrcId(entityId));
-    expect(entityOp.values).toHaveLength(1);
+    expect(entityOp.set).toHaveLength(1);
 
     // Verify name value
-    const nameValue = entityOp.values[0];
+    const nameValue = entityOp.set[0];
     expect(nameValue?.property).toEqual(toGrcId(NAME_PROPERTY));
     expect(nameValue?.value.type).toBe('text');
     if (nameValue?.value.type === 'text') {
@@ -82,13 +83,13 @@ describe('updateEntity', () => {
     expect(result.id).toBe(entityId);
     expect(result.ops).toHaveLength(1);
 
-    const entityOp = result.ops[0] as CreateEntity;
-    expect(entityOp.type).toBe('createEntity');
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
     expect(entityOp.id).toEqual(toGrcId(entityId));
-    expect(entityOp.values).toHaveLength(1);
+    expect(entityOp.set).toHaveLength(1);
 
     // Verify custom value
-    const customValue = entityOp.values[0];
+    const customValue = entityOp.set[0];
     expect(customValue?.property).toEqual(toGrcId(customPropertyId));
     expect(customValue?.value.type).toBe('text');
     if (customValue?.value.type === 'text') {
@@ -105,12 +106,12 @@ describe('updateEntity', () => {
 
     expect(result).toBeDefined();
 
-    const entityOp = result.ops[0] as CreateEntity;
-    expect(entityOp.type).toBe('createEntity');
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
     expect(entityOp.id).toEqual(toGrcId(entityId));
-    expect(entityOp.values).toHaveLength(1);
+    expect(entityOp.set).toHaveLength(1);
 
-    const floatValue = entityOp.values[0];
+    const floatValue = entityOp.set[0];
     expect(floatValue?.property).toEqual(toGrcId(customPropertyId));
     expect(floatValue?.value.type).toBe('float64');
     if (floatValue?.value.type === 'float64') {
@@ -128,10 +129,10 @@ describe('updateEntity', () => {
 
     expect(result).toBeDefined();
 
-    const entityOp = result.ops[0] as CreateEntity;
-    expect(entityOp.type).toBe('createEntity');
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
 
-    const floatValue = entityOp.values[0];
+    const floatValue = entityOp.set[0];
     expect(floatValue?.value.type).toBe('float64');
     if (floatValue?.value.type === 'float64') {
       expect(floatValue.value.value).toBe(42.5);
@@ -148,10 +149,10 @@ describe('updateEntity', () => {
 
     expect(result).toBeDefined();
 
-    const entityOp = result.ops[0] as CreateEntity;
-    expect(entityOp.type).toBe('createEntity');
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
 
-    const boolValue = entityOp.values[0];
+    const boolValue = entityOp.set[0];
     expect(boolValue?.property).toEqual(toGrcId(customPropertyId));
     expect(boolValue?.value.type).toBe('bool');
     if (boolValue?.value.type === 'bool') {
@@ -168,10 +169,10 @@ describe('updateEntity', () => {
 
     expect(result).toBeDefined();
 
-    const entityOp = result.ops[0] as CreateEntity;
-    expect(entityOp.type).toBe('createEntity');
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
 
-    const pointValue = entityOp.values[0];
+    const pointValue = entityOp.set[0];
     expect(pointValue?.property).toEqual(toGrcId(customPropertyId));
     expect(pointValue?.value.type).toBe('point');
     if (pointValue?.value.type === 'point') {
@@ -189,10 +190,10 @@ describe('updateEntity', () => {
 
     expect(result).toBeDefined();
 
-    const entityOp = result.ops[0] as CreateEntity;
-    expect(entityOp.type).toBe('createEntity');
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
 
-    const dateValue = entityOp.values[0];
+    const dateValue = entityOp.set[0];
     expect(dateValue?.property).toEqual(toGrcId(customPropertyId));
     expect(dateValue?.value.type).toBe('date');
     if (dateValue?.value.type === 'date') {
@@ -210,15 +211,106 @@ describe('updateEntity', () => {
 
     expect(result).toBeDefined();
 
-    const entityOp = result.ops[0] as CreateEntity;
-    expect(entityOp.type).toBe('createEntity');
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
 
-    const textValue = entityOp.values[0];
+    const textValue = entityOp.set[0];
     expect(textValue?.value.type).toBe('text');
     if (textValue?.value.type === 'text') {
       expect(textValue.value.value).toBe('localized text');
       expect(textValue.value.language).toEqual(toGrcId(languageId));
     }
+  });
+
+  // Unset tests
+  it('unsets a property value with default (all) language', async () => {
+    const propertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const result = updateEntity({
+      id: entityId,
+      unset: [{ property: propertyId }],
+    });
+
+    expect(result).toBeDefined();
+    expect(result.id).toBe(entityId);
+    expect(result.ops).toHaveLength(1);
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+    expect(entityOp.unset).toHaveLength(1);
+    expect(entityOp.unset[0]?.property).toEqual(toGrcId(propertyId));
+    expect(entityOp.unset[0]?.language).toEqual({ type: 'all' });
+  });
+
+  it('unsets a property value with explicit all language', async () => {
+    const propertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const result = updateEntity({
+      id: entityId,
+      unset: [{ property: propertyId, language: 'all' }],
+    });
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.unset).toHaveLength(1);
+    expect(entityOp.unset[0]?.language).toEqual({ type: 'all' });
+  });
+
+  it('unsets a property value with english language using grc-20 helper', async () => {
+    const propertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const result = updateEntity({
+      id: entityId,
+      unset: [{ property: propertyId, language: languages.english() }],
+    });
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.unset).toHaveLength(1);
+    expect(entityOp.unset[0]?.property).toEqual(toGrcId(propertyId));
+    expect(entityOp.unset[0]?.language).toEqual({ type: 'specific', language: languages.english() });
+  });
+
+  it('unsets a property value with specific language using string ID', async () => {
+    const propertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const germanLanguageId = Id('0a4e9810f78f429ea4ceb1904a43251d');
+    const result = updateEntity({
+      id: entityId,
+      unset: [{ property: propertyId, language: germanLanguageId }],
+    });
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.unset).toHaveLength(1);
+    expect(entityOp.unset[0]?.property).toEqual(toGrcId(propertyId));
+    expect(entityOp.unset[0]?.language).toEqual({ type: 'specific', language: toGrcId(germanLanguageId) });
+  });
+
+  it('supports mixed set and unset operations', async () => {
+    const propertyId1 = Id('fa269fd3de9849cf90c44235d905a67c');
+    const propertyId2 = Id('016c9b1cd8a84e4d9e844e40878bb235');
+    const result = updateEntity({
+      id: entityId,
+      values: [{ property: propertyId1, type: 'text', value: 'new value' }],
+      unset: [{ property: propertyId2 }],
+    });
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+    expect(entityOp.set).toHaveLength(1);
+    expect(entityOp.unset).toHaveLength(1);
+    expect(entityOp.set[0]?.property).toEqual(toGrcId(propertyId1));
+    expect(entityOp.unset[0]?.property).toEqual(toGrcId(propertyId2));
+  });
+
+  it('supports unsetting multiple properties', async () => {
+    const propertyId1 = Id('fa269fd3de9849cf90c44235d905a67c');
+    const propertyId2 = Id('016c9b1cd8a84e4d9e844e40878bb235');
+    const result = updateEntity({
+      id: entityId,
+      unset: [{ property: propertyId1 }, { property: propertyId2, language: languages.german() }],
+    });
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.unset).toHaveLength(2);
+    expect(entityOp.unset[0]?.property).toEqual(toGrcId(propertyId1));
+    expect(entityOp.unset[0]?.language).toEqual({ type: 'all' });
+    expect(entityOp.unset[1]?.property).toEqual(toGrcId(propertyId2));
+    expect(entityOp.unset[1]?.language).toEqual({ type: 'specific', language: languages.german() });
   });
 
   it('throws an error if the provided id is invalid', () => {
@@ -252,5 +344,24 @@ describe('updateEntity', () => {
         values: [{ property: customPropertyId, type: 'float64', value: 42, unit: 'invalid-unit' }],
       }),
     ).toThrow('Invalid id: "invalid-unit" for `unit` in `values` in `updateEntity`');
+  });
+
+  it('throws an error if a property id in unset is invalid', () => {
+    expect(() =>
+      updateEntity({
+        id: entityId,
+        unset: [{ property: 'invalid-prop' }],
+      }),
+    ).toThrow('Invalid id: "invalid-prop" for `property` in `unset` in `updateEntity`');
+  });
+
+  it('throws an error if a language id in unset is invalid', () => {
+    const propertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    expect(() =>
+      updateEntity({
+        id: entityId,
+        unset: [{ property: propertyId, language: 'invalid-lang' }],
+      }),
+    ).toThrow('Invalid id: "invalid-lang" for `language` in `unset` in `updateEntity`');
   });
 });

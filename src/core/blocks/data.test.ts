@@ -1,4 +1,4 @@
-import type { CreateEntity, CreateRelation } from '@geoprotocol/grc-20';
+import type { CreateRelation, UpdateEntity } from '@geoprotocol/grc-20';
 import { expect, it } from 'vitest';
 import { Id } from '../../id.js';
 import { toGrcId } from '../../id-utils.js';
@@ -77,11 +77,11 @@ it('should generate ops for a data block entity with a name', () => {
   expect(blocksRelOp.relationType).toEqual(toGrcId(BLOCKS));
 
   // Check name entity update
-  expect(blockNameOp?.type).toBe('createEntity');
-  const nameEntityOp = blockNameOp as CreateEntity;
+  expect(blockNameOp?.type).toBe('updateEntity');
+  const nameEntityOp = blockNameOp as UpdateEntity;
 
   // Verify name value
-  const nameValue = nameEntityOp.values.find(v => {
+  const nameValue = nameEntityOp.set.find(v => {
     const propBytes = v.property;
     return propBytes.every((b, i) => b === toGrcId(NAME_PROPERTY)[i]);
   });

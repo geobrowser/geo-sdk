@@ -1,4 +1,4 @@
-import type { CreateEntity, CreateRelation } from '@geoprotocol/grc-20';
+import type { CreateRelation, UpdateEntity } from '@geoprotocol/grc-20';
 import { expect, it } from 'vitest';
 import { Id } from '../../id.js';
 import { toGrcId } from '../../id-utils.js';
@@ -24,11 +24,11 @@ it('should generate ops for a text block entity', () => {
   expect(typeRelOp.relationType).toEqual(toGrcId(TYPES_PROPERTY));
 
   // Check entity update with markdown text
-  expect(blockMarkdownTextOp?.type).toBe('createEntity');
-  const markdownEntityOp = blockMarkdownTextOp as CreateEntity;
+  expect(blockMarkdownTextOp?.type).toBe('updateEntity');
+  const markdownEntityOp = blockMarkdownTextOp as UpdateEntity;
 
   // Verify markdown content value
-  const markdownValue = markdownEntityOp.values.find(v => {
+  const markdownValue = markdownEntityOp.set.find(v => {
     const propBytes = v.property;
     return propBytes.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]);
   });
@@ -71,8 +71,8 @@ it('should handle empty text', () => {
 
   expect(ops.length).toBe(3);
 
-  const markdownEntityOp = ops[1] as CreateEntity;
-  const markdownValue = markdownEntityOp.values.find(v => {
+  const markdownEntityOp = ops[1] as UpdateEntity;
+  const markdownValue = markdownEntityOp.set.find(v => {
     const propBytes = v.property;
     return propBytes.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]);
   });
@@ -96,8 +96,8 @@ This is a paragraph.
     position: 'b',
   });
 
-  const markdownEntityOp = ops[1] as CreateEntity;
-  const markdownValue = markdownEntityOp.values.find(v => {
+  const markdownEntityOp = ops[1] as UpdateEntity;
+  const markdownValue = markdownEntityOp.set.find(v => {
     const propBytes = v.property;
     return propBytes.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]);
   });

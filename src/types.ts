@@ -77,9 +77,38 @@ export type EntityParams = DefaultProperties & {
   types?: Array<Id | string>;
 };
 
+/**
+ * Language specification for unsetting property values.
+ * - `'all'`: Unset all language slots for the property
+ * - `Id | string | Uint8Array`: A specific language entity ID (use `languages.english()` or `languageId('de')` from grc-20)
+ *
+ * @example
+ * ```ts
+ * import { languages, languageId } from '@geoprotocol/grc-20';
+ *
+ * // Unset all languages
+ * unset: [{ property: propertyId, language: 'all' }]
+ *
+ * // Unset specific language using grc-20 helpers
+ * unset: [{ property: propertyId, language: languages.english() }]
+ * unset: [{ property: propertyId, language: languageId('de') }]
+ * ```
+ */
+export type UnsetLanguageParam = 'all' | Id | string | Uint8Array;
+
+/**
+ * Parameter for unsetting a property value on an entity.
+ */
+export type UnsetPropertyParam = {
+  property: Id | string;
+  /** Defaults to 'all' if omitted. Use `languages.english()` or `languageId('de')` from grc-20 for specific languages. */
+  language?: UnsetLanguageParam;
+};
+
 export type UpdateEntityParams = Omit<DefaultProperties, 'cover'> & {
   id: Id | string;
   values?: PropertiesParam;
+  unset?: UnsetPropertyParam[];
 };
 
 type RelationEntityParams = {
