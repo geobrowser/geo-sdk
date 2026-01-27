@@ -1,4 +1,4 @@
-const UUID_DASHLESS_REGEX = /^[0-9a-fA-F]{32}$/;
+export const UUID_DASHLESS_REGEX = /^[0-9a-fA-F]{32}$/;
 
 /**
  * If `id` looks like a UUID without dashes (32 hex chars), convert it to the

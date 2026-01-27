@@ -1,13 +1,12 @@
-import { encodeFunctionData, stringToHex } from 'viem';
+import { encodeFunctionData, stringToHex, toHex } from 'viem';
 import { TESTNET } from '../../contracts.js';
 import { SpaceRegistryAbi } from '../abis/index.js';
 import { isValid } from '../id.js';
 import { toBytes } from '../id-utils.js';
+import { UUID_DASHLESS_REGEX } from '../internal/uuid.js';
 import * as Ipfs from '../ipfs.js';
 import { EDITS_PUBLISHED, EMPTY_SIGNATURE, EMPTY_TOPIC } from './constants.js';
 import type { PublishEditParams, PublishEditResult } from './types.js';
-
-const HEX32_REGEX = /^[0-9a-fA-F]{32}$/;
 
 /**
  * Converts a spaceId to bytes16 hex format.
@@ -16,14 +15,14 @@ const HEX32_REGEX = /^[0-9a-fA-F]{32}$/;
 function spaceIdToBytes16(spaceId: string): `0x${string}` {
   // If it's a 32-char hex string (bytes16 from on-chain), use directly
   // Check this first since on-chain space IDs may look like UUIDs but aren't valid ones
-  if (HEX32_REGEX.test(spaceId)) {
+  if (UUID_DASHLESS_REGEX.test(spaceId)) {
     return `0x${spaceId.toLowerCase()}` as `0x${string}`;
   }
 
   // If it's a valid UUID (with dashes), use the standard toBytes conversion
   if (isValid(spaceId)) {
     const bytes = toBytes(spaceId);
-    return `0x${Buffer.from(bytes).toString('hex')}` as `0x${string}`;
+    return toHex(bytes);
   }
 
   throw new Error(`Invalid spaceId: "${spaceId}". Expected a valid UUID or 32-character hex string.`);
