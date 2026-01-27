@@ -38,6 +38,12 @@ export * as IdUtils from './src/id-utils.js';
  * @since 0.1.1
  */
 export * as Ipfs from './src/ipfs.js';
+/**
+ * This module provides functions for creating and managing personal spaces.
+ *
+ * @since 0.2.0
+ */
+export * as personalSpace from './src/personal-space/index.js';
 export { Position } from './src/position.js';
 /**
  * This module provides utility functions for working with ranks in the Knowledge Graph.

@@ -347,80 +347,75 @@ const smartAccountWalletClient = await getSmartAccountWalletClient({
 });
 ```
 
-### Creating a personal space
+### Personal Spaces
 
-You can create personal spaces using the SpaceRegistry contract. Personal spaces are owned by a single address and don't require voting for governance.
+Personal spaces are owned by a single address and don't require voting for governance. The SDK provides a `personalSpace` module with helper functions for creating and publishing to personal spaces.
+
+#### Creating a personal space
 
 ```ts
-import { createPublicClient, encodeAbiParameters, encodeFunctionData, type Hex, http, keccak256, toHex } from 'viem';
-import { SpaceRegistryAbi, getWalletClient } from '@geoprotocol/geo-sdk';
-
-const SPACE_REGISTRY_ADDRESS = '0xB01683b2f0d38d43fcD4D9aAB980166988924132' as const;
-const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
+import { personalSpace, getWalletClient } from '@geoprotocol/geo-sdk';
 
 const walletClient = await getWalletClient({
   privateKey: addressPrivateKey,
 });
 
-const account = walletClient.account;
-const rpcUrl = walletClient.chain?.rpcUrls?.default?.http?.[0];
+// Get the calldata for creating a personal space
+const { to, calldata } = personalSpace.createSpace();
 
-const publicClient = createPublicClient({
-  transport: http(rpcUrl),
+// Submit the transaction
+const txHash = await walletClient.sendTransaction({
+  account: walletClient.account,
+  to,
+  data: calldata,
+});
+```
+
+#### Publishing an edit to a personal space
+
+The `personalSpace.publishEdit()` function handles both IPFS upload and calldata encoding in a single call:
+
+```ts
+import { personalSpace, Graph, getWalletClient } from '@geoprotocol/geo-sdk';
+
+const walletClient = await getWalletClient({
+  privateKey: addressPrivateKey,
 });
 
-// Check if a personal space already exists for this address
-let spaceIdHex = await publicClient.readContract({
-  address: SPACE_REGISTRY_ADDRESS,
-  abi: SpaceRegistryAbi,
-  functionName: 'addressToSpaceId',
-  args: [account.address],
-}) as Hex;
+// Create some ops
+const { ops } = Graph.createEntity({
+  name: 'Test Entity',
+  description: 'Created via SDK',
+});
 
-// Create a personal space if one doesn't exist
-if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
-  const createSpaceTxHash = await walletClient.sendTransaction({
-    account: walletClient.account,
-    to: SPACE_REGISTRY_ADDRESS,
-    value: 0n,
-    data: encodeFunctionData({
-      abi: SpaceRegistryAbi,
-      functionName: 'registerSpaceId',
-      args: [
-        keccak256(toHex('EOA_SPACE')), // _type
-        encodeAbiParameters([{ type: 'string' }], ['1.0.0']), // _version
-      ],
-    }),
-  });
+// Publish to IPFS and get calldata for on-chain submission
+const { editId, cid, to, calldata } = await personalSpace.publishEdit({
+  name: 'My Edit',
+  spaceId: 'your-space-id', // 32-char hex string from on-chain
+  ops,
+  author: walletClient.account.address,
+});
 
-  await publicClient.waitForTransactionReceipt({ hash: createSpaceTxHash });
-
-  // Re-fetch the space ID after creation
-  spaceIdHex = await publicClient.readContract({
-    address: SPACE_REGISTRY_ADDRESS,
-    abi: SpaceRegistryAbi,
-    functionName: 'addressToSpaceId',
-    args: [account.address],
-  }) as Hex;
-}
-
-// Convert bytes16 hex to UUID string (without dashes)
-const spaceId = spaceIdHex.slice(2, 34).toLowerCase();
+// Submit the transaction
+const txHash = await walletClient.sendTransaction({
+  account: walletClient.account,
+  to,
+  data: calldata,
+});
 ```
 
 ## Full Publishing Flow
 
-This example shows the complete flow for creating a personal space and publishing an edit on testnet.
+This example shows the complete flow for creating a personal space and publishing an edit on testnet using the `personalSpace` module.
 
 ```ts
-import { createPublicClient, encodeAbiParameters, encodeFunctionData, type Hex, http, keccak256, toHex } from 'viem';
+import { createPublicClient, type Hex, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { Graph, Ipfs, SpaceRegistryAbi, getWalletClient } from '@geoprotocol/geo-sdk';
+import { Graph, personalSpace, getWalletClient } from '@geoprotocol/geo-sdk';
+import { SpaceRegistryAbi } from '@geoprotocol/geo-sdk';
 
-// Contract addresses for testnet
 const SPACE_REGISTRY_ADDRESS = '0xB01683b2f0d38d43fcD4D9aAB980166988924132' as const;
 const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
-const EDITS_PUBLISHED = keccak256(toHex('GOVERNANCE.EDITS_PUBLISHED'));
 
 // IMPORTANT: Be careful with your private key. Don't commit it to version control.
 // You can get your private key using https://www.geobrowser.io/export-wallet
@@ -453,18 +448,12 @@ let spaceIdHex = await publicClient.readContract({
 if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
   console.log('Creating personal space...');
 
+  const { to, calldata } = personalSpace.createSpace();
+
   const createSpaceTxHash = await walletClient.sendTransaction({
     account: walletClient.account,
-    to: SPACE_REGISTRY_ADDRESS,
-    value: 0n,
-    data: encodeFunctionData({
-      abi: SpaceRegistryAbi,
-      functionName: 'registerSpaceId',
-      args: [
-        keccak256(toHex('EOA_SPACE')), // _type
-        encodeAbiParameters([{ type: 'string' }], ['1.0.0']), // _version
-      ],
-    }),
+    to,
+    data: calldata,
   });
 
   await publicClient.waitForTransactionReceipt({ hash: createSpaceTxHash });
@@ -489,9 +478,10 @@ const { ops, id: entityId } = Graph.createEntity({
 });
 console.log('entityId', entityId);
 
-// Publish the edit to IPFS
-const { cid, editId } = await Ipfs.publishEdit({
+// Publish to IPFS and get calldata for on-chain submission
+const { cid, editId, to, calldata } = await personalSpace.publishEdit({
   name: 'Test Edit',
+  spaceId,
   ops,
   author: account.address,
   network: 'TESTNET',
@@ -499,26 +489,10 @@ const { cid, editId } = await Ipfs.publishEdit({
 console.log('cid', cid);
 console.log('editId', editId);
 
-// Publish edit on-chain via SpaceRegistry.enter(...)
-const enterData = encodeAbiParameters([{ type: 'string' }], [cid]);
-
-const calldata = encodeFunctionData({
-  abi: SpaceRegistryAbi,
-  functionName: 'enter',
-  args: [
-    spaceIdHex, // fromSpaceId (bytes16)
-    spaceIdHex, // toSpaceId (bytes16)
-    EDITS_PUBLISHED, // action
-    '0x0000000000000000000000000000000000000000000000000000000000000000' as Hex, // topic
-    enterData, // data
-    '0x' as Hex, // signature (empty for direct calls)
-  ],
-});
-
+// Submit the edit on-chain
 const publishTxHash = await walletClient.sendTransaction({
   account: walletClient.account,
-  to: SPACE_REGISTRY_ADDRESS,
-  value: 0n,
+  to,
   data: calldata,
 });
 console.log('publishTxHash', publishTxHash);
