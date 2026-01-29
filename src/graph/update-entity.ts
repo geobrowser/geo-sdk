@@ -43,9 +43,9 @@ const toGrcUnsetLanguage = (language: UnsetLanguageParam | undefined): GrcUnsetV
  *     }
  *   ],
  *   unset: [
- *     { property: propertyId },                         // unset all languages
- *     { property: propertyId2, language: 'english' },   // unset english only
- *     { property: propertyId3, language: { specific: germanLanguageId } },  // specific language
+ *     { property: propertyId },                              // unset all languages
+ *     { property: propertyId2, language: languages.english() }, // unset english only
+ *     { property: propertyId3, language: germanLanguageId }, // unset specific language
  *   ],
  * });
  * ```
