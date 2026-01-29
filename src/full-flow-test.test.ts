@@ -1,4 +1,4 @@
-import { createPublicClient, encodeAbiParameters, encodeFunctionData, type Hex, http, keccak256, toHex } from 'viem';
+import { createPublicClient, type Hex, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { it } from 'vitest';
 
@@ -6,17 +6,13 @@ import { SpaceRegistryAbi } from './abis/index.js';
 import { DESCRIPTION_PROPERTY } from './core/ids/system.js';
 import { createEntity } from './graph/create-entity.js';
 import { updateEntity } from './graph/update-entity.js';
-import { publishEdit } from './ipfs.js';
+import * as personalSpace from './personal-space/index.js';
 import { getWalletClient } from './smart-wallet.js';
 
 // Contract addresses for testnet
-// Note: These should be imported from contracts.ts once it's exported
 const SPACE_REGISTRY_ADDRESS = '0xB01683b2f0d38d43fcD4D9aAB980166988924132' as const;
 const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Hex;
-
-// Action constants
-const EDITS_PUBLISHED = keccak256(toHex('GOVERNANCE.EDITS_PUBLISHED'));
 
 /**
  * Converts a bytes16 hex space ID to a UUID string (without dashes).
@@ -68,19 +64,14 @@ it.skip('should create a space and publish an edit', async () => {
   if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
     console.log('Creating personal space...');
 
+    const { to, calldata } = personalSpace.createSpace();
+
     const createSpaceTxHash = await walletClient.sendTransaction({
       // @ts-expect-error - viem type mismatch for account
       account: walletClient.account,
-      to: SPACE_REGISTRY_ADDRESS,
+      to,
       value: 0n,
-      data: encodeFunctionData({
-        abi: SpaceRegistryAbi,
-        functionName: 'registerSpaceId',
-        args: [
-          keccak256(toHex('EOA_SPACE')), // _type
-          encodeAbiParameters([{ type: 'string' }], ['1.0.0']), // _version
-        ],
-      }),
+      data: calldata,
     });
 
     console.log('createSpaceTxHash', createSpaceTxHash);
@@ -135,9 +126,10 @@ it.skip('should create a space and publish an edit', async () => {
 
   const allOps = [...ops, ...unsetDescriptionOps];
 
-  // Publish the edit to IPFS
-  const { cid, editId } = await publishEdit({
+  // Publish the edit to IPFS and get calldata for on-chain submission
+  const { cid, editId, to, calldata } = await personalSpace.publishEdit({
     name: 'Test Edit',
+    spaceId,
     ops: allOps,
     author: account.address,
     network: 'TESTNET',
@@ -146,29 +138,11 @@ it.skip('should create a space and publish an edit', async () => {
   console.log('cid', cid);
   console.log('editId', editId);
 
-  // Publish edit on-chain via SpaceRegistry.enter(...)
-  // SpaceRegistry.enter expects `bytes data`; we ABI-encode the CID as a single string
-  const enterData = encodeAbiParameters([{ type: 'string' }], [cid]);
-
-  const calldata = encodeFunctionData({
-    abi: SpaceRegistryAbi,
-    functionName: 'enter',
-    args: [
-      spaceIdHex, // fromSpaceId (bytes16)
-      spaceIdHex, // toSpaceId (bytes16)
-      EDITS_PUBLISHED, // action
-      '0x0000000000000000000000000000000000000000000000000000000000000000' as Hex, // topic
-      enterData, // data
-      '0x' as Hex, // signature (empty for direct calls)
-    ],
-  });
-
   const publishTxHash = await walletClient.sendTransaction({
     // @ts-expect-error - viem type mismatch for account
     account: walletClient.account,
     chain: walletClient.chain ?? null,
-    to: SPACE_REGISTRY_ADDRESS,
-    value: 0n,
+    to,
     data: calldata,
   });
 

@@ -1,6 +1,4 @@
 import { Brand } from 'effect';
-import { validate as uuidValidate } from 'uuid';
-import { dashlessUuidToDashed } from './internal/uuid.js';
 
 /**
  * A globally unique knowledge graph identifier.
@@ -15,11 +13,9 @@ export const Id = Brand.refined<Id>(
   id => Brand.error(`Expected ${id} to be a valid Id`),
 );
 
+const UUID_DASHED_REGEX = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+const UUID_DASHLESS_REGEX = /^[0-9a-fA-F]{32}$/;
+
 export function isValid(id: string): boolean {
-  if (uuidValidate(id)) return true;
-
-  const dashed = dashlessUuidToDashed(id);
-  if (!dashed) return false;
-
-  return uuidValidate(dashed);
+  return UUID_DASHED_REGEX.test(id) || UUID_DASHLESS_REGEX.test(id);
 }

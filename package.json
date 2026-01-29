@@ -1,6 +1,6 @@
 {
   "name": "@geoprotocol/geo-sdk",
-  "version": "0.2.0",
+  "version": "0.2.2",
   "license": "MIT",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -27,7 +27,7 @@
     "bump": "pnpm changeset version"
   },
   "dependencies": {
-    "@geoprotocol/grc-20": "^0.2.2",
+    "@geoprotocol/grc-20": "^0.2.3",
     "effect": "^3.17.13",
     "fflate": "^0.8.2",
     "fractional-indexing-jittered": "^1.0.0",
