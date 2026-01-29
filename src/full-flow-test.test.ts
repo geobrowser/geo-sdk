@@ -3,7 +3,9 @@ import { privateKeyToAccount } from 'viem/accounts';
 import { it } from 'vitest';
 
 import { SpaceRegistryAbi } from './abis/index.js';
+import { DESCRIPTION_PROPERTY } from './core/ids/system.js';
 import { createEntity } from './graph/create-entity.js';
+import { updateEntity } from './graph/update-entity.js';
 import { publishEdit } from './ipfs.js';
 import { getWalletClient } from './smart-wallet.js';
 
@@ -125,10 +127,18 @@ it.skip('should create a space and publish an edit', async () => {
 
   console.log('entityId', entityId);
 
+  // Unset description
+  const { ops: unsetDescriptionOps } = updateEntity({
+    id: entityId,
+    unset: [{ property: DESCRIPTION_PROPERTY }],
+  });
+
+  const allOps = [...ops, ...unsetDescriptionOps];
+
   // Publish the edit to IPFS
   const { cid, editId } = await publishEdit({
     name: 'Test Edit',
-    ops,
+    ops: allOps,
     author: account.address,
     network: 'TESTNET',
   });
@@ -164,7 +174,9 @@ it.skip('should create a space and publish an edit', async () => {
 
   console.log('publishTxHash', publishTxHash);
 
-  const publishReceipt = await publicClient.waitForTransactionReceipt({ hash: publishTxHash });
+  const publishReceipt = await publicClient.waitForTransactionReceipt({
+    hash: publishTxHash,
+  });
   console.log('publishReceipt status', publishReceipt.status);
 
   if (publishReceipt.status === 'reverted') {
