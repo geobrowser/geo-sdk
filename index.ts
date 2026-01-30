@@ -12,6 +12,10 @@ export { DataBlock, TextBlock } from './src/blocks.js';
  */
 export * as Base58 from './src/core/base58.js';
 export { getChecksumAddress } from './src/core/get-checksum-address.js';
+/**
+ * This module provides functions for creating DAO spaces.
+ */
+export * as daoSpace from './src/dao-space/index.js';
 export * as Encoding from './src/encoding.js';
 export {
   getAcceptEditorArguments,
@@ -58,7 +62,10 @@ export * as Rank from './src/ranks/index.js';
  */
 export { GraphUrl } from './src/scheme.js';
 
-export { getSmartAccountWalletClient, getWalletClient } from './src/smart-wallet.js';
+export {
+  getSmartAccountWalletClient,
+  getWalletClient,
+} from './src/smart-wallet.js';
 
 /**
  * Provides ids for commonly used entities across the Knowledge Graph.

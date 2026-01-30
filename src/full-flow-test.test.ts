@@ -4,6 +4,7 @@ import { it } from 'vitest';
 
 import { SpaceRegistryAbi } from './abis/index.js';
 import { DESCRIPTION_PROPERTY } from './core/ids/system.js';
+import * as daoSpace from './dao-space/index.js';
 import { createEntity } from './graph/create-entity.js';
 import { updateEntity } from './graph/update-entity.js';
 import * as personalSpace from './personal-space/index.js';
@@ -158,4 +159,118 @@ it.skip('should create a space and publish an edit', async () => {
   }
 
   console.log('Successfully published edit to space', spaceId);
+}, 60000);
+
+it.skip('should create a DAO space', async () => {
+  // IMPORTANT: Replace with your actual private key for testing
+  // You can get your private key using https://www.geobrowser.io/export-wallet
+  const addressPrivateKey = '0xTODO' as `0x${string}`;
+  const { address } = privateKeyToAccount(addressPrivateKey);
+
+  console.log('address', address);
+
+  // Get wallet client for testnet
+  const walletClient = await getWalletClient({
+    privateKey: addressPrivateKey,
+  });
+
+  const account = walletClient.account;
+  if (!account) {
+    throw new Error('Wallet client account is undefined');
+  }
+
+  // Create a public client for reading contract state
+  const rpcUrl = walletClient.chain?.rpcUrls?.default?.http?.[0];
+  if (!rpcUrl) {
+    throw new Error('Wallet client RPC URL is undefined');
+  }
+
+  const publicClient = createPublicClient({
+    transport: http(rpcUrl),
+  });
+
+  // Check if a personal space already exists for this address
+  let spaceIdHex = (await publicClient.readContract({
+    address: SPACE_REGISTRY_ADDRESS,
+    abi: SpaceRegistryAbi,
+    functionName: 'addressToSpaceId',
+    args: [account.address],
+  })) as Hex;
+
+  console.log('existing spaceIdHex', spaceIdHex);
+
+  // Create a personal space if one doesn't exist (required to be an editor)
+  if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
+    console.log('Creating personal space (required to be a DAO editor)...');
+
+    const { to, calldata } = personalSpace.createSpace();
+
+    const createSpaceTxHash = await walletClient.sendTransaction({
+      // @ts-expect-error - viem type mismatch for account
+      account: walletClient.account,
+      to,
+      value: 0n,
+      data: calldata,
+    });
+
+    console.log('createSpaceTxHash', createSpaceTxHash);
+
+    await publicClient.waitForTransactionReceipt({ hash: createSpaceTxHash });
+
+    // Re-fetch the space ID after creation
+    spaceIdHex = (await publicClient.readContract({
+      address: SPACE_REGISTRY_ADDRESS,
+      abi: SpaceRegistryAbi,
+      functionName: 'addressToSpaceId',
+      args: [account.address],
+    })) as Hex;
+
+    console.log('new spaceIdHex', spaceIdHex);
+  }
+
+  if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
+    throw new Error(`Failed to create personal space for address ${account.address}`);
+  }
+
+  console.log('Personal space ID (to use as editor):', spaceIdHex);
+
+  // Create a DAO space with the user's personal space as the initial editor
+  console.log('Creating DAO space...');
+  const { to, calldata, spaceEntityId, cid } = await daoSpace.createSpace({
+    name: 'Test DAO Space',
+    votingSettings: {
+      slowPathPercentageThreshold: 50, // 50% approval needed
+      fastPathFlatThreshold: 1, // 1 editor for fast path
+      quorum: 1, // minimum 1 editor must vote
+      durationInDays: 2, // 2 day voting period (minimum)
+    },
+    initialEditorSpaceIds: [spaceIdHex],
+    author: account.address,
+  });
+
+  console.log('spaceEntityId:', spaceEntityId);
+  console.log('cid:', cid);
+  console.log('to:', to);
+
+  const createDaoSpaceTxHash = await walletClient.sendTransaction({
+    // @ts-expect-error - viem type mismatch for account
+    account: walletClient.account,
+    to,
+    value: 0n,
+    data: calldata,
+  });
+
+  console.log('createDaoSpaceTxHash', createDaoSpaceTxHash);
+
+  const receipt = await publicClient.waitForTransactionReceipt({
+    hash: createDaoSpaceTxHash,
+  });
+
+  console.log('receipt status', receipt.status);
+
+  if (receipt.status === 'reverted') {
+    throw new Error(`DAO space creation transaction reverted: ${createDaoSpaceTxHash}`);
+  }
+
+  console.log('Successfully created DAO space');
 }, 60000);

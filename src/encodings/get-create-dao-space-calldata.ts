@@ -1,4 +1,4 @@
-import { encodeFunctionData, toHex } from 'viem';
+import { encodeAbiParameters, encodeFunctionData } from 'viem';
 
 import { DaoSpaceFactoryAbi } from '../abis/index.js';
 
@@ -233,7 +233,8 @@ export function getCreateDaoSpaceCalldata(args: CreateDaoSpaceCalldataParams): `
     if (ipfsError) {
       throw new Error(ipfsError);
     }
-    initialEditsContentUri = toHex(args.initialEditsContentUri);
+    // ABI-encode the string so the contract can decode it with abi.decode(bytes, (string))
+    initialEditsContentUri = encodeAbiParameters([{ type: 'string' }], [args.initialEditsContentUri]);
   }
 
   // Convert UUID to bytes16 hex if provided
