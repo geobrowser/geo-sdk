@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@geoprotocol/grc-20':
-        specifier: ^0.2.3
-        version: 0.2.3
+        specifier: ^0.3.0
+        version: 0.3.0
       effect:
         specifier: ^3.17.13
         version: 3.17.13
@@ -53,6 +53,9 @@ packages:
 
   '@adraffy/ens-normalize@1.11.0':
     resolution: {integrity: sha512-/3DDPKHqqIqxUULp8yP4zODUY1i+2xvVWsv8A79xGWdCAG+8sb0hRh0Rk2QyOJUnnbyPUAZYcpBuRe3nS2OIUg==}
+
+  '@adraffy/ens-normalize@1.11.1':
+    resolution: {integrity: sha512-nhCBV3quEgesuf7c7KYfperqSS14T8bYuvJ8PcLJp6znkZpFc0AuW4qBtr8eKVyPPe/8RSr7sglCWPU5eaxwKQ==}
 
   '@babel/runtime@7.28.4':
     resolution: {integrity: sha512-Q/N6JNWvIvPnLDvjlE1OUBLPQHH6l3CltCEsHIujp45zQUSSh8K+gHnaEX45yAT1nyngnINhvWtzN+Nb9D8RAQ==}
@@ -325,8 +328,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@geoprotocol/grc-20@0.2.3':
-    resolution: {integrity: sha512-oN2yiyQfAJw+LtH4oe5Est/bmQO47mvtmGO28MLV8mk5LJAEPKqRUPh94LerHTUsNkmEak/gq8T0MpxNPo9VTQ==}
+  '@geoprotocol/grc-20@0.3.0':
+    resolution: {integrity: sha512-Nd8lge6lAZxOeNYxmMzoTC8cYCEwN1RDaLod3IQO1DQnMzu7Qhv7F/x9ZnbZryO1wkbSSRQ4Z62CL6xf+BNrVQ==}
     engines: {node: '>=18'}
 
   '@inquirer/external-editor@1.0.2':
@@ -539,6 +542,17 @@ packages:
 
   abitype@1.1.0:
     resolution: {integrity: sha512-6Vh4HcRxNMLA0puzPjM5GBgT4aAcFGKZzSgAXvuZ27shJP6NEpielTuqbBmZILR5/xd0PizkBGy5hReKz9jl5A==}
+    peerDependencies:
+      typescript: '>=5.0.4'
+      zod: ^3.22.0 || ^4.0.0
+    peerDependenciesMeta:
+      typescript:
+        optional: true
+      zod:
+        optional: true
+
+  abitype@1.2.3:
+    resolution: {integrity: sha512-Ofer5QUnuUdTFsBRwARMoWKOH1ND5ehwYhJ3OJ/BQO+StkwQjHw0XyVh4vDttzHB7QOFhPHa/o413PJ82gU/Tg==}
     peerDependencies:
       typescript: '>=5.0.4'
       zod: ^3.22.0 || ^4.0.0
@@ -1125,6 +1139,9 @@ snapshots:
 
   '@adraffy/ens-normalize@1.11.0': {}
 
+  '@adraffy/ens-normalize@1.11.1':
+    optional: true
+
   '@babel/runtime@7.28.4': {}
 
   '@biomejs/biome@2.2.4':
@@ -1386,7 +1403,7 @@ snapshots:
   '@esbuild/win32-x64@0.25.10':
     optional: true
 
-  '@geoprotocol/grc-20@0.2.3':
+  '@geoprotocol/grc-20@0.3.0':
     dependencies:
       '@bokuweb/zstd-wasm': 0.0.27
 
@@ -1575,6 +1592,11 @@ snapshots:
   abitype@1.1.0(typescript@5.9.2):
     optionalDependencies:
       typescript: 5.9.2
+
+  abitype@1.2.3(typescript@5.9.2):
+    optionalDependencies:
+      typescript: 5.9.2
+    optional: true
 
   ansi-colors@4.1.3: {}
 
@@ -1816,12 +1838,12 @@ snapshots:
 
   ox@0.6.7(typescript@5.9.2):
     dependencies:
-      '@adraffy/ens-normalize': 1.11.0
+      '@adraffy/ens-normalize': 1.11.1
       '@noble/curves': 1.9.7
       '@noble/hashes': 1.8.0
       '@scure/bip32': 1.7.0
       '@scure/bip39': 1.6.0
-      abitype: 1.1.0(typescript@5.9.2)
+      abitype: 1.2.3(typescript@5.9.2)
       eventemitter3: 5.0.1
     optionalDependencies:
       typescript: 5.9.2

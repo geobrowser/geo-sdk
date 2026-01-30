@@ -109,18 +109,25 @@ describe('publishEdit', () => {
   });
 
   it('handles all value types in createEntity', async () => {
-    const propertyId = generate();
+    const textPropertyId = generate();
+    const float64PropertyId = generate();
+    const boolPropertyId = generate();
+    const pointPropertyId = generate();
+    const datePropertyId = generate();
+    const timePropertyId = generate();
+    const datetimePropertyId = generate();
+    const schedulePropertyId = generate();
     const { ops } = createEntity({
       name: 'value types test',
       values: [
-        { property: propertyId, type: 'text', value: 'text value' },
-        { property: propertyId, type: 'float64', value: 42.5 },
-        { property: propertyId, type: 'bool', value: true },
-        { property: propertyId, type: 'point', lon: -122.4, lat: 37.8 },
-        { property: propertyId, type: 'date', value: '2024-01-15' },
-        { property: propertyId, type: 'time', value: '14:30:00Z' },
-        { property: propertyId, type: 'datetime', value: '2024-01-15T14:30:00Z' },
-        { property: propertyId, type: 'schedule', value: 'FREQ=WEEKLY;BYDAY=MO' },
+        { property: textPropertyId, type: 'text', value: 'text value' },
+        { property: float64PropertyId, type: 'float64', value: 42.5 },
+        { property: boolPropertyId, type: 'bool', value: true },
+        { property: pointPropertyId, type: 'point', lon: -122.4, lat: 37.8 },
+        { property: datePropertyId, type: 'date', value: '2024-01-15' },
+        { property: timePropertyId, type: 'time', value: '14:30:00Z' },
+        { property: datetimePropertyId, type: 'datetime', value: '2024-01-15T14:30:00Z' },
+        { property: schedulePropertyId, type: 'schedule', value: 'FREQ=WEEKLY;BYDAY=MO' },
       ],
     });
 
