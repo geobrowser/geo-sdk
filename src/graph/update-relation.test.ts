@@ -253,7 +253,7 @@ describe('updateRelation', () => {
   it('validates the op structure correctly', () => {
     const result = updateRelation({
       id: relationId,
-      position: 'test-position',
+      position: 'a0',
     });
 
     expect(result.ops).toHaveLength(1);
@@ -263,7 +263,7 @@ describe('updateRelation', () => {
 
     if (op && isUpdateRelationOp(op)) {
       expect(op.id).toEqual(toGrcId(relationId));
-      expect(op.position).toBe('test-position');
+      expect(op.position).toBe('a0');
     } else {
       throw new Error('Expected op to be defined and of type updateRelation');
     }

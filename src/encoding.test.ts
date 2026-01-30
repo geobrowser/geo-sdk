@@ -363,7 +363,7 @@ describe('GRC-20 v2 Encoding', () => {
             from: fromEntityId,
             to: toEntityId,
             entity: entityId,
-            position: 'test-position',
+            position: 'a0',
           },
         ],
       };
@@ -380,7 +380,7 @@ describe('GRC-20 v2 Encoding', () => {
       expect(formatId(op.relationType)).toBe('cf518eafef744aadbc87fe09c2631fcd');
       expect(formatId(op.from)).toBe('3af3e22d21694a078681516710b7ecf1');
       expect(formatId(op.to)).toBe('d4bc2f205e2d415e971eb0b9fbf6b6fc');
-      expect(op.position).toBe('test-position');
+      expect(op.position).toBe('a0');
     });
 
     it('encodes and decodes createRelation with space pins', () => {
@@ -463,7 +463,7 @@ describe('GRC-20 v2 Encoding', () => {
           {
             type: 'updateRelation',
             id: relationId,
-            position: 'new-position',
+            position: 'b0',
             unset: [],
           },
         ],
@@ -477,7 +477,7 @@ describe('GRC-20 v2 Encoding', () => {
 
       const op = decoded.ops[0] as Extract<Op, { type: 'updateRelation' }>;
       expect(formatId(op.id)).toBe('765564cac7e54c61b1dcc28ab77ec6b7');
-      expect(op.position).toBe('new-position');
+      expect(op.position).toBe('b0');
     });
 
     it('encodes and decodes updateRelation with unset fields', () => {
