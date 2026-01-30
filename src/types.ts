@@ -40,7 +40,7 @@ export type DataType = ValueDataType | 'RELATION';
  */
 export type TypedValue =
   | { type: 'bool'; value: boolean }
-  | { type: 'int64'; value: bigint; unit?: Id | string }
+  | { type: 'int64'; value: bigint | number; unit?: Id | string }
   | { type: 'float64'; value: number; unit?: Id | string }
   | { type: 'decimal'; exponent: number; mantissa: DecimalMantissa; unit?: Id | string }
   | { type: 'text'; value: string; language?: Id | string }

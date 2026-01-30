@@ -7,7 +7,7 @@ import {
 } from '@geoprotocol/grc-20';
 import { DESCRIPTION_PROPERTY, NAME_PROPERTY } from '../core/ids/system.js';
 import { Id } from '../id.js';
-import { assertValid, toGrcId } from '../id-utils.js';
+import { assertValid, toGrcId, toInt64 } from '../id-utils.js';
 import type { CreateResult, UnsetLanguageParam, UpdateEntityParams } from '../types.js';
 
 /**
@@ -176,7 +176,7 @@ export const updateEntity = ({ id, name, description, values, unset }: UpdateEnt
         property,
         value: {
           type: 'int64',
-          value: valueEntry.value,
+          value: toInt64(valueEntry.value, '`int64` value in `updateEntity`'),
           ...(valueEntry.unit ? { unit: toGrcId(valueEntry.unit) } : {}),
         },
       });

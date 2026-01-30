@@ -7,7 +7,7 @@ import {
 } from '@geoprotocol/grc-20';
 import { COVER_PROPERTY, DESCRIPTION_PROPERTY, NAME_PROPERTY, TYPES_PROPERTY } from '../core/ids/system.js';
 import { Id } from '../id.js';
-import { assertValid, generate, toGrcId } from '../id-utils.js';
+import { assertValid, generate, toGrcId, toInt64 } from '../id-utils.js';
 import type { CreateResult, EntityParams } from '../types.js';
 import { createRelation } from './create-relation.js';
 
@@ -219,7 +219,7 @@ export const createEntity = ({
         property,
         value: {
           type: 'int64',
-          value: valueEntry.value,
+          value: toInt64(valueEntry.value, '`int64` value in `createEntity`'),
           ...(valueEntry.unit ? { unit: toGrcId(valueEntry.unit) } : {}),
         },
       });

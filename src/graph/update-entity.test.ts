@@ -542,4 +542,88 @@ describe('updateEntity', () => {
       }),
     ).toThrow('Invalid id: "invalid-unit" for `unit` in `values` in `updateEntity`');
   });
+
+  it('updates an entity with an int64 value from number', async () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const result = updateEntity({
+      id: entityId,
+      values: [{ property: customPropertyId, type: 'int64', value: 42 }],
+    });
+
+    expect(result).toBeDefined();
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+
+    const int64Value = entityOp.set[0];
+    expect(int64Value?.property).toEqual(toGrcId(customPropertyId));
+    expect(int64Value?.value.type).toBe('int64');
+    if (int64Value?.value.type === 'int64') {
+      expect(int64Value.value.value).toBe(42n);
+    }
+  });
+
+  it('updates an entity with an int64 value from number with unit', async () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const unitId = Id('016c9b1cd8a84e4d9e844e40878bb235');
+    const result = updateEntity({
+      id: entityId,
+      values: [{ property: customPropertyId, type: 'int64', value: 42, unit: unitId }],
+    });
+
+    expect(result).toBeDefined();
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+
+    const int64Value = entityOp.set[0];
+    expect(int64Value?.value.type).toBe('int64');
+    if (int64Value?.value.type === 'int64') {
+      expect(int64Value.value.value).toBe(42n);
+      expect(int64Value.value.unit).toEqual(toGrcId(unitId));
+    }
+  });
+
+  it('throws error for non-integer number in int64 value', () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    expect(() =>
+      updateEntity({
+        id: entityId,
+        values: [{ property: customPropertyId, type: 'int64', value: 42.5 }],
+      }),
+    ).toThrow('Value 42.5 is not a valid integer for `int64` value in `updateEntity`');
+  });
+
+  it('throws error for NaN in int64 value', () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    expect(() =>
+      updateEntity({
+        id: entityId,
+        values: [{ property: customPropertyId, type: 'int64', value: NaN }],
+      }),
+    ).toThrow('Value NaN is not a valid integer for `int64` value in `updateEntity`');
+  });
+
+  it('throws error for Infinity in int64 value', () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    expect(() =>
+      updateEntity({
+        id: entityId,
+        values: [{ property: customPropertyId, type: 'int64', value: Infinity }],
+      }),
+    ).toThrow('Value Infinity is not a valid integer for `int64` value in `updateEntity`');
+  });
+
+  it('throws error for unsafe integer in int64 value', () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const unsafeInteger = Number.MAX_SAFE_INTEGER + 1;
+    expect(() =>
+      updateEntity({
+        id: entityId,
+        values: [{ property: customPropertyId, type: 'int64', value: unsafeInteger }],
+      }),
+    ).toThrow(
+      `Value ${unsafeInteger} is outside safe integer range for \`int64\` value in \`updateEntity\`. Use bigint for large integers.`,
+    );
+  });
 });

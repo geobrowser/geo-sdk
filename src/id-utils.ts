@@ -119,3 +119,28 @@ export function fromBase64(id: IdBase64): Id {
 
   return fromBytes(new Uint8Array(bytes));
 }
+
+/**
+ * Validates and converts a number or bigint to a bigint for int64 values.
+ * If the value is already a bigint, it is returned as-is.
+ * If the value is a number, it must be a safe integer to be converted.
+ *
+ * @param value - The value to convert (bigint or number)
+ * @param sourceHint - Optional hint for error messages indicating where the value came from
+ * @returns The value as a bigint
+ * @throws Error if the number is not an integer, is NaN, is Infinity, or is outside safe integer range
+ */
+export function toInt64(value: bigint | number, sourceHint?: string): bigint {
+  if (typeof value === 'bigint') {
+    return value;
+  }
+  if (!Number.isInteger(value)) {
+    throw new Error(`Value ${value} is not a valid integer${sourceHint ? ` for ${sourceHint}` : ''}`);
+  }
+  if (!Number.isSafeInteger(value)) {
+    throw new Error(
+      `Value ${value} is outside safe integer range${sourceHint ? ` for ${sourceHint}` : ''}. Use bigint for large integers.`,
+    );
+  }
+  return BigInt(value);
+}
