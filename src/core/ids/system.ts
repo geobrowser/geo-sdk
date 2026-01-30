@@ -281,3 +281,26 @@ export const RANK_TYPE_PROPERTY = Id('48e01bc8324e48c2a6c9cab3f49290c6');
 export const RANK_VOTES_RELATION_TYPE = Id('19a4cfff45f24150abf2af0f43eb2eec');
 export const VOTE_ORDINAL_VALUE_PROPERTY = Id('49ee1b8918204e75a1ae38a2dcaad4a5');
 export const VOTE_WEIGHTED_VALUE_PROPERTY = Id('103701ddcabe4a8e835b10345327b647');
+
+export const WORKS_AT_PROPERTY = Id('dac6e89e76be4f7788e10f556ceb6869');
+
+// bounty
+export const BOUNTY_TYPE = Id('808af0bad5884e3391f09dd4b25e18be');
+export const DIFFICULTY_TYPE = Id('0ef12e0df2e4478c96cdfd3901109b16');
+export const DIFFICULTY_PROPERTY = Id('8c8405abc6bc4d46a5806e4fc80d8187');
+export const EASY_DIFFICULTY = Id('6ce89cfc43e14e44a5cb4da93ed7d453');
+export const MEDIUM_DIFFICULTY = Id('74a88abeaf694d4d969eef651c61f58a');
+export const HARD_DIFFICULTY = Id('80daec57cf454643a73c632e5dcb6834');
+export const REWARD_PROPERTY = Id('9ece325c592d42d5b2e785e8e6fe05b6');
+export const MAX_CONTRIBUTORS_PROPERTY = Id('1d7bb89ec2854df7afac28cec9007e38');
+export const ACTIVE_UNTIL_PROPERTY = Id('7566286ca054405a83e185ffd60492fb');
+export const INTERESTED_IN_PROPERTY = Id('ff7e1b4444a2419187324e6c222afe07');
+export const MAX_SUBMISSIONS_PER_PERSON_PROPERTY = Id('21c06b6d7f7846f1ac65e4fc4eadc615');
+export const CREATOR_PROPERTY = Id('e200041dba1a4ca7b28497fe22d8e234');
+// community call
+export const MEETING_TIME_PROPERTY = Id('3ae3d1efebfc433da4bdebaa823348c9');
+export const COMMUNITY_CALL_TYPE = Id('6e76a82830e14bad93a1097d05ab688a');
+export const COMMUNITY_CALL_PARENT_PROPERTY = Id('6da0310b8aaa46f79f1f23ea5d6df686');
+export const PARTICIPANTS_PROPERTY = Id('0b9b1a35206844318f7d2350f958a728');
+export const COMMUNITY_CALL_EVENT_TYPE = Id('0419ca20118b4cdb84dfdb9ed73b50c2');
+export const CALL_RSVP_PROPERTY = Id('74261aaad0ab4756bde405be00ae6bc6');
