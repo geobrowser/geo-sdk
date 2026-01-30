@@ -1,5 +1,13 @@
 # @geoprotocol/geo-sdk
 
+## 0.3.1
+
+### Patch Changes
+
+- 74ce4e7: Add missing datatype options to TypedValue: `int64`, `decimal`, `bytes`, and `embedding`
+- 5b0dcfb: Add new IDs for GitHub property, LinkedIn property, works at property, bounty-related types and properties, and community call types and properties
+- 168356f: Deprecate ROLE_PROPERTY and add ROLE_TYPE with the same ID
+
 ## 0.3.0
 
 ### Minor Changes
