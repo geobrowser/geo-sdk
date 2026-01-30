@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.6.0
+
+### Minor Changes
+
+- 75b0a34: Fix IPFS CID encoding in `publishEdit()` to use ABI-encoded string format, enabling the indexer to properly decode published edits.
+
 ## 0.5.0
 
 ### Minor Changes
