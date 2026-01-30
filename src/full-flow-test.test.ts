@@ -161,7 +161,7 @@ it.skip('should create a space and publish an edit', async () => {
   console.log('Successfully published edit to space', spaceId);
 }, 60000);
 
-it.skip('should create a DAO space', async () => {
+it.skip('should create a DAO space and propose an edit', async () => {
   // IMPORTANT: Replace with your actual private key for testing
   // You can get your private key using https://www.geobrowser.io/export-wallet
   const addressPrivateKey = '0xTODO' as `0x${string}`;
@@ -273,4 +273,82 @@ it.skip('should create a DAO space', async () => {
   }
 
   console.log('Successfully created DAO space');
-}, 60000);
+
+  // Find the DAO space address from the transaction logs
+  // The Initialized event is emitted by the new DAO space proxy
+  // We find it by looking for logs from addresses other than the factory
+  const daoSpaceAddress = receipt.logs.find(log => log.address.toLowerCase() !== to.toLowerCase())?.address as Hex;
+
+  if (!daoSpaceAddress) {
+    throw new Error('Could not find DAO space address in transaction logs');
+  }
+
+  console.log('daoSpaceAddress:', daoSpaceAddress);
+
+  // Get the DAO space ID from the registry
+  const daoSpaceIdHex = (await publicClient.readContract({
+    address: SPACE_REGISTRY_ADDRESS,
+    abi: SpaceRegistryAbi,
+    functionName: 'addressToSpaceId',
+    args: [daoSpaceAddress],
+  })) as Hex;
+
+  console.log('daoSpaceIdHex:', daoSpaceIdHex);
+
+  if (daoSpaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
+    throw new Error('DAO space was not registered in the Space Registry');
+  }
+
+  // Now propose an edit to the DAO space
+  console.log('Proposing edit to DAO space...');
+
+  const { ops, id: entityId } = createEntity({
+    name: 'DAO Entity',
+    description: 'Created via DAO space proposal',
+  });
+
+  console.log('entityId:', entityId);
+
+  const {
+    editId,
+    cid: proposalCid,
+    to: proposalTo,
+    calldata: proposalCalldata,
+    proposalId,
+  } = await daoSpace.proposeEdit({
+    name: 'Add new entity to DAO space',
+    ops,
+    author: account.address,
+    daoSpaceAddress,
+    callerSpaceId: spaceIdHex,
+    daoSpaceId: daoSpaceIdHex,
+    votingMode: 'FAST', // Fast path since we're the only editor and threshold is 1
+  });
+
+  console.log('editId:', editId);
+  console.log('proposalCid:', proposalCid);
+  console.log('proposalId:', proposalId.slice(2));
+
+  const proposeTxHash = await walletClient.sendTransaction({
+    // @ts-expect-error - viem type mismatch for account
+    account: walletClient.account,
+    chain: walletClient.chain ?? null,
+    to: proposalTo,
+    data: proposalCalldata,
+  });
+
+  console.log('proposeTxHash:', proposeTxHash);
+
+  const proposeReceipt = await publicClient.waitForTransactionReceipt({
+    hash: proposeTxHash,
+  });
+
+  console.log('proposeReceipt status:', proposeReceipt.status);
+
+  if (proposeReceipt.status === 'reverted') {
+    throw new Error(`Propose edit transaction reverted: ${proposeTxHash}`);
+  }
+
+  console.log('Successfully proposed edit to DAO space');
+  console.log('Proposal ID:', proposalId.slice(2));
+}, 120000);
