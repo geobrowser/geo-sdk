@@ -238,7 +238,7 @@ describe('proposeEdit', () => {
       daoSpaceId: validDaoSpaceId,
     });
 
-    // Proposal IDs should be unique because of Date.now() and crypto.randomUUID()
+    // Proposal IDs should be unique because they are generated using UUID v4
     expect(result1.proposalId).not.toBe(result2.proposalId);
   });
 });
