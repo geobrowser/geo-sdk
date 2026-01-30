@@ -64,6 +64,12 @@ export const updateEntity = ({ id, name, description, values, unset }: UpdateEnt
     if (valueEntry.type === 'float64' && valueEntry.unit) {
       assertValid(valueEntry.unit, '`unit` in `values` in `updateEntity`');
     }
+    if (valueEntry.type === 'int64' && valueEntry.unit) {
+      assertValid(valueEntry.unit, '`unit` in `values` in `updateEntity`');
+    }
+    if (valueEntry.type === 'decimal' && valueEntry.unit) {
+      assertValid(valueEntry.unit, '`unit` in `values` in `updateEntity`');
+    }
   }
   for (const unsetEntry of unset ?? []) {
     assertValid(unsetEntry.property, '`property` in `unset` in `updateEntity`');
@@ -163,6 +169,43 @@ export const updateEntity = ({ id, name, description, values, unset }: UpdateEnt
         value: {
           type: 'schedule',
           value: valueEntry.value,
+        },
+      });
+    } else if (valueEntry.type === 'int64') {
+      newValues.push({
+        property,
+        value: {
+          type: 'int64',
+          value: valueEntry.value,
+          ...(valueEntry.unit ? { unit: toGrcId(valueEntry.unit) } : {}),
+        },
+      });
+    } else if (valueEntry.type === 'decimal') {
+      newValues.push({
+        property,
+        value: {
+          type: 'decimal',
+          exponent: valueEntry.exponent,
+          mantissa: valueEntry.mantissa,
+          ...(valueEntry.unit ? { unit: toGrcId(valueEntry.unit) } : {}),
+        },
+      });
+    } else if (valueEntry.type === 'bytes') {
+      newValues.push({
+        property,
+        value: {
+          type: 'bytes',
+          value: valueEntry.value,
+        },
+      });
+    } else if (valueEntry.type === 'embedding') {
+      newValues.push({
+        property,
+        value: {
+          type: 'embedding',
+          subType: valueEntry.subType,
+          dims: valueEntry.dims,
+          data: valueEntry.data,
         },
       });
     } else {

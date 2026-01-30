@@ -1,4 +1,4 @@
-import type { CreateEntity, CreateRelation } from '@geoprotocol/grc-20';
+import { type CreateEntity, type CreateRelation, EmbeddingSubType } from '@geoprotocol/grc-20';
 import { describe, expect, it } from 'vitest';
 import { CLAIM_TYPE, NEWS_STORY_TYPE } from '../core/ids/content.js';
 import { COVER_PROPERTY, DESCRIPTION_PROPERTY, NAME_PROPERTY, TYPES_PROPERTY } from '../core/ids/system.js';
@@ -458,6 +458,198 @@ describe('createEntity', () => {
     }
   });
 
+  it('creates an entity with an int64 value', () => {
+    const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
+    const entity = createEntity({
+      values: [
+        {
+          property: propertyId,
+          type: 'int64',
+          value: 9007199254740993n,
+        },
+      ],
+    });
+
+    expect(entity).toBeDefined();
+
+    const entityOp = entity.ops[0] as CreateEntity;
+    expect(entityOp.type).toBe('createEntity');
+    expect(entityOp.values).toHaveLength(1);
+
+    const int64Value = entityOp.values[0];
+    expect(int64Value?.property).toEqual(toGrcId(propertyId));
+    expect(int64Value?.value.type).toBe('int64');
+    if (int64Value?.value.type === 'int64') {
+      expect(int64Value.value.value).toBe(9007199254740993n);
+    }
+  });
+
+  it('creates an entity with an int64 value with unit', () => {
+    const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
+    const unitId = Id('016c9b1cd8a84e4d9e844e40878bb235');
+    const entity = createEntity({
+      values: [
+        {
+          property: propertyId,
+          type: 'int64',
+          value: 42n,
+          unit: unitId,
+        },
+      ],
+    });
+
+    expect(entity).toBeDefined();
+
+    const entityOp = entity.ops[0] as CreateEntity;
+    expect(entityOp.type).toBe('createEntity');
+
+    const int64Value = entityOp.values[0];
+    expect(int64Value?.value.type).toBe('int64');
+    if (int64Value?.value.type === 'int64') {
+      expect(int64Value.value.value).toBe(42n);
+      expect(int64Value.value.unit).toEqual(toGrcId(unitId));
+    }
+  });
+
+  it('creates an entity with a decimal value (i64 mantissa)', () => {
+    const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
+    const entity = createEntity({
+      values: [
+        {
+          property: propertyId,
+          type: 'decimal',
+          exponent: -2,
+          mantissa: { type: 'i64', value: 12345n },
+        },
+      ],
+    });
+
+    expect(entity).toBeDefined();
+
+    const entityOp = entity.ops[0] as CreateEntity;
+    expect(entityOp.type).toBe('createEntity');
+
+    const decimalValue = entityOp.values[0];
+    expect(decimalValue?.property).toEqual(toGrcId(propertyId));
+    expect(decimalValue?.value.type).toBe('decimal');
+    if (decimalValue?.value.type === 'decimal') {
+      expect(decimalValue.value.exponent).toBe(-2);
+      expect(decimalValue.value.mantissa).toEqual({ type: 'i64', value: 12345n });
+    }
+  });
+
+  it('creates an entity with a decimal value (big mantissa)', () => {
+    const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
+    const bigBytes = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
+    const entity = createEntity({
+      values: [
+        {
+          property: propertyId,
+          type: 'decimal',
+          exponent: 5,
+          mantissa: { type: 'big', bytes: bigBytes },
+        },
+      ],
+    });
+
+    expect(entity).toBeDefined();
+
+    const entityOp = entity.ops[0] as CreateEntity;
+    expect(entityOp.type).toBe('createEntity');
+
+    const decimalValue = entityOp.values[0];
+    expect(decimalValue?.value.type).toBe('decimal');
+    if (decimalValue?.value.type === 'decimal') {
+      expect(decimalValue.value.exponent).toBe(5);
+      expect(decimalValue.value.mantissa).toEqual({ type: 'big', bytes: bigBytes });
+    }
+  });
+
+  it('creates an entity with a decimal value with unit', () => {
+    const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
+    const unitId = Id('016c9b1cd8a84e4d9e844e40878bb235');
+    const entity = createEntity({
+      values: [
+        {
+          property: propertyId,
+          type: 'decimal',
+          exponent: -2,
+          mantissa: { type: 'i64', value: 12345n },
+          unit: unitId,
+        },
+      ],
+    });
+
+    expect(entity).toBeDefined();
+
+    const entityOp = entity.ops[0] as CreateEntity;
+    expect(entityOp.type).toBe('createEntity');
+
+    const decimalValue = entityOp.values[0];
+    expect(decimalValue?.value.type).toBe('decimal');
+    if (decimalValue?.value.type === 'decimal') {
+      expect(decimalValue.value.exponent).toBe(-2);
+      expect(decimalValue.value.mantissa).toEqual({ type: 'i64', value: 12345n });
+      expect(decimalValue.value.unit).toEqual(toGrcId(unitId));
+    }
+  });
+
+  it('creates an entity with a bytes value', () => {
+    const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
+    const bytesData = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
+    const entity = createEntity({
+      values: [
+        {
+          property: propertyId,
+          type: 'bytes',
+          value: bytesData,
+        },
+      ],
+    });
+
+    expect(entity).toBeDefined();
+
+    const entityOp = entity.ops[0] as CreateEntity;
+    expect(entityOp.type).toBe('createEntity');
+
+    const bytesValue = entityOp.values[0];
+    expect(bytesValue?.property).toEqual(toGrcId(propertyId));
+    expect(bytesValue?.value.type).toBe('bytes');
+    if (bytesValue?.value.type === 'bytes') {
+      expect(bytesValue.value.value).toEqual(bytesData);
+    }
+  });
+
+  it('creates an entity with an embedding value', () => {
+    const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
+    const embeddingData = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]);
+    const entity = createEntity({
+      values: [
+        {
+          property: propertyId,
+          type: 'embedding',
+          subType: EmbeddingSubType.Float32,
+          dims: 2,
+          data: embeddingData,
+        },
+      ],
+    });
+
+    expect(entity).toBeDefined();
+
+    const entityOp = entity.ops[0] as CreateEntity;
+    expect(entityOp.type).toBe('createEntity');
+
+    const embeddingValue = entityOp.values[0];
+    expect(embeddingValue?.property).toEqual(toGrcId(propertyId));
+    expect(embeddingValue?.value.type).toBe('embedding');
+    if (embeddingValue?.value.type === 'embedding') {
+      expect(embeddingValue.value.subType).toBe(EmbeddingSubType.Float32);
+      expect(embeddingValue.value.dims).toBe(2);
+      expect(embeddingValue.value.data).toEqual(embeddingData);
+    }
+  });
+
   it('creates an entity with relations', () => {
     const providedId = Id('b1dc6e5c63e143bab3d4755b251a4ea1');
     const relationTypeId = Id('295c8bc61ae342cbb2a65b61080906ff');
@@ -539,5 +731,29 @@ describe('createEntity', () => {
     expect(() => createEntity({ values: [{ property: 'invalid-prop', type: 'text', value: 'test' }] })).toThrow(
       'Invalid id: "invalid-prop" for `values` in `createEntity`',
     );
+  });
+
+  it('throws an error if a unit id in int64 value is invalid', () => {
+    const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
+    expect(() =>
+      createEntity({ values: [{ property: propertyId, type: 'int64', value: 42n, unit: 'invalid-unit' }] }),
+    ).toThrow('Invalid id: "invalid-unit" for `unit` in `values` in `createEntity`');
+  });
+
+  it('throws an error if a unit id in decimal value is invalid', () => {
+    const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
+    expect(() =>
+      createEntity({
+        values: [
+          {
+            property: propertyId,
+            type: 'decimal',
+            exponent: -2,
+            mantissa: { type: 'i64', value: 12345n },
+            unit: 'invalid-unit',
+          },
+        ],
+      }),
+    ).toThrow('Invalid id: "invalid-unit" for `unit` in `values` in `createEntity`');
   });
 });

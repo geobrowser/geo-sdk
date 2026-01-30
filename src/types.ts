@@ -1,4 +1,4 @@
-import type { Op } from '@geoprotocol/grc-20';
+import type { EmbeddingSubType, Op } from '@geoprotocol/grc-20';
 import type { SafeSmartAccountImplementation } from 'permissionless/accounts';
 import type { SmartAccountClient } from 'permissionless/clients';
 import type { Address, Chain, HttpTransport } from 'viem';
@@ -7,9 +7,11 @@ import type { Id } from './id.js';
 
 export type Network = 'TESTNET';
 
-export type { Op };
+export type { Op, EmbeddingSubType };
 /** @deprecated Use `Op` instead */
 export type GrcOp = Op;
+
+export type DecimalMantissa = { type: 'i64'; value: bigint } | { type: 'big'; bytes: Uint8Array };
 
 export type ValueDataType =
   | 'BOOLEAN'
@@ -38,8 +40,11 @@ export type DataType = ValueDataType | 'RELATION';
  */
 export type TypedValue =
   | { type: 'bool'; value: boolean }
+  | { type: 'int64'; value: bigint; unit?: Id | string }
   | { type: 'float64'; value: number; unit?: Id | string }
+  | { type: 'decimal'; exponent: number; mantissa: DecimalMantissa; unit?: Id | string }
   | { type: 'text'; value: string; language?: Id | string }
+  | { type: 'bytes'; value: Uint8Array }
   | { type: 'point'; lon: number; lat: number; alt?: number }
   /** ISO 8601 date format (YYYY-MM-DD), e.g., "2024-01-15" */
   | { type: 'date'; value: string }
@@ -48,7 +53,8 @@ export type TypedValue =
   /** ISO 8601 combined date and time, e.g., "2024-01-15T14:30:00Z" */
   | { type: 'datetime'; value: string }
   /** iCalendar RRULE format for recurring events, e.g., "FREQ=WEEKLY;BYDAY=MO,WE,FR" */
-  | { type: 'schedule'; value: string };
+  | { type: 'schedule'; value: string }
+  | { type: 'embedding'; subType: EmbeddingSubType; dims: number; data: Uint8Array };
 
 // ValueParams now directly accepts a TypedValue
 export type ValueParams = {

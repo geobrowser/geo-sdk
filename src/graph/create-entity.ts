@@ -82,6 +82,12 @@ export const createEntity = ({
     if (valueEntry.type === 'float64' && valueEntry.unit) {
       assertValid(valueEntry.unit, '`unit` in `values` in `createEntity`');
     }
+    if (valueEntry.type === 'int64' && valueEntry.unit) {
+      assertValid(valueEntry.unit, '`unit` in `values` in `createEntity`');
+    }
+    if (valueEntry.type === 'decimal' && valueEntry.unit) {
+      assertValid(valueEntry.unit, '`unit` in `values` in `createEntity`');
+    }
   }
   // we only assert Ids one level deep for a better experience here, but multiple levels deep are
   // asserted since we use createRelation and createEntity internally
@@ -206,6 +212,43 @@ export const createEntity = ({
         value: {
           type: 'schedule',
           value: valueEntry.value,
+        },
+      });
+    } else if (valueEntry.type === 'int64') {
+      newValues.push({
+        property,
+        value: {
+          type: 'int64',
+          value: valueEntry.value,
+          ...(valueEntry.unit ? { unit: toGrcId(valueEntry.unit) } : {}),
+        },
+      });
+    } else if (valueEntry.type === 'decimal') {
+      newValues.push({
+        property,
+        value: {
+          type: 'decimal',
+          exponent: valueEntry.exponent,
+          mantissa: valueEntry.mantissa,
+          ...(valueEntry.unit ? { unit: toGrcId(valueEntry.unit) } : {}),
+        },
+      });
+    } else if (valueEntry.type === 'bytes') {
+      newValues.push({
+        property,
+        value: {
+          type: 'bytes',
+          value: valueEntry.value,
+        },
+      });
+    } else if (valueEntry.type === 'embedding') {
+      newValues.push({
+        property,
+        value: {
+          type: 'embedding',
+          subType: valueEntry.subType,
+          dims: valueEntry.dims,
+          data: valueEntry.data,
         },
       });
     } else {

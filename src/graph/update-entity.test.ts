@@ -1,5 +1,4 @@
-import type { UpdateEntity } from '@geoprotocol/grc-20';
-import { languages } from '@geoprotocol/grc-20';
+import { EmbeddingSubType, languages, type UpdateEntity } from '@geoprotocol/grc-20';
 import { describe, expect, it } from 'vitest';
 import { DESCRIPTION_PROPERTY, NAME_PROPERTY } from '../core/ids/system.js';
 import { Id } from '../id.js';
@@ -222,6 +221,157 @@ describe('updateEntity', () => {
     }
   });
 
+  it('updates an entity with an int64 value', async () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const result = updateEntity({
+      id: entityId,
+      values: [{ property: customPropertyId, type: 'int64', value: 9007199254740993n }],
+    });
+
+    expect(result).toBeDefined();
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+
+    const int64Value = entityOp.set[0];
+    expect(int64Value?.property).toEqual(toGrcId(customPropertyId));
+    expect(int64Value?.value.type).toBe('int64');
+    if (int64Value?.value.type === 'int64') {
+      expect(int64Value.value.value).toBe(9007199254740993n);
+    }
+  });
+
+  it('updates an entity with an int64 value with unit', async () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const unitId = Id('016c9b1cd8a84e4d9e844e40878bb235');
+    const result = updateEntity({
+      id: entityId,
+      values: [{ property: customPropertyId, type: 'int64', value: 42n, unit: unitId }],
+    });
+
+    expect(result).toBeDefined();
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+
+    const int64Value = entityOp.set[0];
+    expect(int64Value?.value.type).toBe('int64');
+    if (int64Value?.value.type === 'int64') {
+      expect(int64Value.value.value).toBe(42n);
+      expect(int64Value.value.unit).toEqual(toGrcId(unitId));
+    }
+  });
+
+  it('updates an entity with a decimal value (i64 mantissa)', async () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const result = updateEntity({
+      id: entityId,
+      values: [
+        {
+          property: customPropertyId,
+          type: 'decimal',
+          exponent: -2,
+          mantissa: { type: 'i64', value: 12345n },
+        },
+      ],
+    });
+
+    expect(result).toBeDefined();
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+
+    const decimalValue = entityOp.set[0];
+    expect(decimalValue?.property).toEqual(toGrcId(customPropertyId));
+    expect(decimalValue?.value.type).toBe('decimal');
+    if (decimalValue?.value.type === 'decimal') {
+      expect(decimalValue.value.exponent).toBe(-2);
+      expect(decimalValue.value.mantissa).toEqual({ type: 'i64', value: 12345n });
+    }
+  });
+
+  it('updates an entity with a decimal value with unit', async () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const unitId = Id('016c9b1cd8a84e4d9e844e40878bb235');
+    const result = updateEntity({
+      id: entityId,
+      values: [
+        {
+          property: customPropertyId,
+          type: 'decimal',
+          exponent: -2,
+          mantissa: { type: 'i64', value: 12345n },
+          unit: unitId,
+        },
+      ],
+    });
+
+    expect(result).toBeDefined();
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+
+    const decimalValue = entityOp.set[0];
+    expect(decimalValue?.value.type).toBe('decimal');
+    if (decimalValue?.value.type === 'decimal') {
+      expect(decimalValue.value.exponent).toBe(-2);
+      expect(decimalValue.value.mantissa).toEqual({ type: 'i64', value: 12345n });
+      expect(decimalValue.value.unit).toEqual(toGrcId(unitId));
+    }
+  });
+
+  it('updates an entity with a bytes value', async () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const bytesData = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
+    const result = updateEntity({
+      id: entityId,
+      values: [{ property: customPropertyId, type: 'bytes', value: bytesData }],
+    });
+
+    expect(result).toBeDefined();
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+
+    const bytesValue = entityOp.set[0];
+    expect(bytesValue?.property).toEqual(toGrcId(customPropertyId));
+    expect(bytesValue?.value.type).toBe('bytes');
+    if (bytesValue?.value.type === 'bytes') {
+      expect(bytesValue.value.value).toEqual(bytesData);
+    }
+  });
+
+  it('updates an entity with an embedding value', async () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    const embeddingData = new Uint8Array([0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07]);
+    const result = updateEntity({
+      id: entityId,
+      values: [
+        {
+          property: customPropertyId,
+          type: 'embedding',
+          subType: EmbeddingSubType.Float32,
+          dims: 2,
+          data: embeddingData,
+        },
+      ],
+    });
+
+    expect(result).toBeDefined();
+
+    const entityOp = result.ops[0] as UpdateEntity;
+    expect(entityOp.type).toBe('updateEntity');
+
+    const embeddingValue = entityOp.set[0];
+    expect(embeddingValue?.property).toEqual(toGrcId(customPropertyId));
+    expect(embeddingValue?.value.type).toBe('embedding');
+    if (embeddingValue?.value.type === 'embedding') {
+      expect(embeddingValue.value.subType).toBe(EmbeddingSubType.Float32);
+      expect(embeddingValue.value.dims).toBe(2);
+      expect(embeddingValue.value.data).toEqual(embeddingData);
+    }
+  });
+
   // Unset tests
   it('unsets a property value with default (all) language', async () => {
     const propertyId = Id('fa269fd3de9849cf90c44235d905a67c');
@@ -363,5 +513,33 @@ describe('updateEntity', () => {
         unset: [{ property: propertyId, language: 'invalid-lang' }],
       }),
     ).toThrow('Invalid id: "invalid-lang" for `language` in `unset` in `updateEntity`');
+  });
+
+  it('throws an error if a unit id in int64 value is invalid', () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    expect(() =>
+      updateEntity({
+        id: entityId,
+        values: [{ property: customPropertyId, type: 'int64', value: 42n, unit: 'invalid-unit' }],
+      }),
+    ).toThrow('Invalid id: "invalid-unit" for `unit` in `values` in `updateEntity`');
+  });
+
+  it('throws an error if a unit id in decimal value is invalid', () => {
+    const customPropertyId = Id('fa269fd3de9849cf90c44235d905a67c');
+    expect(() =>
+      updateEntity({
+        id: entityId,
+        values: [
+          {
+            property: customPropertyId,
+            type: 'decimal',
+            exponent: -2,
+            mantissa: { type: 'i64', value: 12345n },
+            unit: 'invalid-unit',
+          },
+        ],
+      }),
+    ).toThrow('Invalid id: "invalid-unit" for `unit` in `values` in `updateEntity`');
   });
 });
