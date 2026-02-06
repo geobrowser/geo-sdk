@@ -1,6 +1,7 @@
 import { encodeAbiParameters, encodeFunctionData } from 'viem';
 
 import { DaoSpaceFactoryAbi } from '../abis/index.js';
+import { isValid as isValidUuid } from '../id.js';
 
 // Contract constants from DAOSpace.sol
 /**
@@ -240,6 +241,9 @@ export function getCreateDaoSpaceCalldata(args: CreateDaoSpaceCalldataParams): `
   // Convert UUID to bytes16 hex if provided
   let initialTopicId: `0x${string}` = '0x00000000000000000000000000000000';
   if (args.initialTopicId) {
+    if (!isValidUuid(args.initialTopicId)) {
+      throw new Error('initialTopicId must be a valid UUID (32 hex chars or 8-4-4-4-12 dashed format)');
+    }
     // Remove dashes from UUID and add 0x prefix
     initialTopicId = `0x${args.initialTopicId.replace(/-/g, '')}`;
   }

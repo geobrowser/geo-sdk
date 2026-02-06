@@ -235,4 +235,53 @@ describe('getCreateDaoSpaceCalldata', () => {
     };
     expect(() => getCreateDaoSpaceCalldata(args)).toThrow('IPFS URI contains an invalid CID format');
   });
+
+  it('should accept a valid dashless UUID as initialTopicId', () => {
+    const args = {
+      ...validArgs,
+      initialTopicId: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
+    };
+    const calldata = getCreateDaoSpaceCalldata(args);
+    expect(calldata).toBeTypeOf('string');
+    expect(calldata.startsWith('0x')).toBe(true);
+  });
+
+  it('should accept a valid dashed UUID as initialTopicId', () => {
+    const args = {
+      ...validArgs,
+      initialTopicId: 'a1b2c3d4-e5f6-a7b8-c9d0-e1f2a3b4c5d6',
+    };
+    const calldata = getCreateDaoSpaceCalldata(args);
+    expect(calldata).toBeTypeOf('string');
+    expect(calldata.startsWith('0x')).toBe(true);
+  });
+
+  it('should throw for invalid initialTopicId', () => {
+    const args = {
+      ...validArgs,
+      initialTopicId: 'not-a-uuid',
+    };
+    expect(() => getCreateDaoSpaceCalldata(args)).toThrow(
+      'initialTopicId must be a valid UUID (32 hex chars or 8-4-4-4-12 dashed format)',
+    );
+  });
+
+  it('should throw for initialTopicId that is too short', () => {
+    const args = {
+      ...validArgs,
+      initialTopicId: 'a1b2c3d4',
+    };
+    expect(() => getCreateDaoSpaceCalldata(args)).toThrow(
+      'initialTopicId must be a valid UUID (32 hex chars or 8-4-4-4-12 dashed format)',
+    );
+  });
+
+  it('should generate different calldata with and without initialTopicId', () => {
+    const calldataWithout = getCreateDaoSpaceCalldata(validArgs);
+    const calldataWith = getCreateDaoSpaceCalldata({
+      ...validArgs,
+      initialTopicId: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6',
+    });
+    expect(calldataWithout).not.toBe(calldataWith);
+  });
 });
