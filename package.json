@@ -23,6 +23,7 @@
     "test": "vitest",
     "lint": "biome check",
     "lint:fix": "biome check --write --unsafe",
+    "create-private-key": "node --experimental-strip-types create-private-key.ts",
     "deploy": "pnpm clean && pnpm build && pnpm changeset publish",
     "bump": "pnpm changeset version"
   },

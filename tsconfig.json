@@ -38,5 +38,6 @@
 
     /* When building a library in a monorepo */
     "declarationMap": true
-  }
+  },
+  "exclude": ["dist", "create-private-key.ts"]
 }

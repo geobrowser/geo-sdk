@@ -8,7 +8,11 @@
       "Bash(ls:*)",
       "Bash(grep:*)",
       "Bash(node:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(python3:*)",
+      "WebSearch",
+      "Bash(pnpm create-private-key:*)",
+      "Bash(pnpm clean:*)"
     ]
   }
 }
