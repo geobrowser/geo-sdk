@@ -6,7 +6,17 @@ const account = privateKeyToAccount(privateKey);
 
 const envContent = `PRIVATE_KEY=${privateKey}\nADDRESS=${account.address}\n`;
 
-fs.writeFileSync('.env', envContent);
+try {
+  fs.writeFileSync('.env', envContent, { flag: 'wx', mode: 0o600 });
+} catch (error) {
+  const err = error as NodeJS.ErrnoException;
+  if (err.code === 'EEXIST') {
+    console.error('Error: .env file already exists. Aborting to avoid overwriting it.');
+    process.exitCode = 1;
+  } else {
+    throw error;
+  }
+}
 
 console.log('Created .env file with:');
 console.log(`  ADDRESS=${account.address}`);
