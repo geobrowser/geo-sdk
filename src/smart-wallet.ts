@@ -18,10 +18,16 @@ const DEFAULT_API_KEY = 'pim_KqHm63txxhbCYjdDaWaHqH';
 
 /**
  * Custom Safe contract addresses for Geo Testnet.
- * The canonical Safe addresses are not deployed on the Geo Testnet chain,
- * so we use these custom deployments instead.
+ *
+ * Safe uses deterministic deployment so the canonical addresses are the same on
+ * every chain. On Geo Mainnet (80451) those canonical addresses exist, so the
+ * permissionless library's defaults work. On Geo Testnet (19411) the canonical
+ * deployer was never run — the Safe contracts were deployed separately and
+ * landed at different addresses. We pass them explicitly to toSafeSmartAccount.
+ *
+ * Source of truth: curator-app packages/curator-utils/src/utils/smart-account-constants.ts
  */
-const GEO_TESTNET_SAFE_ADDRESSES = {
+export const GEO_TESTNET_SAFE_ADDRESSES = {
   safeModuleSetupAddress: '0x2dd68b007B46fBe91B9A7c3EDa5A7a1063cB5b47' as Hex,
   safe4337ModuleAddress: '0x75cf11467937ce3F2f357CE24ffc3DBF8fD5c226' as Hex,
   safeProxyFactoryAddress: '0xd9d2Ba03a7754250FDD71333F444636471CACBC4' as Hex,
