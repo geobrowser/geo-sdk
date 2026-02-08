@@ -283,10 +283,8 @@ import {
   toHex,
 } from "viem";
 import { SpaceRegistryAbi, getWalletClient } from "@geoprotocol/geo-sdk";
+import { TESTNET } from "@geoprotocol/geo-sdk/contracts";
 
-// Contract addresses for testnet
-const SPACE_REGISTRY_ADDRESS =
-  "0xB01683b2f0d38d43fcD4D9aAB980166988924132" as const;
 const EDITS_PUBLISHED = keccak256(toHex("GOVERNANCE.EDITS_PUBLISHED"));
 
 // You'll need your space ID in hex format (bytes16) and an IPFS CID
@@ -315,7 +313,7 @@ const calldata = encodeFunctionData({
 
 const txResult = await walletClient.sendTransaction({
   account: walletClient.account,
-  to: SPACE_REGISTRY_ADDRESS,
+  to: TESTNET.SPACE_REGISTRY_ADDRESS,
   value: 0n,
   data: calldata,
 });
@@ -416,9 +414,88 @@ const txHash = await walletClient.sendTransaction({
 });
 ```
 
-## Full Publishing Flow
+## Full Publishing Flow with Smart Account
 
-This example shows the complete flow for creating a personal space and publishing an edit on testnet using the `personalSpace` module.
+This example shows the complete flow for publishing an edit using a Geo smart account (Safe with Pimlico paymaster) on testnet. Gas is sponsored, so no testnet ETH is required.
+
+The smart account address must already have a personal space. You can create one via the [Geo Genesis browser](https://www.geobrowser.io).
+
+```ts
+import { createPublicClient, type Hex, http } from "viem";
+import {
+  Graph,
+  personalSpace,
+  getSmartAccountWalletClient,
+  SpaceRegistryAbi,
+  TESTNET_RPC_URL,
+} from "@geoprotocol/geo-sdk";
+import { TESTNET } from "@geoprotocol/geo-sdk/contracts";
+
+// IMPORTANT: Be careful with your private key. Don't commit it to version control.
+// You can get your private key using https://www.geobrowser.io/export-wallet
+const privateKey = `0x${privateKeyFromGeoWallet}` as `0x${string}`;
+
+// Get smart account wallet client (Safe + Pimlico paymaster)
+const smartAccount = await getSmartAccountWalletClient({ privateKey });
+const smartAccountAddress = smartAccount.account.address;
+
+// Check if a personal space exists for this smart account address
+const hasExistingSpace = await personalSpace.hasSpace({
+  address: smartAccountAddress,
+});
+if (!hasExistingSpace) {
+  throw new Error("No personal space found for this smart account address.");
+}
+
+const publicClient = createPublicClient({
+  transport: http(TESTNET_RPC_URL),
+});
+
+// Look up the space ID for this smart account address
+const spaceIdHex = (await publicClient.readContract({
+  address: TESTNET.SPACE_REGISTRY_ADDRESS,
+  abi: SpaceRegistryAbi,
+  functionName: "addressToSpaceId",
+  args: [smartAccountAddress],
+})) as Hex;
+
+// Convert bytes16 hex to UUID string (without dashes)
+const spaceId = spaceIdHex.slice(2, 34).toLowerCase();
+console.log("spaceId", spaceId);
+
+// Create an entity
+const { ops, id: entityId } = Graph.createEntity({
+  name: "Test Entity",
+});
+console.log("entityId", entityId);
+
+// Publish to IPFS and get calldata for on-chain submission
+const { cid, editId, to, calldata } = await personalSpace.publishEdit({
+  name: "Test Edit",
+  spaceId,
+  ops,
+  author: smartAccountAddress,
+  network: "TESTNET",
+});
+console.log("cid", cid);
+console.log("editId", editId);
+
+// Send transaction via smart account (account and chain are baked in)
+const txHash = await smartAccount.sendTransaction({
+  to,
+  data: calldata,
+});
+console.log("txHash", txHash);
+
+const receipt = await publicClient.waitForTransactionReceipt({
+  hash: txHash,
+});
+console.log("Successfully published edit to space", spaceId);
+```
+
+## Full Publishing Flow (EOA Wallet)
+
+This example shows the complete flow for creating a personal space and publishing an edit on testnet using the `personalSpace` module with an EOA wallet.
 
 ```ts
 import { createPublicClient, type Hex, http } from "viem";
@@ -428,11 +505,9 @@ import {
   personalSpace,
   getWalletClient,
   SpaceRegistryAbi,
+  TESTNET_RPC_URL,
 } from "@geoprotocol/geo-sdk";
-
-const SPACE_REGISTRY_ADDRESS =
-  "0xB01683b2f0d38d43fcD4D9aAB980166988924132" as const;
-const EMPTY_SPACE_ID = "0x00000000000000000000000000000000" as Hex;
+import { TESTNET } from "@geoprotocol/geo-sdk/contracts";
 
 // IMPORTANT: Be careful with your private key. Don't commit it to version control.
 // You can get your private key using https://www.geobrowser.io/export-wallet
@@ -447,22 +522,18 @@ const walletClient = await getWalletClient({
 });
 
 const account = walletClient.account;
-const rpcUrl = walletClient.chain?.rpcUrls?.default?.http?.[0];
 
 const publicClient = createPublicClient({
-  transport: http(rpcUrl),
+  transport: http(TESTNET_RPC_URL),
 });
 
 // Check if a personal space already exists for this address
-let spaceIdHex = (await publicClient.readContract({
-  address: SPACE_REGISTRY_ADDRESS,
-  abi: SpaceRegistryAbi,
-  functionName: "addressToSpaceId",
-  args: [account.address],
-})) as Hex;
+const hasExistingSpace = await personalSpace.hasSpace({
+  address: account.address,
+});
 
 // Create a personal space if one doesn't exist
-if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
+if (!hasExistingSpace) {
   console.log("Creating personal space...");
 
   const { to, calldata } = personalSpace.createSpace();
@@ -474,15 +545,15 @@ if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
   });
 
   await publicClient.waitForTransactionReceipt({ hash: createSpaceTxHash });
-
-  // Re-fetch the space ID after creation
-  spaceIdHex = (await publicClient.readContract({
-    address: SPACE_REGISTRY_ADDRESS,
-    abi: SpaceRegistryAbi,
-    functionName: "addressToSpaceId",
-    args: [account.address],
-  })) as Hex;
 }
+
+// Look up the space ID
+const spaceIdHex = (await publicClient.readContract({
+  address: TESTNET.SPACE_REGISTRY_ADDRESS,
+  abi: SpaceRegistryAbi,
+  functionName: "addressToSpaceId",
+  args: [account.address],
+})) as Hex;
 
 // Convert bytes16 hex to UUID string (without dashes)
 const spaceId = spaceIdHex.slice(2, 34).toLowerCase();
@@ -516,84 +587,6 @@ console.log("publishTxHash", publishTxHash);
 
 const publishReceipt = await publicClient.waitForTransactionReceipt({
   hash: publishTxHash,
-});
-console.log("Successfully published edit to space", spaceId);
-```
-
-## Full Publishing Flow with Smart Account
-
-This example shows the complete flow for publishing an edit using a Geo smart account (Safe with Pimlico paymaster) on testnet. Gas is sponsored, so no testnet ETH is required.
-
-The smart account address must already have a personal space. You can create one via the [Geo Genesis browser](https://www.geobrowser.io).
-
-```ts
-import { createPublicClient, type Hex, http } from "viem";
-import {
-  Graph,
-  personalSpace,
-  getSmartAccountWalletClient,
-  SpaceRegistryAbi,
-} from "@geoprotocol/geo-sdk";
-
-const SPACE_REGISTRY_ADDRESS =
-  "0xB01683b2f0d38d43fcD4D9aAB980166988924132" as const;
-const EMPTY_SPACE_ID = "0x00000000000000000000000000000000" as Hex;
-const TESTNET_RPC_URL = "https://rpc-geo-test-zc16z3tcvf.t.conduit.xyz";
-
-// IMPORTANT: Be careful with your private key. Don't commit it to version control.
-// You can get your private key using https://www.geobrowser.io/export-wallet
-const privateKey = `0x${privateKeyFromGeoWallet}` as `0x${string}`;
-
-// Get smart account wallet client (Safe + Pimlico paymaster)
-const smartAccount = await getSmartAccountWalletClient({ privateKey });
-const smartAccountAddress = smartAccount.account.address;
-
-const publicClient = createPublicClient({
-  transport: http(TESTNET_RPC_URL),
-});
-
-// Look up the personal space for this smart account address
-const spaceIdHex = (await publicClient.readContract({
-  address: SPACE_REGISTRY_ADDRESS,
-  abi: SpaceRegistryAbi,
-  functionName: "addressToSpaceId",
-  args: [smartAccountAddress],
-})) as Hex;
-
-if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
-  throw new Error("No personal space found for this smart account address.");
-}
-
-// Convert bytes16 hex to UUID string (without dashes)
-const spaceId = spaceIdHex.slice(2, 34).toLowerCase();
-console.log("spaceId", spaceId);
-
-// Create an entity
-const { ops, id: entityId } = Graph.createEntity({
-  name: "Test Entity",
-});
-console.log("entityId", entityId);
-
-// Publish to IPFS and get calldata for on-chain submission
-const { cid, editId, to, calldata } = await personalSpace.publishEdit({
-  name: "Test Edit",
-  spaceId,
-  ops,
-  author: smartAccountAddress,
-  network: "TESTNET",
-});
-console.log("cid", cid);
-console.log("editId", editId);
-
-// Send transaction via smart account (account and chain are baked in)
-const txHash = await smartAccount.sendTransaction({
-  to,
-  data: calldata,
-});
-console.log("txHash", txHash);
-
-const receipt = await publicClient.waitForTransactionReceipt({
-  hash: txHash,
 });
 console.log("Successfully published edit to space", spaceId);
 ```

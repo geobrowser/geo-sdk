@@ -65,6 +65,7 @@ export { GraphUrl } from './src/scheme.js';
 export {
   getSmartAccountWalletClient,
   getWalletClient,
+  TESTNET_RPC_URL,
 } from './src/smart-wallet.js';
 
 /**

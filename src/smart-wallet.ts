@@ -8,7 +8,7 @@ import { privateKeyToAccount } from 'viem/accounts';
 import type { GeoSmartAccount } from './types.js';
 
 const MAINNET_DEFAULT_RPC_URL = 'https://rpc-geo-genesis-h0q2s21xx8.t.conduit.xyz';
-const TESTNET_DEFAULT_RPC_URL = 'https://rpc-geo-test-zc16z3tcvf.t.conduit.xyz';
+export const TESTNET_RPC_URL = 'https://rpc-geo-test-zc16z3tcvf.t.conduit.xyz';
 
 /**
  * We provide a fallback API key for gas sponsorship for the duration of the
@@ -52,10 +52,10 @@ const createChain = (network: 'TESTNET' | 'MAINNET', rpcUrl: string) => {
     },
     rpcUrls: {
       default: {
-        http: [rpcUrl ?? (network === 'TESTNET' ? TESTNET_DEFAULT_RPC_URL : MAINNET_DEFAULT_RPC_URL)],
+        http: [rpcUrl ?? (network === 'TESTNET' ? TESTNET_RPC_URL : MAINNET_DEFAULT_RPC_URL)],
       },
       public: {
-        http: [rpcUrl ?? (network === 'TESTNET' ? TESTNET_DEFAULT_RPC_URL : MAINNET_DEFAULT_RPC_URL)],
+        http: [rpcUrl ?? (network === 'TESTNET' ? TESTNET_RPC_URL : MAINNET_DEFAULT_RPC_URL)],
       },
     },
   };
@@ -82,7 +82,7 @@ const createChain = (network: 'TESTNET' | 'MAINNET', rpcUrl: string) => {
  */
 export const getSmartAccountWalletClient = async ({
   privateKey,
-  rpcUrl = TESTNET_DEFAULT_RPC_URL,
+  rpcUrl = TESTNET_RPC_URL,
 }: GetSmartAccountWalletClientParams): Promise<GeoSmartAccount> => {
   const chain = createChain('TESTNET', rpcUrl);
   const transport = http(rpcUrl);
@@ -131,7 +131,7 @@ export const getSmartAccountWalletClient = async ({
 
 export const getWalletClient = async ({
   privateKey,
-  rpcUrl = TESTNET_DEFAULT_RPC_URL,
+  rpcUrl = TESTNET_RPC_URL,
 }: GetSmartAccountWalletClientParams): Promise<WalletClient> => {
   const chain = createChain('TESTNET', rpcUrl);
   const transport = http(rpcUrl);

@@ -1,15 +1,11 @@
 import { createPublicClient, type Hex, http } from 'viem';
 import { it } from 'vitest';
 
+import { TESTNET } from '../contracts.js';
 import { SpaceRegistryAbi } from './abis/index.js';
 import { createEntity } from './graph/create-entity.js';
 import * as personalSpace from './personal-space/index.js';
-import { getSmartAccountWalletClient } from './smart-wallet.js';
-
-// Contract addresses for testnet
-const SPACE_REGISTRY_ADDRESS = '0xB01683b2f0d38d43fcD4D9aAB980166988924132' as const;
-const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
-const TESTNET_RPC_URL = 'https://rpc-geo-test-zc16z3tcvf.t.conduit.xyz';
+import { getSmartAccountWalletClient, TESTNET_RPC_URL } from './smart-wallet.js';
 
 /**
  * Converts a bytes16 hex space ID to a UUID string (without dashes).
@@ -37,18 +33,17 @@ it.skip('should publish an edit to personal space via smart account', async () =
   });
 
   // Check if a personal space exists for this smart account address
+  const hasExistingSpace = await personalSpace.hasSpace({ address: smartAccountAddress });
+  if (!hasExistingSpace) {
+    throw new Error(`No personal space found for smart account address ${smartAccountAddress}. Create one first.`);
+  }
+
   const spaceIdHex = (await publicClient.readContract({
-    address: SPACE_REGISTRY_ADDRESS,
+    address: TESTNET.SPACE_REGISTRY_ADDRESS,
     abi: SpaceRegistryAbi,
     functionName: 'addressToSpaceId',
     args: [smartAccountAddress],
   })) as Hex;
-
-  console.log('spaceIdHex', spaceIdHex);
-
-  if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
-    throw new Error(`No personal space found for smart account address ${smartAccountAddress}. Create one first.`);
-  }
 
   const spaceId = hexToUuid(spaceIdHex);
   console.log('spaceId (UUID)', spaceId);

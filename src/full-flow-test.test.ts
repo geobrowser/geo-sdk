@@ -2,17 +2,15 @@ import { createPublicClient, type Hex, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { it } from 'vitest';
 
+import { TESTNET } from '../contracts.js';
 import { SpaceRegistryAbi } from './abis/index.js';
 import { DESCRIPTION_PROPERTY } from './core/ids/system.js';
 import * as daoSpace from './dao-space/index.js';
 import { createEntity } from './graph/create-entity.js';
 import { updateEntity } from './graph/update-entity.js';
 import * as personalSpace from './personal-space/index.js';
-import { getWalletClient } from './smart-wallet.js';
+import { getWalletClient, TESTNET_RPC_URL } from './smart-wallet.js';
 
-// Contract addresses for testnet
-const SPACE_REGISTRY_ADDRESS = '0xB01683b2f0d38d43fcD4D9aAB980166988924132' as const;
-const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Hex;
 
 /**
@@ -44,27 +42,14 @@ it.skip('should create a space and publish an edit', async () => {
   }
 
   // Create a public client for reading contract state
-  const rpcUrl = walletClient.chain?.rpcUrls?.default?.http?.[0];
-  if (!rpcUrl) {
-    throw new Error('Wallet client RPC URL is undefined');
-  }
-
   const publicClient = createPublicClient({
-    transport: http(rpcUrl),
+    transport: http(TESTNET_RPC_URL),
   });
 
   // Check if a personal space already exists for this address
-  let spaceIdHex = (await publicClient.readContract({
-    address: SPACE_REGISTRY_ADDRESS,
-    abi: SpaceRegistryAbi,
-    functionName: 'addressToSpaceId',
-    args: [account.address],
-  })) as Hex;
+  const hasExistingSpace = await personalSpace.hasSpace({ address: account.address });
 
-  console.log('existing spaceIdHex', spaceIdHex);
-
-  // Create a personal space if one doesn't exist
-  if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
+  if (!hasExistingSpace) {
     console.log('Creating personal space...');
 
     const { to, calldata } = personalSpace.createSpace();
@@ -80,28 +65,27 @@ it.skip('should create a space and publish an edit', async () => {
     console.log('createSpaceTxHash', createSpaceTxHash);
 
     await publicClient.waitForTransactionReceipt({ hash: createSpaceTxHash });
-
-    // Re-fetch the space ID after creation
-    spaceIdHex = (await publicClient.readContract({
-      address: SPACE_REGISTRY_ADDRESS,
-      abi: SpaceRegistryAbi,
-      functionName: 'addressToSpaceId',
-      args: [account.address],
-    })) as Hex;
-
-    console.log('new spaceIdHex', spaceIdHex);
   }
 
-  if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
+  // Verify space exists after potential creation
+  const hasSpaceNow = await personalSpace.hasSpace({ address: account.address });
+  if (!hasSpaceNow) {
     throw new Error(`Failed to create personal space for address ${account.address}`);
   }
+
+  const spaceIdHex = (await publicClient.readContract({
+    address: TESTNET.SPACE_REGISTRY_ADDRESS,
+    abi: SpaceRegistryAbi,
+    functionName: 'addressToSpaceId',
+    args: [account.address],
+  })) as Hex;
 
   const spaceId = hexToUuid(spaceIdHex);
   console.log('spaceId (UUID)', spaceId);
 
   // Verify the space address exists
   const spaceAddress = (await publicClient.readContract({
-    address: SPACE_REGISTRY_ADDRESS,
+    address: TESTNET.SPACE_REGISTRY_ADDRESS,
     abi: SpaceRegistryAbi,
     functionName: 'spaceIdToAddress',
     args: [spaceIdHex],
@@ -187,27 +171,14 @@ it.skip('should create a DAO space and propose an edit', async () => {
   }
 
   // Create a public client for reading contract state
-  const rpcUrl = walletClient.chain?.rpcUrls?.default?.http?.[0];
-  if (!rpcUrl) {
-    throw new Error('Wallet client RPC URL is undefined');
-  }
-
   const publicClient = createPublicClient({
-    transport: http(rpcUrl),
+    transport: http(TESTNET_RPC_URL),
   });
 
   // Check if a personal space already exists for this address
-  let spaceIdHex = (await publicClient.readContract({
-    address: SPACE_REGISTRY_ADDRESS,
-    abi: SpaceRegistryAbi,
-    functionName: 'addressToSpaceId',
-    args: [account.address],
-  })) as Hex;
+  const hasExistingSpace = await personalSpace.hasSpace({ address: account.address });
 
-  console.log('existing spaceIdHex', spaceIdHex);
-
-  // Create a personal space if one doesn't exist (required to be an editor)
-  if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
+  if (!hasExistingSpace) {
     console.log('Creating personal space (required to be a DAO editor)...');
 
     const { to, calldata } = personalSpace.createSpace();
@@ -223,21 +194,20 @@ it.skip('should create a DAO space and propose an edit', async () => {
     console.log('createSpaceTxHash', createSpaceTxHash);
 
     await publicClient.waitForTransactionReceipt({ hash: createSpaceTxHash });
-
-    // Re-fetch the space ID after creation
-    spaceIdHex = (await publicClient.readContract({
-      address: SPACE_REGISTRY_ADDRESS,
-      abi: SpaceRegistryAbi,
-      functionName: 'addressToSpaceId',
-      args: [account.address],
-    })) as Hex;
-
-    console.log('new spaceIdHex', spaceIdHex);
   }
 
-  if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
+  // Verify space exists after potential creation
+  const hasSpaceNow = await personalSpace.hasSpace({ address: account.address });
+  if (!hasSpaceNow) {
     throw new Error(`Failed to create personal space for address ${account.address}`);
   }
+
+  const spaceIdHex = (await publicClient.readContract({
+    address: TESTNET.SPACE_REGISTRY_ADDRESS,
+    abi: SpaceRegistryAbi,
+    functionName: 'addressToSpaceId',
+    args: [account.address],
+  })) as Hex;
 
   console.log('Personal space ID (to use as editor):', spaceIdHex);
 
@@ -294,7 +264,7 @@ it.skip('should create a DAO space and propose an edit', async () => {
 
   // Get the DAO space ID from the registry
   const daoSpaceIdHex = (await publicClient.readContract({
-    address: SPACE_REGISTRY_ADDRESS,
+    address: TESTNET.SPACE_REGISTRY_ADDRESS,
     abi: SpaceRegistryAbi,
     functionName: 'addressToSpaceId',
     args: [daoSpaceAddress],
@@ -302,7 +272,8 @@ it.skip('should create a DAO space and propose an edit', async () => {
 
   console.log('daoSpaceIdHex:', daoSpaceIdHex);
 
-  if (daoSpaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
+  const hasDaoSpace = await personalSpace.hasSpace({ address: daoSpaceAddress });
+  if (!hasDaoSpace) {
     throw new Error('DAO space was not registered in the Space Registry');
   }
 
