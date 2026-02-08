@@ -7,7 +7,7 @@ import { entryPoint07Address } from 'viem/account-abstraction';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { GeoSmartAccount } from './types.js';
 
-const MAINNET_DEFAULT_RPC_URL = 'https://rpc-geo-genesis-h0q2s21xx8.t.conduit.xyz';
+const _MAINNET_DEFAULT_RPC_URL = 'https://rpc-geo-genesis-h0q2s21xx8.t.conduit.xyz';
 export const TESTNET_RPC_URL = 'https://rpc-geo-test-zc16z3tcvf.t.conduit.xyz';
 
 /**
@@ -52,10 +52,10 @@ const createChain = (network: 'TESTNET' | 'MAINNET', rpcUrl: string) => {
     },
     rpcUrls: {
       default: {
-        http: [rpcUrl ?? (network === 'TESTNET' ? TESTNET_RPC_URL : MAINNET_DEFAULT_RPC_URL)],
+        http: [rpcUrl],
       },
       public: {
-        http: [rpcUrl ?? (network === 'TESTNET' ? TESTNET_RPC_URL : MAINNET_DEFAULT_RPC_URL)],
+        http: [rpcUrl],
       },
     },
   };
