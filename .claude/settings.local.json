@@ -12,7 +12,8 @@
       "Bash(python3:*)",
       "WebSearch",
       "Bash(pnpm create-private-key:*)",
-      "Bash(pnpm clean:*)"
+      "Bash(pnpm clean:*)",
+      "Bash(curl:*)"
     ]
   }
 }
