@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TESTNET } from '../../contracts.js';
 import { createEntity } from '../graph/create-entity.js';
+import { generate } from '../id-utils.js';
 import { proposeEdit } from './propose-edit.js';
 
 describe('proposeEdit', () => {
@@ -9,7 +10,7 @@ describe('proposeEdit', () => {
   const validCallerSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validDaoSpaceId = '0xabcdef12345678901234567890abcdef' as const;
   const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
-  const validAuthor = '0x0000000000000000000000000000000000000000' as const;
+  const validAuthor = generate();
 
   it('should return correct structure', async () => {
     const { ops } = createEntity({ name: 'Test Entity' });

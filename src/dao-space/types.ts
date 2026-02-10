@@ -12,8 +12,8 @@ export type CreateSpaceParams = {
   initialEditorSpaceIds: `0x${string}`[];
   /** Space IDs of initial members (can be empty). Must be bytes16 hex strings. */
   initialMemberSpaceIds?: `0x${string}`[];
-  /** Author address for the initial edit */
-  author: `0x${string}`;
+  /** The author's personal space ID (UUID). */
+  author: Id | string;
   /** Additional ops to include in the initial edit (optional) */
   ops?: Op[];
   /** Initial topic ID as UUID string (optional - if provided, declares a topic on creation) */
@@ -43,8 +43,8 @@ export type ProposeEditParams = {
   name: string;
   /** The ops to include in the edit */
   ops: Op[];
-  /** Author address for the edit */
-  author: `0x${string}`;
+  /** The author's personal space ID (UUID). */
+  author: Id | string;
   /**
    * The DAO space contract address.
    * This is the target of the publish() call in the proposal.

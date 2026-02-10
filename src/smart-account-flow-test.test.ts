@@ -60,7 +60,7 @@ it.skip('should publish an edit to personal space via smart account', async () =
     name: 'Smart Account Test Edit',
     spaceId,
     ops,
-    author: smartAccountAddress,
+    author: spaceId,
     network: 'TESTNET',
   });
 

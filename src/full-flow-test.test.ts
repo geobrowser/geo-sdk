@@ -118,7 +118,7 @@ it.skip('should create a space and publish an edit', async () => {
     name: 'Test Edit',
     spaceId,
     ops: allOps,
-    author: account.address,
+    author: spaceId,
     network: 'TESTNET',
   });
 
@@ -222,7 +222,7 @@ it.skip('should create a DAO space and propose an edit', async () => {
       durationInDays: 2, // 2 day voting period (minimum)
     },
     initialEditorSpaceIds: [spaceIdHex],
-    author: account.address,
+    author: hexToUuid(spaceIdHex),
   });
 
   console.log('spaceEntityId:', spaceEntityId);
@@ -287,6 +287,8 @@ it.skip('should create a DAO space and propose an edit', async () => {
 
   console.log('entityId:', entityId);
 
+  const personalSpaceId = hexToUuid(spaceIdHex);
+
   const {
     editId,
     cid: proposalCid,
@@ -296,7 +298,7 @@ it.skip('should create a DAO space and propose an edit', async () => {
   } = await daoSpace.proposeEdit({
     name: 'Add new entity to DAO space',
     ops,
-    author: account.address,
+    author: personalSpaceId,
     daoSpaceAddress,
     callerSpaceId: spaceIdHex,
     daoSpaceId: daoSpaceIdHex,

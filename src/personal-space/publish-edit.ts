@@ -48,7 +48,7 @@ function spaceIdToBytes16(spaceId: string): `0x${string}` {
  *   name: 'Add entity',
  *   spaceId: 'your-space-id',
  *   ops,
- *   author: '0x...',
+ *   author: 'your-personal-space-id',
  * });
  *
  * await walletClient.sendTransaction({ to, data: calldata });
