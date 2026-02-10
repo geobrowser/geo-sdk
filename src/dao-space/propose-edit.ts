@@ -3,6 +3,7 @@ import { encodeAbiParameters, encodeFunctionData } from 'viem';
 
 import { TESTNET } from '../../contracts.js';
 import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
+import { assertValid } from '../id-utils.js';
 import * as Ipfs from '../ipfs.js';
 import {
   bytes16ToBytes32LeftAligned,
@@ -37,7 +38,7 @@ import type { ProposeEditParams, ProposeEditResult } from './types.js';
  * const { editId, cid, to, calldata, proposalId } = await daoSpace.proposeEdit({
  *   name: 'Add new entity',
  *   ops,
- *   author: 'your-personal-space-id',
+ *   author: 'your-person-entity-id',
  *   daoSpaceAddress: '0xDAOSpaceContractAddress...',
  *   callerSpaceId: '0xCallerBytes16SpaceId...',
  *   daoSpaceId: '0xDAOBytes16SpaceId...',
@@ -60,7 +61,8 @@ export async function proposeEdit(params: ProposeEditParams): Promise<ProposeEdi
     network = 'TESTNET',
   } = params;
 
-  // Validate space IDs
+  // Validate inputs
+  assertValid(author, '`author` in `proposeEdit`');
   if (!isBytes16Hex(callerSpaceId)) {
     throw new Error(`callerSpaceId must be bytes16 hex (0x followed by 32 hex chars). Received: ${callerSpaceId}`);
   }

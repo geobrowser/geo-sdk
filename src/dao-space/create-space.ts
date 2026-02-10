@@ -33,7 +33,7 @@ import type { CreateSpaceParams, CreateSpaceResult } from './types.js';
  *     durationInDays: 7,                // 7 day voting period
  *   },
  *   initialEditorSpaceIds: ['0x01234567890abcdef01234567890abcd'],
- *   author: 'your-personal-space-id',
+ *   author: 'your-person-entity-id',
  * });
  *
  * // Using viem

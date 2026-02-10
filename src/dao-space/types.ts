@@ -12,7 +12,7 @@ export type CreateSpaceParams = {
   initialEditorSpaceIds: `0x${string}`[];
   /** Space IDs of initial members (can be empty). Must be bytes16 hex strings. */
   initialMemberSpaceIds?: `0x${string}`[];
-  /** The author's personal space ID (UUID). */
+  /** The author's Person Entity ID (UUID). */
   author: Id | string;
   /** Additional ops to include in the initial edit (optional) */
   ops?: Op[];
@@ -43,7 +43,7 @@ export type ProposeEditParams = {
   name: string;
   /** The ops to include in the edit */
   ops: Op[];
-  /** The author's personal space ID (UUID). */
+  /** The author's Person Entity ID (UUID). */
   author: Id | string;
   /**
    * The DAO space contract address.

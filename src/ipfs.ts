@@ -12,7 +12,7 @@ import { imageSize } from 'image-size';
 
 import { getApiOrigin } from './graph/constants.js';
 import type { Id } from './id.js';
-import { fromBytes, toGrcId } from './id-utils.js';
+import { assertValid, fromBytes, toGrcId } from './id-utils.js';
 import type { Network } from './types.js';
 
 class IpfsUploadError extends Error {
@@ -22,7 +22,7 @@ class IpfsUploadError extends Error {
 type PublishEditProposalParams = {
   name: string;
   ops: Op[];
-  /** The author's personal space ID (UUID). Used as the `authors` field in the proto Edit message. */
+  /** The author's Person Entity ID (UUID). Used as the `authors` field in the proto Edit message. */
   author: Id | string;
   network?: Network;
 };
@@ -44,7 +44,7 @@ type PublishEditResult = {
  * const { cid, editId } = await IPFS.publishEdit({
  *   name: 'Edit name',
  *   ops: ops,
- *   author: 'your-personal-space-id',
+ *   author: 'your-person-entity-id',
  * });
  * ```
  *
@@ -53,6 +53,8 @@ type PublishEditResult = {
  */
 export async function publishEdit(args: PublishEditProposalParams): Promise<PublishEditResult> {
   const { name, ops, author, network = 'TESTNET' } = args;
+
+  assertValid(author, '`author` in `publishEdit`');
 
   // Generate a new edit ID
   const editId = randomId();
