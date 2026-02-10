@@ -10,6 +10,8 @@ import { updateRelation } from './graph/update-relation.js';
 import { generate } from './id-utils.js';
 import { publishEdit } from './ipfs.js';
 
+const TEST_AUTHOR_SPACE_ID = generate();
+
 describe('publishEdit', () => {
   it('full flow with createEntity', async () => {
     const { ops } = createEntity({
@@ -27,7 +29,7 @@ describe('publishEdit', () => {
     const { cid, editId } = await publishEdit({
       name: 'test',
       ops,
-      author: '0x000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
       network: 'TESTNET',
     });
 
@@ -47,7 +49,7 @@ describe('publishEdit', () => {
     const { cid, editId } = await publishEdit({
       name: 'update test',
       ops,
-      author: '0x000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
       network: 'TESTNET',
     });
 
@@ -67,7 +69,7 @@ describe('publishEdit', () => {
     const { cid, editId } = await publishEdit({
       name: 'relation test',
       ops,
-      author: '0x000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
       network: 'TESTNET',
     });
 
@@ -82,7 +84,7 @@ describe('publishEdit', () => {
     const { cid, editId } = await publishEdit({
       name: 'delete relation test',
       ops,
-      author: '0x000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
       network: 'TESTNET',
     });
 
@@ -100,7 +102,7 @@ describe('publishEdit', () => {
     const { cid, editId } = await publishEdit({
       name: 'update relation test',
       ops,
-      author: '0x000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
       network: 'TESTNET',
     });
 
@@ -134,7 +136,7 @@ describe('publishEdit', () => {
     const { cid, editId } = await publishEdit({
       name: 'all value types test',
       ops,
-      author: '0x000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
       network: 'TESTNET',
     });
 
@@ -156,7 +158,7 @@ describe('publishEdit', () => {
     const { cid, editId } = await publishEdit({
       name: 'multiple ops test',
       ops,
-      author: '0x000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
       network: 'TESTNET',
     });
 

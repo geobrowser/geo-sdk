@@ -5,39 +5,25 @@
  * @since 0.1.1
  */
 
-import {
-  derivedUuidFromString,
-  encodeEdit,
-  type Edit as GrcEdit,
-  type Id as GrcId,
-  type Op,
-  randomId,
-} from '@geoprotocol/grc-20';
+import { encodeEdit, type Edit as GrcEdit, type Op, randomId } from '@geoprotocol/grc-20';
 import { Micro } from 'effect';
 import { gzipSync } from 'fflate';
 import { imageSize } from 'image-size';
 
 import { getApiOrigin } from './graph/constants.js';
 import type { Id } from './id.js';
-import { fromBytes } from './id-utils.js';
+import { assertValid, fromBytes, toGrcId } from './id-utils.js';
 import type { Network } from './types.js';
 
 class IpfsUploadError extends Error {
   readonly _tag = 'IpfsUploadError';
 }
 
-/**
- * Converts a hex string (like an ethereum address) to a GRC-20 Id.
- * Uses derived UUID since ethereum addresses (20 bytes) don't fit directly into UUIDs (16 bytes).
- */
-function hexToGrcId(hex: `0x${string}`): GrcId {
-  return derivedUuidFromString(hex);
-}
-
 type PublishEditProposalParams = {
   name: string;
   ops: Op[];
-  author: `0x${string}`;
+  /** The author's Person Entity ID (UUID). Used as the `authors` field in the proto Edit message. */
+  author: Id | string;
   network?: Network;
 };
 
@@ -58,7 +44,7 @@ type PublishEditResult = {
  * const { cid, editId } = await IPFS.publishEdit({
  *   name: 'Edit name',
  *   ops: ops,
- *   author: '0x000000000000000000000000000000000000',
+ *   author: 'your-person-entity-id',
  * });
  * ```
  *
@@ -68,6 +54,8 @@ type PublishEditResult = {
 export async function publishEdit(args: PublishEditProposalParams): Promise<PublishEditResult> {
   const { name, ops, author, network = 'TESTNET' } = args;
 
+  assertValid(author, '`author` in `publishEdit`');
+
   // Generate a new edit ID
   const editId = randomId();
 
@@ -75,7 +63,7 @@ export async function publishEdit(args: PublishEditProposalParams): Promise<Publ
   const grcEdit: GrcEdit = {
     id: editId,
     name,
-    authors: [hexToGrcId(author)],
+    authors: [toGrcId(author)],
     createdAt: BigInt(Date.now()) * 1000n, // Convert to microseconds
     ops,
   };

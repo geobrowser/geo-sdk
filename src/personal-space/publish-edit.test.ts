@@ -5,6 +5,8 @@ import { createEntity } from '../graph/create-entity.js';
 import { generate } from '../id-utils.js';
 import { publishEdit } from './publish-edit.js';
 
+const TEST_AUTHOR_SPACE_ID = generate();
+
 describe('publishEdit', () => {
   it('should return correct structure', async () => {
     const spaceId = '0eed5491b917cf58b33ac81255fe7ae9';
@@ -14,7 +16,7 @@ describe('publishEdit', () => {
       name: 'Test Edit',
       spaceId,
       ops,
-      author: '0x0000000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
     });
 
     expect(result).toHaveProperty('editId');
@@ -31,7 +33,7 @@ describe('publishEdit', () => {
       name: 'Test Edit',
       spaceId,
       ops,
-      author: '0x0000000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
     });
 
     expect(to).toBe(TESTNET.SPACE_REGISTRY_ADDRESS);
@@ -45,7 +47,7 @@ describe('publishEdit', () => {
       name: 'Test Edit',
       spaceId,
       ops,
-      author: '0x0000000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
     });
 
     expect(calldata).toBeTypeOf('string');
@@ -60,7 +62,7 @@ describe('publishEdit', () => {
       name: 'Test Edit',
       spaceId,
       ops,
-      author: '0x0000000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
     });
 
     expect(cid).toMatch(/^ipfs:\/\//);
@@ -74,7 +76,7 @@ describe('publishEdit', () => {
       name: 'Test Edit',
       spaceId,
       ops,
-      author: '0x0000000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
     });
 
     expect(editId).toBeTruthy();
@@ -89,7 +91,7 @@ describe('publishEdit', () => {
       name: 'Test Edit',
       spaceId,
       ops,
-      author: '0x0000000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
     });
 
     expect(result.cid).toMatch(/^ipfs:\/\//);
@@ -104,7 +106,7 @@ describe('publishEdit', () => {
       name: 'Test Edit',
       spaceId,
       ops,
-      author: '0x0000000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
     });
 
     expect(result.cid).toMatch(/^ipfs:\/\//);
@@ -119,7 +121,7 @@ describe('publishEdit', () => {
       name: 'Test Edit',
       spaceId,
       ops,
-      author: '0x0000000000000000000000000000000000000000',
+      author: TEST_AUTHOR_SPACE_ID,
     });
 
     expect(result.cid).toMatch(/^ipfs:\/\//);
@@ -135,7 +137,7 @@ describe('publishEdit', () => {
         name: 'Test Edit',
         spaceId: invalidSpaceId,
         ops,
-        author: '0x0000000000000000000000000000000000000000',
+        author: TEST_AUTHOR_SPACE_ID,
       }),
     ).rejects.toThrow('Invalid spaceId');
   });
@@ -149,7 +151,7 @@ describe('publishEdit', () => {
         name: 'Test Edit',
         spaceId: shortSpaceId,
         ops,
-        author: '0x0000000000000000000000000000000000000000',
+        author: TEST_AUTHOR_SPACE_ID,
       }),
     ).rejects.toThrow('Invalid spaceId');
   });
