@@ -52,12 +52,12 @@ const generateRankTypeOps = (): Op[] => {
   });
   ops.push(...voteOrdinalValueProperty.ops);
 
-  // 4. Create VOTE_WEIGHTED_VALUE_PROPERTY - A FLOAT64 property for numeric scores
+  // 4. Create VOTE_WEIGHTED_VALUE_PROPERTY - A FLOAT property for numeric scores
   const voteWeightedValueProperty = createProperty({
     id: VOTE_WEIGHTED_VALUE_PROPERTY,
     name: 'Vote Weighted Value',
     description: 'Numeric score for weighted rank values',
-    dataType: 'FLOAT64',
+    dataType: 'FLOAT',
   });
   ops.push(...voteWeightedValueProperty.ops);
 

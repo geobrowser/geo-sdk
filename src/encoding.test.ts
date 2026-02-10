@@ -64,7 +64,7 @@ describe('GRC-20 v2 Encoding', () => {
       }
     });
 
-    it('encodes and decodes createEntity with float64 value', () => {
+    it('encodes and decodes createEntity with float value', () => {
       const entityId = toGrcId('3af3e22d21694a078681516710b7ecf1');
       const propertyId = toGrcId('d4bc2f205e2d415e971eb0b9fbf6b6fc');
       const unitId = toGrcId('a6104fe0d6954f9392fa0a1afc552bc5');
@@ -84,7 +84,7 @@ describe('GRC-20 v2 Encoding', () => {
               {
                 property: propertyId,
                 value: {
-                  type: 'float64',
+                  type: 'float',
                   value: 42.5,
                   unit: unitId,
                 },
@@ -101,13 +101,13 @@ describe('GRC-20 v2 Encoding', () => {
       expect(decoded.ops.length).toBe(1);
 
       const op = decoded.ops[0] as Extract<Op, { type: 'createEntity' }>;
-      expect(op.values[0]?.value.type).toBe('float64');
-      if (op.values[0]?.value.type === 'float64') {
+      expect(op.values[0]?.value.type).toBe('float');
+      if (op.values[0]?.value.type === 'float') {
         expect(op.values[0].value.value).toBe(42.5);
       }
     });
 
-    it('encodes and decodes createEntity with bool value', () => {
+    it('encodes and decodes createEntity with boolean value', () => {
       const entityId = toGrcId('3af3e22d21694a078681516710b7ecf1');
       const propertyId = toGrcId('d4bc2f205e2d415e971eb0b9fbf6b6fc');
       const editId = toGrcId('11111111111111111111111111111111');
@@ -126,7 +126,7 @@ describe('GRC-20 v2 Encoding', () => {
               {
                 property: propertyId,
                 value: {
-                  type: 'bool',
+                  type: 'boolean',
                   value: true,
                 },
               },
@@ -139,8 +139,8 @@ describe('GRC-20 v2 Encoding', () => {
       const decoded = decodeEdit(binary);
 
       const op = decoded.ops[0] as Extract<Op, { type: 'createEntity' }>;
-      expect(op.values[0]?.value.type).toBe('bool');
-      if (op.values[0]?.value.type === 'bool') {
+      expect(op.values[0]?.value.type).toBe('boolean');
+      if (op.values[0]?.value.type === 'boolean') {
         expect(op.values[0].value.value).toBe(true);
       }
     });

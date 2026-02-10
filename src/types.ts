@@ -17,8 +17,8 @@ export type DecimalMantissa = { type: 'i64'; value: bigint } | { type: 'big'; by
 
 export type ValueDataType =
   | 'BOOLEAN'
-  | 'INT64'
-  | 'FLOAT64'
+  | 'INTEGER'
+  | 'FLOAT'
   | 'DECIMAL'
   | 'TEXT'
   | 'BYTES'
@@ -41,9 +41,9 @@ export type DataType = ValueDataType | 'RELATION';
  * - `schedule`: iCalendar RRULE format for recurring events, e.g., "FREQ=WEEKLY;BYDAY=MO,WE,FR"
  */
 export type TypedValue =
-  | { type: 'bool'; value: boolean }
-  | { type: 'int64'; value: bigint | number; unit?: Id | string }
-  | { type: 'float64'; value: number; unit?: Id | string }
+  | { type: 'boolean'; value: boolean }
+  | { type: 'integer'; value: bigint | number; unit?: Id | string }
+  | { type: 'float'; value: number; unit?: Id | string }
   | {
       type: 'decimal';
       exponent: number;

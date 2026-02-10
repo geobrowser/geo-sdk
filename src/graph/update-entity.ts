@@ -61,10 +61,10 @@ export const updateEntity = ({ id, name, description, values, unset }: UpdateEnt
     if (valueEntry.type === 'text' && valueEntry.language) {
       assertValid(valueEntry.language, '`language` in `values` in `updateEntity`');
     }
-    if (valueEntry.type === 'float64' && valueEntry.unit) {
+    if (valueEntry.type === 'float' && valueEntry.unit) {
       assertValid(valueEntry.unit, '`unit` in `values` in `updateEntity`');
     }
-    if (valueEntry.type === 'int64' && valueEntry.unit) {
+    if (valueEntry.type === 'integer' && valueEntry.unit) {
       assertValid(valueEntry.unit, '`unit` in `values` in `updateEntity`');
     }
     if (valueEntry.type === 'decimal' && valueEntry.unit) {
@@ -112,20 +112,20 @@ export const updateEntity = ({ id, name, description, values, unset }: UpdateEnt
           language: valueEntry.language ? toGrcId(valueEntry.language) : languages.english(),
         },
       });
-    } else if (valueEntry.type === 'float64') {
+    } else if (valueEntry.type === 'float') {
       newValues.push({
         property,
         value: {
-          type: 'float64',
+          type: 'float',
           value: valueEntry.value,
           ...(valueEntry.unit ? { unit: toGrcId(valueEntry.unit) } : {}),
         },
       });
-    } else if (valueEntry.type === 'bool') {
+    } else if (valueEntry.type === 'boolean') {
       newValues.push({
         property,
         value: {
-          type: 'bool',
+          type: 'boolean',
           value: valueEntry.value,
         },
       });
@@ -171,12 +171,12 @@ export const updateEntity = ({ id, name, description, values, unset }: UpdateEnt
           value: valueEntry.value,
         },
       });
-    } else if (valueEntry.type === 'int64') {
+    } else if (valueEntry.type === 'integer') {
       newValues.push({
         property,
         value: {
-          type: 'int64',
-          value: toInt64(valueEntry.value, '`int64` value in `updateEntity`'),
+          type: 'integer',
+          value: toInt64(valueEntry.value, '`integer` value in `updateEntity`'),
           ...(valueEntry.unit ? { unit: toGrcId(valueEntry.unit) } : {}),
         },
       });

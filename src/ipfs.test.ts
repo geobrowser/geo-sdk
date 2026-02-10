@@ -110,7 +110,7 @@ describe('publishEdit', () => {
 
   it('handles all value types in createEntity', async () => {
     const textPropertyId = generate();
-    const float64PropertyId = generate();
+    const floatPropertyId = generate();
     const boolPropertyId = generate();
     const pointPropertyId = generate();
     const datePropertyId = generate();
@@ -121,8 +121,8 @@ describe('publishEdit', () => {
       name: 'value types test',
       values: [
         { property: textPropertyId, type: 'text', value: 'text value' },
-        { property: float64PropertyId, type: 'float64', value: 42.5 },
-        { property: boolPropertyId, type: 'bool', value: true },
+        { property: floatPropertyId, type: 'float', value: 42.5 },
+        { property: boolPropertyId, type: 'boolean', value: true },
         { property: pointPropertyId, type: 'point', lon: -122.4, lat: 37.8 },
         { property: datePropertyId, type: 'date', value: '2024-01-15' },
         { property: timePropertyId, type: 'time', value: '14:30:00Z' },

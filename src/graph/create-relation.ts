@@ -77,7 +77,7 @@ export const createRelation = ({
     if (valueEntry.type === 'text' && valueEntry.language) {
       assertValid(valueEntry.language, '`language` in `entityValues` in `createRelation`');
     }
-    if (valueEntry.type === 'float64' && valueEntry.unit) {
+    if (valueEntry.type === 'float' && valueEntry.unit) {
       assertValid(valueEntry.unit, '`unit` in `entityValues` in `createRelation`');
     }
   }

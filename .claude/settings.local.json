@@ -13,7 +13,8 @@
       "WebSearch",
       "Bash(pnpm create-private-key:*)",
       "Bash(pnpm clean:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(pnpm install:*)"
     ]
   }
 }

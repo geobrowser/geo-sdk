@@ -173,7 +173,7 @@ export const createRank = ({
         : {
             property: toGrcId(VOTE_WEIGHTED_VALUE_PROPERTY),
             value: {
-              type: 'float64',
+              type: 'float',
               value: (vote as VoteWeighted).value,
             },
           };

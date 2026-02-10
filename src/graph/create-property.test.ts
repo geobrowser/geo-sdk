@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { JOB_TYPE, ROLES_PROPERTY } from '../core/ids/content.js';
 import {
   DATA_TYPE,
-  FLOAT64,
+  FLOAT,
   NAME_PROPERTY,
   PROPERTY,
   RELATION_VALUE_RELATIONSHIP_TYPE,
@@ -58,11 +58,11 @@ describe('createProperty', () => {
     expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
   });
 
-  it('creates a FLOAT64 property', async () => {
+  it('creates a FLOAT property', async () => {
     const property = createProperty({
       name: 'Price',
       description: 'The price of the product',
-      dataType: 'FLOAT64',
+      dataType: 'FLOAT',
     });
 
     expect(property).toBeDefined();
@@ -83,11 +83,11 @@ describe('createProperty', () => {
     expect(typeRelOp.to).toEqual(toGrcId(PROPERTY));
     expect(typeRelOp.relationType).toEqual(toGrcId(TYPES_PROPERTY));
 
-    // Check data type relation to FLOAT64
+    // Check data type relation to FLOAT
     const dataTypeRelOp = property.ops[2] as CreateRelation;
     expect(dataTypeRelOp.type).toBe('createRelation');
     expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
-    expect(dataTypeRelOp.to).toEqual(toGrcId(FLOAT64));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(FLOAT));
     expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
   });
 
@@ -162,7 +162,7 @@ describe('createProperty', () => {
     const property = createProperty({
       id: providedId,
       name: 'Price',
-      dataType: 'FLOAT64',
+      dataType: 'FLOAT',
     });
 
     expect(property).toBeDefined();

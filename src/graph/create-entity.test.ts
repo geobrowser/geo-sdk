@@ -216,13 +216,13 @@ describe('createEntity', () => {
     }
   });
 
-  it('creates an entity with a float64 value', () => {
+  it('creates an entity with a float value', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     const entity = createEntity({
       values: [
         {
           property: propertyId,
-          type: 'float64',
+          type: 'float',
           value: 42,
         },
       ],
@@ -238,20 +238,20 @@ describe('createEntity', () => {
 
     const floatValue = entityOp.values[0];
     expect(floatValue?.property).toEqual(toGrcId(propertyId));
-    expect(floatValue?.value.type).toBe('float64');
-    if (floatValue?.value.type === 'float64') {
+    expect(floatValue?.value.type).toBe('float');
+    if (floatValue?.value.type === 'float') {
       expect(floatValue.value.value).toBe(42);
     }
   });
 
-  it('creates an entity with a float64 value with unit', () => {
+  it('creates an entity with a float value with unit', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     const unitId = Id('016c9b1cd8a84e4d9e844e40878bb235');
     const entity = createEntity({
       values: [
         {
           property: propertyId,
-          type: 'float64',
+          type: 'float',
           value: 42,
           unit: unitId,
         },
@@ -268,8 +268,8 @@ describe('createEntity', () => {
 
     const floatValue = entityOp.values[0];
     expect(floatValue?.property).toEqual(toGrcId(propertyId));
-    expect(floatValue?.value.type).toBe('float64');
-    if (floatValue?.value.type === 'float64') {
+    expect(floatValue?.value.type).toBe('float');
+    if (floatValue?.value.type === 'float') {
       expect(floatValue.value.value).toBe(42);
       expect(floatValue.value.unit).toEqual(toGrcId(unitId));
     }
@@ -281,7 +281,7 @@ describe('createEntity', () => {
       values: [
         {
           property: propertyId,
-          type: 'bool',
+          type: 'boolean',
           value: true,
         },
       ],
@@ -295,8 +295,8 @@ describe('createEntity', () => {
 
     const boolValue = entityOp.values[0];
     expect(boolValue?.property).toEqual(toGrcId(propertyId));
-    expect(boolValue?.value.type).toBe('bool');
-    if (boolValue?.value.type === 'bool') {
+    expect(boolValue?.value.type).toBe('boolean');
+    if (boolValue?.value.type === 'boolean') {
       expect(boolValue.value.value).toBe(true);
     }
   });
@@ -458,13 +458,13 @@ describe('createEntity', () => {
     }
   });
 
-  it('creates an entity with an int64 value', () => {
+  it('creates an entity with an integer value', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     const entity = createEntity({
       values: [
         {
           property: propertyId,
-          type: 'int64',
+          type: 'integer',
           value: 9007199254740993n,
         },
       ],
@@ -478,20 +478,20 @@ describe('createEntity', () => {
 
     const int64Value = entityOp.values[0];
     expect(int64Value?.property).toEqual(toGrcId(propertyId));
-    expect(int64Value?.value.type).toBe('int64');
-    if (int64Value?.value.type === 'int64') {
+    expect(int64Value?.value.type).toBe('integer');
+    if (int64Value?.value.type === 'integer') {
       expect(int64Value.value.value).toBe(9007199254740993n);
     }
   });
 
-  it('creates an entity with an int64 value with unit', () => {
+  it('creates an entity with an integer value with unit', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     const unitId = Id('016c9b1cd8a84e4d9e844e40878bb235');
     const entity = createEntity({
       values: [
         {
           property: propertyId,
-          type: 'int64',
+          type: 'integer',
           value: 42n,
           unit: unitId,
         },
@@ -504,8 +504,8 @@ describe('createEntity', () => {
     expect(entityOp.type).toBe('createEntity');
 
     const int64Value = entityOp.values[0];
-    expect(int64Value?.value.type).toBe('int64');
-    if (int64Value?.value.type === 'int64') {
+    expect(int64Value?.value.type).toBe('integer');
+    if (int64Value?.value.type === 'integer') {
       expect(int64Value.value.value).toBe(42n);
       expect(int64Value.value.unit).toEqual(toGrcId(unitId));
     }
@@ -733,10 +733,10 @@ describe('createEntity', () => {
     );
   });
 
-  it('throws an error if a unit id in int64 value is invalid', () => {
+  it('throws an error if a unit id in integer value is invalid', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     expect(() =>
-      createEntity({ values: [{ property: propertyId, type: 'int64', value: 42n, unit: 'invalid-unit' }] }),
+      createEntity({ values: [{ property: propertyId, type: 'integer', value: 42n, unit: 'invalid-unit' }] }),
     ).toThrow('Invalid id: "invalid-unit" for `unit` in `values` in `createEntity`');
   });
 
@@ -757,13 +757,13 @@ describe('createEntity', () => {
     ).toThrow('Invalid id: "invalid-unit" for `unit` in `values` in `createEntity`');
   });
 
-  it('creates an entity with an int64 value from number', () => {
+  it('creates an entity with an integer value from number', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     const entity = createEntity({
       values: [
         {
           property: propertyId,
-          type: 'int64',
+          type: 'integer',
           value: 42,
         },
       ],
@@ -777,20 +777,20 @@ describe('createEntity', () => {
 
     const int64Value = entityOp.values[0];
     expect(int64Value?.property).toEqual(toGrcId(propertyId));
-    expect(int64Value?.value.type).toBe('int64');
-    if (int64Value?.value.type === 'int64') {
+    expect(int64Value?.value.type).toBe('integer');
+    if (int64Value?.value.type === 'integer') {
       expect(int64Value.value.value).toBe(42n);
     }
   });
 
-  it('creates an entity with an int64 value from number with unit', () => {
+  it('creates an entity with an integer value from number with unit', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     const unitId = Id('016c9b1cd8a84e4d9e844e40878bb235');
     const entity = createEntity({
       values: [
         {
           property: propertyId,
-          type: 'int64',
+          type: 'integer',
           value: 42,
           unit: unitId,
         },
@@ -803,49 +803,49 @@ describe('createEntity', () => {
     expect(entityOp.type).toBe('createEntity');
 
     const int64Value = entityOp.values[0];
-    expect(int64Value?.value.type).toBe('int64');
-    if (int64Value?.value.type === 'int64') {
+    expect(int64Value?.value.type).toBe('integer');
+    if (int64Value?.value.type === 'integer') {
       expect(int64Value.value.value).toBe(42n);
       expect(int64Value.value.unit).toEqual(toGrcId(unitId));
     }
   });
 
-  it('throws error for non-integer number in int64 value', () => {
+  it('throws error for non-integer number in integer value', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     expect(() =>
       createEntity({
-        values: [{ property: propertyId, type: 'int64', value: 42.5 }],
+        values: [{ property: propertyId, type: 'integer', value: 42.5 }],
       }),
-    ).toThrow('Value 42.5 is not a valid integer for `int64` value in `createEntity`');
+    ).toThrow('Value 42.5 is not a valid integer for `integer` value in `createEntity`');
   });
 
-  it('throws error for NaN in int64 value', () => {
+  it('throws error for NaN in integer value', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     expect(() =>
       createEntity({
-        values: [{ property: propertyId, type: 'int64', value: NaN }],
+        values: [{ property: propertyId, type: 'integer', value: NaN }],
       }),
-    ).toThrow('Value NaN is not a valid integer for `int64` value in `createEntity`');
+    ).toThrow('Value NaN is not a valid integer for `integer` value in `createEntity`');
   });
 
-  it('throws error for Infinity in int64 value', () => {
+  it('throws error for Infinity in integer value', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     expect(() =>
       createEntity({
-        values: [{ property: propertyId, type: 'int64', value: Infinity }],
+        values: [{ property: propertyId, type: 'integer', value: Infinity }],
       }),
-    ).toThrow('Value Infinity is not a valid integer for `int64` value in `createEntity`');
+    ).toThrow('Value Infinity is not a valid integer for `integer` value in `createEntity`');
   });
 
-  it('throws error for unsafe integer in int64 value', () => {
+  it('throws error for unsafe integer in integer value', () => {
     const propertyId = Id('295c8bc61ae342cbb2a65b61080906ff');
     const unsafeInteger = Number.MAX_SAFE_INTEGER + 1;
     expect(() =>
       createEntity({
-        values: [{ property: propertyId, type: 'int64', value: unsafeInteger }],
+        values: [{ property: propertyId, type: 'integer', value: unsafeInteger }],
       }),
     ).toThrow(
-      `Value ${unsafeInteger} is outside safe integer range for \`int64\` value in \`createEntity\`. Use bigint for large integers.`,
+      `Value ${unsafeInteger} is outside safe integer range for \`integer\` value in \`createEntity\`. Use bigint for large integers.`,
     );
   });
 });

@@ -7,8 +7,8 @@ import {
   DATETIME,
   DECIMAL,
   EMBEDDING,
-  FLOAT64,
-  INT64,
+  FLOAT,
+  INTEGER,
   POINT,
   PROPERTY,
   RELATION_VALUE_RELATIONSHIP_TYPE,
@@ -25,8 +25,8 @@ import { createRelation } from './create-relation.js';
 
 const VALUE_DATA_TYPE_TO_ID: Record<ValueDataType, Id> = {
   BOOLEAN,
-  INT64,
-  FLOAT64,
+  INTEGER,
+  FLOAT,
   DECIMAL,
   TEXT,
   BYTES,

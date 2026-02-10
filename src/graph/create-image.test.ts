@@ -86,8 +86,8 @@ describe('createImage', () => {
       return propBytes.every((b, i) => b === toGrcId(IMAGE_WIDTH_PROPERTY)[i]);
     });
     expect(widthValue).toBeDefined();
-    expect(widthValue?.value.type).toBe('float64');
-    if (widthValue?.value.type === 'float64') {
+    expect(widthValue?.value.type).toBe('float');
+    if (widthValue?.value.type === 'float') {
       expect(widthValue.value.value).toBe(16);
     }
 
@@ -97,8 +97,8 @@ describe('createImage', () => {
       return propBytes.every((b, i) => b === toGrcId(IMAGE_HEIGHT_PROPERTY)[i]);
     });
     expect(heightValue).toBeDefined();
-    expect(heightValue?.value.type).toBe('float64');
-    if (heightValue?.value.type === 'float64') {
+    expect(heightValue?.value.type).toBe('float');
+    if (heightValue?.value.type === 'float') {
       expect(heightValue.value.value).toBe(6);
     }
 

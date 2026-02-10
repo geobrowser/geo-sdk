@@ -28,7 +28,7 @@
     "bump": "pnpm changeset version"
   },
   "dependencies": {
-    "@geoprotocol/grc-20": "^0.3.0",
+    "@geoprotocol/grc-20": "^0.4.0",
     "effect": "^3.17.13",
     "fflate": "^0.8.2",
     "fractional-indexing-jittered": "^1.0.0",

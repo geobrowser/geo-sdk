@@ -209,8 +209,8 @@ describe('createRank', () => {
         return propBytes.every((b, i) => b === toGrcId(VOTE_WEIGHTED_VALUE_PROPERTY)[i]);
       });
       expect(weightedValue).toBeDefined();
-      expect(weightedValue?.value.type).toBe('float64');
-      if (weightedValue?.value.type === 'float64') {
+      expect(weightedValue?.value.type).toBe('float');
+      if (weightedValue?.value.type === 'float') {
         expect(weightedValue.value.value).toBe(4.5);
       }
     });
@@ -239,8 +239,8 @@ describe('createRank', () => {
           const propBytes = v.property;
           return propBytes.every((b, j) => b === toGrcId(VOTE_WEIGHTED_VALUE_PROPERTY)[j]);
         });
-        expect(weightedValue?.value.type).toBe('float64');
-        if (weightedValue?.value.type === 'float64') {
+        expect(weightedValue?.value.type).toBe('float');
+        if (weightedValue?.value.type === 'float') {
           expect(weightedValue.value.value).toBe(expectedValues[i]);
         }
       });
@@ -260,8 +260,8 @@ describe('createRank', () => {
         const propBytes = v.property;
         return propBytes.every((b, i) => b === toGrcId(VOTE_WEIGHTED_VALUE_PROPERTY)[i]);
       });
-      expect(weightedValue?.value.type).toBe('float64');
-      if (weightedValue?.value.type === 'float64') {
+      expect(weightedValue?.value.type).toBe('float');
+      if (weightedValue?.value.type === 'float') {
         expect(weightedValue.value.value).toBe(5);
       }
     });

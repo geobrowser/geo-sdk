@@ -58,14 +58,14 @@ export const createImage = async ({
   if (dimensions?.height) {
     values.push({
       property: IMAGE_HEIGHT_PROPERTY,
-      type: 'float64',
+      type: 'float',
       value: dimensions.height,
     });
   }
   if (dimensions?.width) {
     values.push({
       property: IMAGE_WIDTH_PROPERTY,
-      type: 'float64',
+      type: 'float',
       value: dimensions.width,
     });
   }
