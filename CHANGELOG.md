@@ -1,5 +1,24 @@
 # @geoprotocol/geo-sdk
 
+## 0.8.0
+
+### Minor Changes
+
+- ae84dcc: **BREAKING:** Migrate to `@geoprotocol/grc-20` v0.4.0 type name changes.
+
+  The following `TypedValue` type discriminants have been renamed:
+  - `float64` → `float`
+  - `int64` → `integer`
+  - `bool` → `boolean`
+
+  The following `ValueDataType` values have been renamed:
+  - `INT64` → `INTEGER`
+  - `FLOAT64` → `FLOAT`
+
+  The following system ID exports have been renamed:
+  - `INT64` → `INTEGER`
+  - `FLOAT64` → `FLOAT`
+
 ## 0.7.0
 
 ### Minor Changes
@@ -21,7 +40,6 @@
 - 87e08ea: Add `daoSpace.proposeEdit()` function for creating proposals to publish edits to DAO spaces.
 
   This function:
-
   - Publishes ops to IPFS using the GRC-20 binary format
   - Generates a unique proposal ID (or accepts a custom one)
   - Encodes the calldata for the SpaceRegistry's `enter()` function with PROPOSAL_CREATED action
@@ -93,12 +111,10 @@
 - da51eb5: Add property unsetting support to `Graph.updateEntity`
 
   **Breaking changes:**
-
   - `updateEntity` now generates `updateEntity` ops instead of `createEntity` ops
   - Uses grc-20's `updateEntity()` function with proper `set` and `unset` arrays
 
   **New features:**
-
   - Added `unset` parameter to `updateEntity` for unsetting property values
   - Supports language-aware unsetting using grc-20's `languages` helpers
 
@@ -120,7 +136,6 @@
 ### Patch Changes
 
 - 2573d63: Add `personalSpace` module with helper functions for personal spaces:
-
   - `personalSpace.createSpace()` - returns `{ to, calldata }` for creating a personal space
   - `personalSpace.publishEdit()` - publishes ops to IPFS and returns `{ editId, cid, to, calldata }` for on-chain submission
 
