@@ -1,12 +1,12 @@
-import type { Op } from '@geoprotocol/grc-20';
+import type { Op } from "@geoprotocol/grc-20";
 
-import { TESTNET } from '../../contracts.js';
-import { SPACE_TYPE } from '../core/ids/system.js';
-import { getCreateDaoSpaceCalldata } from '../encodings/index.js';
-import { createEntity } from '../graph/create-entity.js';
-import * as IdUtils from '../id-utils.js';
-import { publishEdit } from '../ipfs.js';
-import type { CreateSpaceParams, CreateSpaceResult } from './types.js';
+import { TESTNET } from "../../contracts.js";
+import { SPACE_TYPE } from "../core/ids/system.js";
+import { getCreateDaoSpaceCalldata } from "../encodings/index.js";
+import { createEntity } from "../graph/create-entity.js";
+import * as IdUtils from "../id-utils.js";
+import { publishEdit } from "../ipfs.js";
+import type { CreateSpaceParams, CreateSpaceResult } from "./types.js";
 
 /**
  * Get the target address and calldata for creating a DAO space.
@@ -33,7 +33,7 @@ import type { CreateSpaceParams, CreateSpaceResult } from './types.js';
  *     durationInDays: 7,                // 7 day voting period
  *   },
  *   initialEditorSpaceIds: ['0x01234567890abcdef01234567890abcd'],
- *   author: 'your-person-entity-id',
+ *   author: 'your-personal-space-id',
  * });
  *
  * // Using viem
@@ -43,8 +43,10 @@ import type { CreateSpaceParams, CreateSpaceResult } from './types.js';
  * });
  * ```
  */
-export async function createSpace(params: CreateSpaceParams): Promise<CreateSpaceResult> {
-  const { name, author, ops: additionalOps = [], network = 'TESTNET' } = params;
+export async function createSpace(
+  params: CreateSpaceParams,
+): Promise<CreateSpaceResult> {
+  const { name, author, ops: additionalOps = [], network = "TESTNET" } = params;
 
   // Generate a space entity ID
   const spaceEntityId = IdUtils.generate();

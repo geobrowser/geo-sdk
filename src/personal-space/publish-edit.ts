@@ -1,12 +1,12 @@
-import { encodeAbiParameters, encodeFunctionData, toHex } from 'viem';
-import { TESTNET } from '../../contracts.js';
-import { SpaceRegistryAbi } from '../abis/index.js';
-import { isValid } from '../id.js';
-import { toBytes } from '../id-utils.js';
-import { UUID_DASHLESS_REGEX } from '../internal/uuid.js';
-import * as Ipfs from '../ipfs.js';
-import { EDITS_PUBLISHED, EMPTY_SIGNATURE, EMPTY_TOPIC } from './constants.js';
-import type { PublishEditParams, PublishEditResult } from './types.js';
+import { encodeAbiParameters, encodeFunctionData, toHex } from "viem";
+import { TESTNET } from "../../contracts.js";
+import { SpaceRegistryAbi } from "../abis/index.js";
+import { isValid } from "../id.js";
+import { toBytes } from "../id-utils.js";
+import { UUID_DASHLESS_REGEX } from "../internal/uuid.js";
+import * as Ipfs from "../ipfs.js";
+import { EDITS_PUBLISHED, EMPTY_SIGNATURE, EMPTY_TOPIC } from "./constants.js";
+import type { PublishEditParams, PublishEditResult } from "./types.js";
 
 /**
  * Converts a spaceId to bytes16 hex format.
@@ -25,7 +25,9 @@ function spaceIdToBytes16(spaceId: string): `0x${string}` {
     return toHex(bytes);
   }
 
-  throw new Error(`Invalid spaceId: "${spaceId}". Expected a valid UUID or 32-character hex string.`);
+  throw new Error(
+    `Invalid spaceId: "${spaceId}". Expected a valid UUID or 32-character hex string.`,
+  );
 }
 
 /**
@@ -48,14 +50,16 @@ function spaceIdToBytes16(spaceId: string): `0x${string}` {
  *   name: 'Add entity',
  *   spaceId: 'your-space-id',
  *   ops,
- *   author: 'your-person-entity-id',
+ *   author: 'your-personal-space-id',
  * });
  *
  * await walletClient.sendTransaction({ to, data: calldata });
  * ```
  */
-export async function publishEdit(params: PublishEditParams): Promise<PublishEditResult> {
-  const { name, spaceId, ops, author, network = 'TESTNET' } = params;
+export async function publishEdit(
+  params: PublishEditParams,
+): Promise<PublishEditResult> {
+  const { name, spaceId, ops, author, network = "TESTNET" } = params;
 
   const spaceIdBytes16 = spaceIdToBytes16(spaceId);
 
@@ -68,12 +72,19 @@ export async function publishEdit(params: PublishEditParams): Promise<PublishEdi
 
   // Encode the IPFS URI as ABI-encoded string (offset + length + data)
   // The indexer expects this format to extract the CID
-  const encodedCid = encodeAbiParameters([{ type: 'string' }], [cid]);
+  const encodedCid = encodeAbiParameters([{ type: "string" }], [cid]);
 
   const calldata = encodeFunctionData({
     abi: SpaceRegistryAbi,
-    functionName: 'enter',
-    args: [spaceIdBytes16, spaceIdBytes16, EDITS_PUBLISHED, EMPTY_TOPIC, encodedCid, EMPTY_SIGNATURE],
+    functionName: "enter",
+    args: [
+      spaceIdBytes16,
+      spaceIdBytes16,
+      EDITS_PUBLISHED,
+      EMPTY_TOPIC,
+      encodedCid,
+      EMPTY_SIGNATURE,
+    ],
   });
 
   return {

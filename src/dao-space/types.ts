@@ -1,7 +1,7 @@
-import type { Op } from '@geoprotocol/grc-20';
-import type { VotingSettingsInput } from '../encodings/get-create-dao-space-calldata.js';
-import type { Id } from '../id.js';
-import type { Network } from '../types.js';
+import type { Op } from "@geoprotocol/grc-20";
+import type { VotingSettingsInput } from "../encodings/get-create-dao-space-calldata.js";
+import type { Id } from "../id.js";
+import type { Network } from "../types.js";
 
 export type CreateSpaceParams = {
   /** Name of the DAO space */
@@ -12,7 +12,7 @@ export type CreateSpaceParams = {
   initialEditorSpaceIds: `0x${string}`[];
   /** Space IDs of initial members (can be empty). Must be bytes16 hex strings. */
   initialMemberSpaceIds?: `0x${string}`[];
-  /** The author's Person Entity ID (UUID). */
+  /** The author's personal space ID (UUID). */
   author: Id | string;
   /** Additional ops to include in the initial edit (optional) */
   ops?: Op[];
@@ -36,14 +36,14 @@ export type CreateSpaceResult = {
  * - SLOW: Standard voting requiring percentage threshold
  * - FAST: Fast-path voting requiring flat threshold (for valid fast-path actions)
  */
-export type VotingMode = 'SLOW' | 'FAST';
+export type VotingMode = "SLOW" | "FAST";
 
 export type ProposeEditParams = {
   /** Name of the edit (used for IPFS metadata) */
   name: string;
   /** The ops to include in the edit */
   ops: Op[];
-  /** The author's Person Entity ID (UUID). */
+  /** The author's personal space ID (UUID). */
   author: Id | string;
   /**
    * The DAO space contract address.
