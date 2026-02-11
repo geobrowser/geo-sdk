@@ -119,7 +119,7 @@ const { id: personId, ops: createPersonOps } = Graph.createEntity({
     // Number value (with optional unit)
     {
       property: someNumberPropertyId,
-      type: "float64",
+      type: "float",
       value: 42.5,
       unit: Id("016c9b1cd8a84e4d9e844e40878bb235"), // optional
     },
@@ -174,7 +174,7 @@ const ops: Array<Op> = [];
 
 // create an age property
 const { id: agePropertyId, ops: createAgePropertyOps } = Graph.createProperty({
-  dataType: "INT64",
+  dataType: "INTEGER",
   name: "Age",
 });
 ops.push(...createAgePropertyOps);
@@ -234,7 +234,7 @@ const { id: personId, ops: createPersonOps } = Graph.createEntity({
   values: [
     {
       property: agePropertyId,
-      type: "float64",
+      type: "float",
       value: 42,
     },
   ],
@@ -282,39 +282,6 @@ const walletClient = await getWalletClient({
 
 // Get the calldata for creating a personal space
 const { to, calldata } = personalSpace.createSpace();
-
-// Submit the transaction
-const txHash = await walletClient.sendTransaction({
-  account: walletClient.account,
-  to,
-  data: calldata,
-});
-```
-
-#### Publishing an edit to a personal space
-
-The `personalSpace.publishEdit()` function handles both IPFS upload and calldata encoding in a single call:
-
-```ts
-import { personalSpace, Graph, getWalletClient } from "@geoprotocol/geo-sdk";
-
-const walletClient = await getWalletClient({
-  privateKey: addressPrivateKey,
-});
-
-// Create some ops
-const { ops } = Graph.createEntity({
-  name: "Test Entity",
-  description: "Created via SDK",
-});
-
-// Publish to IPFS and get calldata for on-chain submission
-const { editId, cid, to, calldata } = await personalSpace.publishEdit({
-  name: "My Edit",
-  spaceId: "your-space-id", // 32-char hex string from on-chain
-  ops,
-  author: walletClient.account.address,
-});
 
 // Submit the transaction
 const txHash = await walletClient.sendTransaction({
