@@ -303,9 +303,9 @@ import {
   Graph,
   personalSpace,
   getSmartAccountWalletClient,
-  SpaceRegistryAbi,
   TESTNET_RPC_URL,
 } from "@geoprotocol/geo-sdk";
+import { SpaceRegistryAbi } from "@geoprotocol/geo-sdk/abis";
 import { TESTNET } from "@geoprotocol/geo-sdk/contracts";
 
 // IMPORTANT: Be careful with your private key. Don't commit it to version control.
@@ -381,9 +381,9 @@ import {
   Graph,
   personalSpace,
   getWalletClient,
-  SpaceRegistryAbi,
   TESTNET_RPC_URL,
 } from "@geoprotocol/geo-sdk";
+import { SpaceRegistryAbi } from "@geoprotocol/geo-sdk/abis";
 import { TESTNET } from "@geoprotocol/geo-sdk/contracts";
 
 // IMPORTANT: Be careful with your private key. Don't commit it to version control.
