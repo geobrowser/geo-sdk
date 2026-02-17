@@ -54,6 +54,10 @@ type PublishEditResult = {
 export async function publishEdit(args: PublishEditProposalParams): Promise<PublishEditResult> {
   const { name, ops, author, network = 'TESTNET' } = args;
 
+  if (ops.length === 0) {
+    throw new Error('`ops` in `publishEdit` must not be empty');
+  }
+
   assertValid(author, '`author` in `publishEdit`');
 
   // Generate a new edit ID
