@@ -1,5 +1,5 @@
 ---
-"@geoprotocol/geo-sdk": patch
+"@geoprotocol/geo-sdk": minor
 ---
 
 Fix `createProperty` with `RELATION` dataType missing `DATA_TYPE` relation

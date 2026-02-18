@@ -99,7 +99,6 @@ export const createProperty = (params: CreatePropertyParams): CreateResult => {
   );
 
   if (params.dataType === 'RELATION') {
-
     const { ops: dataTypeOps } = createRelation({
       fromEntity: entityId,
       toEntity: RELATION,
