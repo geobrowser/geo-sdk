@@ -1,5 +1,15 @@
 # @geoprotocol/geo-sdk
 
+## 0.10.0
+
+### Minor Changes
+
+- 35e9844: Fix `createProperty` with `RELATION` dataType missing `DATA_TYPE` relation
+
+### Patch Changes
+
+- 681547e: Throw error when `publishEdit` is called with an empty ops array
+
 ## 0.9.0
 
 ### Minor Changes
