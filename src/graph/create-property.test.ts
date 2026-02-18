@@ -2,13 +2,23 @@ import type { CreateEntity, CreateRelation } from '@geoprotocol/grc-20';
 import { describe, expect, it } from 'vitest';
 import { JOB_TYPE, ROLES_PROPERTY } from '../core/ids/content.js';
 import {
+  BOOLEAN,
+  BYTES,
   DATA_TYPE,
+  DATE,
+  DATETIME,
+  DECIMAL,
+  EMBEDDING,
   FLOAT,
+  INTEGER,
   NAME_PROPERTY,
+  POINT,
   PROPERTY,
   RELATION,
   RELATION_VALUE_RELATIONSHIP_TYPE,
+  SCHEDULE,
   TEXT,
+  TIME,
   TYPES_PROPERTY,
 } from '../core/ids/system.js';
 import { Id } from '../id.js';
@@ -233,6 +243,76 @@ describe('createProperty', () => {
     const typeRelOp = property.ops[1] as CreateRelation;
     expect(typeRelOp.type).toBe('createRelation');
     expect(typeRelOp.to).toEqual(toGrcId(PROPERTY));
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(BOOLEAN));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
+  });
+
+  it('creates an INTEGER property', async () => {
+    const property = createProperty({
+      name: 'Count',
+      dataType: 'INTEGER',
+    });
+
+    expect(property).toBeDefined();
+    expect(property.ops.length).toBe(3);
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(INTEGER));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
+  });
+
+  it('creates a DECIMAL property', async () => {
+    const property = createProperty({
+      name: 'Amount',
+      dataType: 'DECIMAL',
+    });
+
+    expect(property).toBeDefined();
+    expect(property.ops.length).toBe(3);
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(DECIMAL));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
+  });
+
+  it('creates a BYTES property', async () => {
+    const property = createProperty({
+      name: 'Payload',
+      dataType: 'BYTES',
+    });
+
+    expect(property).toBeDefined();
+    expect(property.ops.length).toBe(3);
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(BYTES));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
+  });
+
+  it('creates a DATE property', async () => {
+    const property = createProperty({
+      name: 'Date founded',
+      dataType: 'DATE',
+    });
+
+    expect(property).toBeDefined();
+    expect(property.ops.length).toBe(3);
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(DATE));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
   });
 
   it('creates a TIME property', async () => {
@@ -248,6 +328,44 @@ describe('createProperty', () => {
     const typeRelOp = property.ops[1] as CreateRelation;
     expect(typeRelOp.type).toBe('createRelation');
     expect(typeRelOp.to).toEqual(toGrcId(PROPERTY));
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(TIME));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
+  });
+
+  it('creates a DATETIME property', async () => {
+    const property = createProperty({
+      name: 'Created at',
+      dataType: 'DATETIME',
+    });
+
+    expect(property).toBeDefined();
+    expect(property.ops.length).toBe(3);
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(DATETIME));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
+  });
+
+  it('creates a SCHEDULE property', async () => {
+    const property = createProperty({
+      name: 'Opening hours',
+      dataType: 'SCHEDULE',
+    });
+
+    expect(property).toBeDefined();
+    expect(property.ops.length).toBe(3);
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(SCHEDULE));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
   });
 
   it('creates a POINT property', async () => {
@@ -263,5 +381,27 @@ describe('createProperty', () => {
     const typeRelOp = property.ops[1] as CreateRelation;
     expect(typeRelOp.type).toBe('createRelation');
     expect(typeRelOp.to).toEqual(toGrcId(PROPERTY));
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(POINT));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
+  });
+
+  it('creates an EMBEDDING property', async () => {
+    const property = createProperty({
+      name: 'Vector',
+      dataType: 'EMBEDDING',
+    });
+
+    expect(property).toBeDefined();
+    expect(property.ops.length).toBe(3);
+
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(EMBEDDING));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
   });
 });
