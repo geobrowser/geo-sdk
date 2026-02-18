@@ -6,6 +6,7 @@ import {
   FLOAT,
   NAME_PROPERTY,
   PROPERTY,
+  RELATION,
   RELATION_VALUE_RELATIONSHIP_TYPE,
   TEXT,
   TYPES_PROPERTY,
@@ -100,8 +101,8 @@ describe('createProperty', () => {
     expect(property).toBeDefined();
     expect(typeof property.id).toBe('string');
     expect(property.ops).toBeDefined();
-    // 1 createEntity + 1 createRelation (type)
-    expect(property.ops.length).toBe(2);
+    // 1 createEntity + 1 createRelation (type) + 1 createRelation (data type)
+    expect(property.ops.length).toBe(3);
 
     // Check entity creation
     const entityOp = property.ops[0] as CreateEntity;
@@ -114,6 +115,13 @@ describe('createProperty', () => {
     expect(typeRelOp.from).toEqual(toGrcId(property.id));
     expect(typeRelOp.to).toEqual(toGrcId(PROPERTY));
     expect(typeRelOp.relationType).toEqual(toGrcId(TYPES_PROPERTY));
+
+    // Check data type relation to RELATION
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(RELATION));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
   });
 
   it('creates a RELATION property with properties and relation value types', async () => {
@@ -127,8 +135,8 @@ describe('createProperty', () => {
     expect(property).toBeDefined();
     expect(typeof property.id).toBe('string');
     expect(property.ops).toBeDefined();
-    // 1 createEntity + 1 createRelation (type) + 1 createRelation (property) + 1 createRelation (value type)
-    expect(property.ops.length).toBe(4);
+    // 1 createEntity + 1 createRelation (type) + 1 createRelation (data type) + 1 createRelation (property) + 1 createRelation (value type)
+    expect(property.ops.length).toBe(5);
 
     // Check entity creation
     const entityOp = property.ops[0] as CreateEntity;
@@ -142,15 +150,22 @@ describe('createProperty', () => {
     expect(typeRelOp.to).toEqual(toGrcId(PROPERTY));
     expect(typeRelOp.relationType).toEqual(toGrcId(TYPES_PROPERTY));
 
+    // Check data type relation to RELATION
+    const dataTypeRelOp = property.ops[2] as CreateRelation;
+    expect(dataTypeRelOp.type).toBe('createRelation');
+    expect(dataTypeRelOp.from).toEqual(toGrcId(property.id));
+    expect(dataTypeRelOp.to).toEqual(toGrcId(RELATION));
+    expect(dataTypeRelOp.relationType).toEqual(toGrcId(DATA_TYPE));
+
     // Check property relation (ROLES_PROPERTY)
-    const propRelOp = property.ops[2] as CreateRelation;
+    const propRelOp = property.ops[3] as CreateRelation;
     expect(propRelOp.type).toBe('createRelation');
     expect(propRelOp.from).toEqual(toGrcId(property.id));
     expect(propRelOp.to).toEqual(toGrcId(ROLES_PROPERTY));
     expect(propRelOp.relationType).toEqual(toGrcId(PROPERTY));
 
     // Check relation value type relation (JOB_TYPE)
-    const valueTypeRelOp = property.ops[3] as CreateRelation;
+    const valueTypeRelOp = property.ops[4] as CreateRelation;
     expect(valueTypeRelOp.type).toBe('createRelation');
     expect(valueTypeRelOp.from).toEqual(toGrcId(property.id));
     expect(valueTypeRelOp.to).toEqual(toGrcId(JOB_TYPE));
