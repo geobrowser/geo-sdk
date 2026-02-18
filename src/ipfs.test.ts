@@ -144,6 +144,17 @@ describe('publishEdit', () => {
     expect(editId).toBeTruthy();
   });
 
+  it('throws when ops array is empty', async () => {
+    await expect(
+      publishEdit({
+        name: 'empty ops test',
+        ops: [],
+        author: TEST_AUTHOR_SPACE_ID,
+        network: 'TESTNET',
+      }),
+    ).rejects.toThrow('`ops` in `publishEdit` must not be empty');
+  });
+
   it('handles multiple ops in a single edit', async () => {
     const entity1 = createEntity({ name: 'Entity 1' });
     const entity2 = createEntity({ name: 'Entity 2' });
