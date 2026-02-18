@@ -11,6 +11,7 @@ import {
   INTEGER,
   POINT,
   PROPERTY,
+  RELATION,
   RELATION_VALUE_RELATIONSHIP_TYPE,
   SCHEDULE,
   TEXT,
@@ -98,6 +99,13 @@ export const createProperty = (params: CreatePropertyParams): CreateResult => {
   );
 
   if (params.dataType === 'RELATION') {
+    const { ops: dataTypeOps } = createRelation({
+      fromEntity: entityId,
+      toEntity: RELATION,
+      type: DATA_TYPE,
+    });
+    ops.push(...dataTypeOps);
+
     // add the provided properties to property "Properties"
     if (params.properties) {
       for (const propertyId of params.properties) {
