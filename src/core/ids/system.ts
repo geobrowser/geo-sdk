@@ -296,7 +296,13 @@ export const MAX_CONTRIBUTORS_PROPERTY = Id('1d7bb89ec2854df7afac28cec9007e38');
 export const ACTIVE_UNTIL_PROPERTY = Id('7566286ca054405a83e185ffd60492fb');
 export const INTERESTED_IN_PROPERTY = Id('ff7e1b4444a2419187324e6c222afe07');
 export const MAX_SUBMISSIONS_PER_PERSON_PROPERTY = Id('21c06b6d7f7846f1ac65e4fc4eadc615');
+export const MAINTAINER_PROPERTY = Id('0693e377eafd42278487cd143250357f');
+export const ALLOCATE_PROPERTY = Id('cfeb642223c54df4b3f9375a489d9e22');
+/** @deprecated should not be used anymore */
 export const CREATOR_PROPERTY = Id('e200041dba1a4ca7b28497fe22d8e234');
+// bounty submission
+export const SUBMISSION_PROPERTY = Id('3b4c516ff3ac41e0a939374119a27d6e');
+
 // community call
 export const MEETING_TIME_PROPERTY = Id('3ae3d1efebfc433da4bdebaa823348c9');
 export const COMMUNITY_CALL_TYPE = Id('6e76a82830e14bad93a1097d05ab688a');
