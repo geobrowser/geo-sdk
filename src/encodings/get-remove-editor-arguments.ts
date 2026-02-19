@@ -20,7 +20,7 @@ export function getRemoveEditorArguments({
         value: BigInt(0),
         data: encodeFunctionData({
           abi: MainVotingAbi,
-          functionName: 'removeMember',
+          functionName: 'removeEditor',
           args: [editorAddress],
         }),
       },
