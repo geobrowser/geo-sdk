@@ -1,0 +1,5 @@
+---
+"@geoprotocol/geo-sdk": patch
+---
+
+Add MAINTAINER_PROPERTY, ALLOCATE_PROPERTY, SUBMISSION_PROPERTY and deprecate CREATOR_PROPERTY
