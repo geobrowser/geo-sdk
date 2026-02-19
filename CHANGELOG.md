@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.10.1
+
+### Patch Changes
+
+- ef5ad47: Add MAINTAINER_PROPERTY, ALLOCATE_PROPERTY, SUBMISSION_PROPERTY and deprecate CREATOR_PROPERTY
+
 ## 0.10.0
 
 ### Minor Changes
