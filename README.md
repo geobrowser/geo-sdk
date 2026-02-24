@@ -27,9 +27,7 @@ Relations describe the edges within the graph. Relations are themselves entities
 
 An entity is a unique identifier representing a person, a place, an idea, a concept, or anything else. Entities are comprised of triples and relations which provide semantic meaning as to what the entity _is_. An entity's data can be composed from multiple spaces at once. This property is what enables pluralism within The Graph.
 
-[More about entities and knowledge graphs](https://www.geobrowser.io/space/6tfhqywXtteatMeGUtd5EB/XYo6aR3VqFQSEcf6AeTikW)
-
-[More about pluralism](https://www.geobrowser.io/space/6tfhqywXtteatMeGUtd5EB/5WHP8BuoCdSiqtfy87SYWG)
+[More about entities and knowledge graphs](https://www.geobrowser.io/space/720eb279c64d56735dccd17a2a416ba2/a72654b014fa405bbf1250ba901bc082)
 
 ### Ops and edits
 
