@@ -98,19 +98,19 @@ export type VoteOption = 'YES' | 'NO' | 'ABSTAIN';
 
 export type VoteProposalParams = {
   /**
-   * The voter's space ID (bytes16 hex).
+   * The voter's space ID (bytes16 hex, with or without 0x prefix).
    * This is the fromSpaceId in the enter() call.
    */
-  callerSpaceId: `0x${string}`;
+  authorSpaceId: string;
   /**
-   * The DAO space ID (bytes16 hex).
+   * The DAO space ID (bytes16 hex, with or without 0x prefix).
    * This is the toSpaceId in the enter() call.
    */
-  daoSpaceId: `0x${string}`;
+  daoSpaceId: string;
   /**
-   * The proposal to vote on (bytes16 hex).
+   * The proposal to vote on (bytes16 hex, with or without 0x prefix).
    */
-  proposalId: `0x${string}`;
+  proposalId: string;
   /**
    * The vote option: 'YES', 'NO', or 'ABSTAIN'.
    */

@@ -12,10 +12,17 @@ import {
 import type { VoteProposalParams, VoteProposalResult } from './types.js';
 
 /**
+ * Ensures a hex string has the 0x prefix.
+ */
+function ensure0xPrefix(value: string): `0x${string}` {
+  return (value.startsWith('0x') ? value : `0x${value}`) as `0x${string}`;
+}
+
+/**
  * Creates a vote transaction for a DAO space proposal.
  *
  * This function:
- * 1. Validates the caller, DAO space, and proposal IDs
+ * 1. Validates the author, DAO space, and proposal IDs
  * 2. Encodes the vote option as the data payload
  * 3. Encodes the SpaceRegistry's `enter()` call with the `PROPOSAL_VOTED` action
  *
@@ -29,7 +36,7 @@ import type { VoteProposalParams, VoteProposalResult } from './types.js';
  * import { daoSpace } from '@geoprotocol/geo-sdk';
  *
  * const { to, calldata } = daoSpace.voteProposal({
- *   callerSpaceId: '0xCallerBytes16SpaceId...',
+ *   authorSpaceId: '0xAuthorBytes16SpaceId...',
  *   daoSpaceId: '0xDAOBytes16SpaceId...',
  *   proposalId: '0xProposalBytes16Id...',
  *   vote: 'YES',
@@ -40,17 +47,22 @@ import type { VoteProposalParams, VoteProposalResult } from './types.js';
  * ```
  */
 export function voteProposal(params: VoteProposalParams): VoteProposalResult {
-  const { callerSpaceId, daoSpaceId, proposalId, vote } = params;
+  const { authorSpaceId: rawAuthorSpaceId, daoSpaceId: rawDaoSpaceId, proposalId: rawProposalId, vote } = params;
+
+  // Ensure 0x prefix on all IDs
+  const authorSpaceId = ensure0xPrefix(rawAuthorSpaceId);
+  const daoSpaceId = ensure0xPrefix(rawDaoSpaceId);
+  const proposalId = ensure0xPrefix(rawProposalId);
 
   // Validate inputs
-  if (!isBytes16Hex(callerSpaceId)) {
-    throw new Error(`callerSpaceId must be bytes16 hex (0x followed by 32 hex chars). Received: ${callerSpaceId}`);
+  if (!isBytes16Hex(authorSpaceId)) {
+    throw new Error(`authorSpaceId must be bytes16 hex (32 hex chars). Received: ${rawAuthorSpaceId}`);
   }
   if (!isBytes16Hex(daoSpaceId)) {
-    throw new Error(`daoSpaceId must be bytes16 hex (0x followed by 32 hex chars). Received: ${daoSpaceId}`);
+    throw new Error(`daoSpaceId must be bytes16 hex (32 hex chars). Received: ${rawDaoSpaceId}`);
   }
   if (!isBytes16Hex(proposalId)) {
-    throw new Error(`proposalId must be bytes16 hex (0x followed by 32 hex chars). Received: ${proposalId}`);
+    throw new Error(`proposalId must be bytes16 hex (32 hex chars). Received: ${rawProposalId}`);
   }
 
   // Convert proposalId to bytes32 for the topic (left-aligned)
@@ -70,7 +82,7 @@ export function voteProposal(params: VoteProposalParams): VoteProposalResult {
     abi: SpaceRegistryAbi,
     functionName: 'enter',
     args: [
-      callerSpaceId, // fromSpaceId
+      authorSpaceId, // fromSpaceId
       daoSpaceId, // toSpaceId
       PROPOSAL_VOTED_ACTION, // action
       topic, // topic (proposalId left-aligned to bytes32)

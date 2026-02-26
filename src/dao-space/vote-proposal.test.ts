@@ -5,13 +5,13 @@ import { voteProposal } from './vote-proposal.js';
 
 describe('voteProposal', () => {
   // Valid test values
-  const validCallerSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
+  const validAuthorSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validDaoSpaceId = '0xabcdef12345678901234567890abcdef' as const;
   const validProposalId = '0x11111111111111111111111111111111' as const;
 
   it('should return correct structure', () => {
     const result = voteProposal({
-      callerSpaceId: validCallerSpaceId,
+      authorSpaceId: validAuthorSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
@@ -23,7 +23,7 @@ describe('voteProposal', () => {
 
   it('should return the correct contract address (Space Registry)', () => {
     const { to } = voteProposal({
-      callerSpaceId: validCallerSpaceId,
+      authorSpaceId: validAuthorSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
@@ -34,7 +34,7 @@ describe('voteProposal', () => {
 
   it('should return valid calldata', () => {
     const { calldata } = voteProposal({
-      callerSpaceId: validCallerSpaceId,
+      authorSpaceId: validAuthorSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
@@ -46,7 +46,7 @@ describe('voteProposal', () => {
 
   it('should accept YES vote', () => {
     const result = voteProposal({
-      callerSpaceId: validCallerSpaceId,
+      authorSpaceId: validAuthorSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
@@ -57,7 +57,7 @@ describe('voteProposal', () => {
 
   it('should accept NO vote', () => {
     const result = voteProposal({
-      callerSpaceId: validCallerSpaceId,
+      authorSpaceId: validAuthorSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'NO',
@@ -68,7 +68,7 @@ describe('voteProposal', () => {
 
   it('should accept ABSTAIN vote', () => {
     const result = voteProposal({
-      callerSpaceId: validCallerSpaceId,
+      authorSpaceId: validAuthorSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'ABSTAIN',
@@ -79,7 +79,7 @@ describe('voteProposal', () => {
 
   it('should produce different calldata for different vote options', () => {
     const params = {
-      callerSpaceId: validCallerSpaceId,
+      authorSpaceId: validAuthorSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: validProposalId,
     } as const;
@@ -97,14 +97,14 @@ describe('voteProposal', () => {
     const otherProposalId = '0x22222222222222222222222222222222' as const;
 
     const result1 = voteProposal({
-      callerSpaceId: validCallerSpaceId,
+      authorSpaceId: validAuthorSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
     });
 
     const result2 = voteProposal({
-      callerSpaceId: validCallerSpaceId,
+      authorSpaceId: validAuthorSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: otherProposalId,
       vote: 'YES',
@@ -113,22 +113,51 @@ describe('voteProposal', () => {
     expect(result1.calldata).not.toBe(result2.calldata);
   });
 
-  it('should throw for invalid callerSpaceId format', () => {
+  it('should accept IDs without 0x prefix', () => {
+    const result = voteProposal({
+      authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
+      daoSpaceId: 'abcdef12345678901234567890abcdef',
+      proposalId: '11111111111111111111111111111111',
+      vote: 'YES',
+    });
+
+    expect(result.calldata).toBeTruthy();
+  });
+
+  it('should produce same calldata with or without 0x prefix', () => {
+    const withPrefix = voteProposal({
+      authorSpaceId: '0x0eed5491b917cf58b33ac81255fe7ae9',
+      daoSpaceId: '0xabcdef12345678901234567890abcdef',
+      proposalId: '0x11111111111111111111111111111111',
+      vote: 'YES',
+    });
+
+    const withoutPrefix = voteProposal({
+      authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
+      daoSpaceId: 'abcdef12345678901234567890abcdef',
+      proposalId: '11111111111111111111111111111111',
+      vote: 'YES',
+    });
+
+    expect(withPrefix.calldata).toBe(withoutPrefix.calldata);
+  });
+
+  it('should throw for invalid authorSpaceId format', () => {
     expect(() =>
       voteProposal({
-        callerSpaceId: '0xinvalid' as `0x${string}`,
+        authorSpaceId: 'invalid',
         daoSpaceId: validDaoSpaceId,
         proposalId: validProposalId,
         vote: 'YES',
       }),
-    ).toThrow('callerSpaceId must be bytes16 hex');
+    ).toThrow('authorSpaceId must be bytes16 hex');
   });
 
   it('should throw for invalid daoSpaceId format', () => {
     expect(() =>
       voteProposal({
-        callerSpaceId: validCallerSpaceId,
-        daoSpaceId: '0xtooshort' as `0x${string}`,
+        authorSpaceId: validAuthorSpaceId,
+        daoSpaceId: 'tooshort',
         proposalId: validProposalId,
         vote: 'YES',
       }),
@@ -138,9 +167,9 @@ describe('voteProposal', () => {
   it('should throw for invalid proposalId format', () => {
     expect(() =>
       voteProposal({
-        callerSpaceId: validCallerSpaceId,
+        authorSpaceId: validAuthorSpaceId,
         daoSpaceId: validDaoSpaceId,
-        proposalId: '0xbadid' as `0x${string}`,
+        proposalId: 'badid',
         vote: 'YES',
       }),
     ).toThrow('proposalId must be bytes16 hex');
