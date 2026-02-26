@@ -7,6 +7,21 @@ import { keccak256, toHex } from 'viem';
 export const PROPOSAL_CREATED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_CREATED'));
 
 /**
+ * Action hash for GOVERNANCE.PROPOSAL_VOTED
+ * Used when voting on proposals via SpaceRegistry.enter()
+ */
+export const PROPOSAL_VOTED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_VOTED'));
+
+/**
+ * Maps VoteOption strings to their on-chain uint8 values (IDAOSpace.VoteOption enum).
+ */
+export const VOTE_OPTION_VALUES = {
+  YES: 1,
+  NO: 2,
+  ABSTAIN: 3,
+} as const;
+
+/**
  * Empty topic (bytes32(0)) used for proposals
  */
 export const EMPTY_TOPIC = '0x0000000000000000000000000000000000000000000000000000000000000000' as const;

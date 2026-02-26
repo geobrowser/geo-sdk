@@ -86,3 +86,42 @@ export type ProposeEditResult = {
   /** The proposal ID (bytes16 hex) */
   proposalId: `0x${string}`;
 };
+
+/**
+ * Vote option for a DAO proposal.
+ * Maps to the IDAOSpace.VoteOption enum on-chain:
+ * - 'YES' = 1
+ * - 'NO' = 2
+ * - 'ABSTAIN' = 3
+ */
+export type VoteOption = 'YES' | 'NO' | 'ABSTAIN';
+
+export type VoteProposalParams = {
+  /**
+   * The voter's space ID (bytes16 hex).
+   * This is the fromSpaceId in the enter() call.
+   */
+  callerSpaceId: `0x${string}`;
+  /**
+   * The DAO space ID (bytes16 hex).
+   * This is the toSpaceId in the enter() call.
+   */
+  daoSpaceId: `0x${string}`;
+  /**
+   * The proposal to vote on (bytes16 hex).
+   */
+  proposalId: `0x${string}`;
+  /**
+   * The vote option: 'YES', 'NO', or 'ABSTAIN'.
+   */
+  vote: VoteOption;
+  /** Network to use (defaults to TESTNET) */
+  network?: Network;
+};
+
+export type VoteProposalResult = {
+  /** The contract address to send the transaction to (Space Registry) */
+  to: `0x${string}`;
+  /** The calldata for the enter() function call */
+  calldata: `0x${string}`;
+};
