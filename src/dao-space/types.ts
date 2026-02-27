@@ -145,7 +145,7 @@ export type ProposeRemoveMemberParams = {
   /**
    * The space ID of the member to remove (bytes16 hex, with or without 0x prefix).
    */
-  memberToRemove: string;
+  memberToRemoveSpaceId: string;
   /**
    * Voting mode for the proposal.
    * Defaults to 'SLOW' since removeMember is not a fast-path action.

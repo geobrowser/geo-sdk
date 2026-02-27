@@ -42,6 +42,13 @@ export const BYTES16_HEX_REGEX = /^0x[0-9a-fA-F]{32}$/;
 export const BYTES32_HEX_REGEX = /^0x[0-9a-fA-F]{64}$/;
 
 /**
+ * Ensures a hex string has the 0x prefix.
+ */
+export function ensure0xPrefix(value: string): `0x${string}` {
+  return (value.startsWith('0x') ? value : `0x${value}`) as `0x${string}`;
+}
+
+/**
  * Checks if a string is a valid bytes16 hex (0x prefix + 32 hex chars).
  */
 export function isBytes16Hex(value: string): boolean {

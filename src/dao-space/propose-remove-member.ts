@@ -1,17 +1,15 @@
 import { v4 as uuidv4 } from 'uuid';
 import { encodeAbiParameters, encodeFunctionData } from 'viem';
-
 import { TESTNET } from '../../contracts.js';
 import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
-import { bytes16ToBytes32LeftAligned, EMPTY_SIGNATURE, isBytes16Hex, PROPOSAL_CREATED_ACTION } from './constants.js';
+import {
+  bytes16ToBytes32LeftAligned,
+  EMPTY_SIGNATURE,
+  ensure0xPrefix,
+  isBytes16Hex,
+  PROPOSAL_CREATED_ACTION,
+} from './constants.js';
 import type { ProposeRemoveMemberParams, ProposeRemoveMemberResult } from './types.js';
-
-/**
- * Ensures a hex string has the 0x prefix.
- */
-function ensure0xPrefix(value: string): `0x${string}` {
-  return (value.startsWith('0x') ? value : `0x${value}`) as `0x${string}`;
-}
 
 /**
  * Creates a proposal to remove a member from a DAO space.
@@ -20,8 +18,6 @@ function ensure0xPrefix(value: string): `0x${string}` {
  * 1. Validates the author, DAO space, and member IDs
  * 2. Encodes the `removeMember()` call as the proposal action
  * 3. Encodes the SpaceRegistry's `enter()` call with the `PROPOSAL_CREATED` action
- *
- * No IPFS publish is needed — this is purely a governance action.
  *
  * @param params - The parameters for proposing member removal
  * @returns Object containing `to` (Space Registry address), `calldata`, and `proposalId`
@@ -34,7 +30,7 @@ function ensure0xPrefix(value: string): `0x${string}` {
  *   spaceAddress: '0xDAOSpaceContractAddress...',
  *   authorSpaceId: '0xAuthorBytes16SpaceId...',
  *   spaceId: '0xDAOBytes16SpaceId...',
- *   memberToRemove: '0xMemberBytes16SpaceId...',
+ *   memberToRemoveSpaceId: '0xMemberBytes16SpaceId...',
  * });
  *
  * // Submit the transaction using viem or another client
@@ -46,7 +42,7 @@ export function proposeRemoveMember(params: ProposeRemoveMemberParams): ProposeR
     spaceAddress,
     authorSpaceId: rawAuthorSpaceId,
     spaceId: rawSpaceId,
-    memberToRemove: rawMemberToRemove,
+    memberToRemoveSpaceId: rawMemberToRemoveSpaceId,
     votingMode = 'SLOW',
     proposalId: rawProposalId,
   } = params;
@@ -54,7 +50,7 @@ export function proposeRemoveMember(params: ProposeRemoveMemberParams): ProposeR
   // Ensure 0x prefix on all IDs
   const authorSpaceId = ensure0xPrefix(rawAuthorSpaceId);
   const spaceId = ensure0xPrefix(rawSpaceId);
-  const memberToRemove = ensure0xPrefix(rawMemberToRemove);
+  const memberToRemoveSpaceId = ensure0xPrefix(rawMemberToRemoveSpaceId);
 
   // Validate inputs
   if (!isBytes16Hex(authorSpaceId)) {
@@ -63,8 +59,8 @@ export function proposeRemoveMember(params: ProposeRemoveMemberParams): ProposeR
   if (!isBytes16Hex(spaceId)) {
     throw new Error(`spaceId must be bytes16 hex (32 hex chars). Received: ${rawSpaceId}`);
   }
-  if (!isBytes16Hex(memberToRemove)) {
-    throw new Error(`memberToRemove must be bytes16 hex (32 hex chars). Received: ${rawMemberToRemove}`);
+  if (!isBytes16Hex(memberToRemoveSpaceId)) {
+    throw new Error(`memberToRemoveSpaceId must be bytes16 hex (32 hex chars). Received: ${rawMemberToRemoveSpaceId}`);
   }
 
   // Generate or use provided proposal ID (UUID v4 as bytes16 hex)
@@ -80,7 +76,7 @@ export function proposeRemoveMember(params: ProposeRemoveMemberParams): ProposeR
   const proposalActionCalldata = encodeFunctionData({
     abi: DaoSpaceAbi,
     functionName: 'removeMember',
-    args: [memberToRemove],
+    args: [memberToRemoveSpaceId],
   });
 
   // Create the proposal action (calling removeMember on the DAO space)

@@ -1,22 +1,15 @@
 import { encodeAbiParameters, encodeFunctionData } from 'viem';
-
 import { TESTNET } from '../../contracts.js';
 import { SpaceRegistryAbi } from '../abis/index.js';
 import {
   bytes16ToBytes32LeftAligned,
   EMPTY_SIGNATURE,
+  ensure0xPrefix,
   isBytes16Hex,
   PROPOSAL_VOTED_ACTION,
   VOTE_OPTION_VALUES,
 } from './constants.js';
 import type { VoteProposalParams, VoteProposalResult } from './types.js';
-
-/**
- * Ensures a hex string has the 0x prefix.
- */
-function ensure0xPrefix(value: string): `0x${string}` {
-  return (value.startsWith('0x') ? value : `0x${value}`) as `0x${string}`;
-}
 
 /**
  * Creates a vote transaction for a DAO space proposal.

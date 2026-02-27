@@ -16,7 +16,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
     });
 
     expect(result).toHaveProperty('to');
@@ -29,7 +29,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
     });
 
     expect(to).toBe(TESTNET.SPACE_REGISTRY_ADDRESS);
@@ -40,7 +40,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
     });
 
     expect(calldata).toBeTypeOf('string');
@@ -52,7 +52,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
     });
 
     expect(proposalId).toMatch(BYTES16_HEX_REGEX);
@@ -65,7 +65,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
       proposalId: customProposalId,
     });
 
@@ -77,7 +77,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
     });
 
     expect(result.calldata).toBeTruthy();
@@ -88,7 +88,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
       votingMode: 'FAST',
     });
 
@@ -100,7 +100,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
     } as const;
 
     const slowResult = proposeRemoveMember({ ...params, votingMode: 'SLOW' });
@@ -121,7 +121,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
       proposalId: sharedProposalId,
     });
 
@@ -129,7 +129,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: otherMember,
+      memberToRemoveSpaceId: otherMember,
       proposalId: sharedProposalId,
     });
 
@@ -141,7 +141,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: 'abcdef12345678901234567890abcdef',
-      memberToRemove: '11111111111111111111111111111111',
+      memberToRemoveSpaceId: '11111111111111111111111111111111',
     });
 
     expect(result.calldata).toBeTruthy();
@@ -154,7 +154,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: '0x0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: '0xabcdef12345678901234567890abcdef',
-      memberToRemove: '0x11111111111111111111111111111111',
+      memberToRemoveSpaceId: '0x11111111111111111111111111111111',
       proposalId,
     });
 
@@ -162,7 +162,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: 'abcdef12345678901234567890abcdef',
-      memberToRemove: '11111111111111111111111111111111',
+      memberToRemoveSpaceId: '11111111111111111111111111111111',
       proposalId,
     });
 
@@ -174,7 +174,7 @@ describe('proposeRemoveMember', () => {
       spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      memberToRemove: validMemberToRemove,
+      memberToRemoveSpaceId: validMemberToRemove,
     } as const;
 
     const result1 = proposeRemoveMember(params);
@@ -189,7 +189,7 @@ describe('proposeRemoveMember', () => {
         spaceAddress: validSpaceAddress,
         authorSpaceId: 'invalid',
         spaceId: validSpaceId,
-        memberToRemove: validMemberToRemove,
+        memberToRemoveSpaceId: validMemberToRemove,
       }),
     ).toThrow('authorSpaceId must be bytes16 hex');
   });
@@ -200,20 +200,20 @@ describe('proposeRemoveMember', () => {
         spaceAddress: validSpaceAddress,
         authorSpaceId: validAuthorSpaceId,
         spaceId: 'tooshort',
-        memberToRemove: validMemberToRemove,
+        memberToRemoveSpaceId: validMemberToRemove,
       }),
     ).toThrow('spaceId must be bytes16 hex');
   });
 
-  it('should throw for invalid memberToRemove format', () => {
+  it('should throw for invalid memberToRemoveSpaceId format', () => {
     expect(() =>
       proposeRemoveMember({
         spaceAddress: validSpaceAddress,
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        memberToRemove: 'badid',
+        memberToRemoveSpaceId: 'badid',
       }),
-    ).toThrow('memberToRemove must be bytes16 hex');
+    ).toThrow('memberToRemoveSpaceId must be bytes16 hex');
   });
 
   it('should throw for invalid proposalId format', () => {
@@ -222,7 +222,7 @@ describe('proposeRemoveMember', () => {
         spaceAddress: validSpaceAddress,
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        memberToRemove: validMemberToRemove,
+        memberToRemoveSpaceId: validMemberToRemove,
         proposalId: 'badproposalid',
       }),
     ).toThrow('proposalId must be bytes16 hex');
