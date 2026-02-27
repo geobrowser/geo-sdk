@@ -37,7 +37,7 @@ function ensure0xPrefix(value: string): `0x${string}` {
  *
  * const { to, calldata } = daoSpace.voteProposal({
  *   authorSpaceId: '0xAuthorBytes16SpaceId...',
- *   daoSpaceId: '0xDAOBytes16SpaceId...',
+ *   spaceId: '0xDAOBytes16SpaceId...',
  *   proposalId: '0xProposalBytes16Id...',
  *   vote: 'YES',
  * });
@@ -47,19 +47,19 @@ function ensure0xPrefix(value: string): `0x${string}` {
  * ```
  */
 export function voteProposal(params: VoteProposalParams): VoteProposalResult {
-  const { authorSpaceId: rawAuthorSpaceId, daoSpaceId: rawDaoSpaceId, proposalId: rawProposalId, vote } = params;
+  const { authorSpaceId: rawAuthorSpaceId, spaceId: rawSpaceId, proposalId: rawProposalId, vote } = params;
 
   // Ensure 0x prefix on all IDs
   const authorSpaceId = ensure0xPrefix(rawAuthorSpaceId);
-  const daoSpaceId = ensure0xPrefix(rawDaoSpaceId);
+  const spaceId = ensure0xPrefix(rawSpaceId);
   const proposalId = ensure0xPrefix(rawProposalId);
 
   // Validate inputs
   if (!isBytes16Hex(authorSpaceId)) {
     throw new Error(`authorSpaceId must be bytes16 hex (32 hex chars). Received: ${rawAuthorSpaceId}`);
   }
-  if (!isBytes16Hex(daoSpaceId)) {
-    throw new Error(`daoSpaceId must be bytes16 hex (32 hex chars). Received: ${rawDaoSpaceId}`);
+  if (!isBytes16Hex(spaceId)) {
+    throw new Error(`spaceId must be bytes16 hex (32 hex chars). Received: ${rawSpaceId}`);
   }
   if (!isBytes16Hex(proposalId)) {
     throw new Error(`proposalId must be bytes16 hex (32 hex chars). Received: ${rawProposalId}`);
@@ -83,7 +83,7 @@ export function voteProposal(params: VoteProposalParams): VoteProposalResult {
     functionName: 'enter',
     args: [
       authorSpaceId, // fromSpaceId
-      daoSpaceId, // toSpaceId
+      spaceId, // toSpaceId
       PROPOSAL_VOTED_ACTION, // action
       topic, // topic (proposalId left-aligned to bytes32)
       data, // data (encoded vote option)

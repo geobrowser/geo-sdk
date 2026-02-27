@@ -12,7 +12,7 @@ describe('voteProposal', () => {
   it('should return correct structure', () => {
     const result = voteProposal({
       authorSpaceId: validAuthorSpaceId,
-      daoSpaceId: validDaoSpaceId,
+      spaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
     });
@@ -24,7 +24,7 @@ describe('voteProposal', () => {
   it('should return the correct contract address (Space Registry)', () => {
     const { to } = voteProposal({
       authorSpaceId: validAuthorSpaceId,
-      daoSpaceId: validDaoSpaceId,
+      spaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
     });
@@ -35,7 +35,7 @@ describe('voteProposal', () => {
   it('should return valid calldata', () => {
     const { calldata } = voteProposal({
       authorSpaceId: validAuthorSpaceId,
-      daoSpaceId: validDaoSpaceId,
+      spaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
     });
@@ -47,7 +47,7 @@ describe('voteProposal', () => {
   it('should accept YES vote', () => {
     const result = voteProposal({
       authorSpaceId: validAuthorSpaceId,
-      daoSpaceId: validDaoSpaceId,
+      spaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
     });
@@ -58,7 +58,7 @@ describe('voteProposal', () => {
   it('should accept NO vote', () => {
     const result = voteProposal({
       authorSpaceId: validAuthorSpaceId,
-      daoSpaceId: validDaoSpaceId,
+      spaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'NO',
     });
@@ -69,7 +69,7 @@ describe('voteProposal', () => {
   it('should accept ABSTAIN vote', () => {
     const result = voteProposal({
       authorSpaceId: validAuthorSpaceId,
-      daoSpaceId: validDaoSpaceId,
+      spaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'ABSTAIN',
     });
@@ -80,7 +80,7 @@ describe('voteProposal', () => {
   it('should produce different calldata for different vote options', () => {
     const params = {
       authorSpaceId: validAuthorSpaceId,
-      daoSpaceId: validDaoSpaceId,
+      spaceId: validDaoSpaceId,
       proposalId: validProposalId,
     } as const;
 
@@ -98,14 +98,14 @@ describe('voteProposal', () => {
 
     const result1 = voteProposal({
       authorSpaceId: validAuthorSpaceId,
-      daoSpaceId: validDaoSpaceId,
+      spaceId: validDaoSpaceId,
       proposalId: validProposalId,
       vote: 'YES',
     });
 
     const result2 = voteProposal({
       authorSpaceId: validAuthorSpaceId,
-      daoSpaceId: validDaoSpaceId,
+      spaceId: validDaoSpaceId,
       proposalId: otherProposalId,
       vote: 'YES',
     });
@@ -116,7 +116,7 @@ describe('voteProposal', () => {
   it('should accept IDs without 0x prefix', () => {
     const result = voteProposal({
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
-      daoSpaceId: 'abcdef12345678901234567890abcdef',
+      spaceId: 'abcdef12345678901234567890abcdef',
       proposalId: '11111111111111111111111111111111',
       vote: 'YES',
     });
@@ -127,14 +127,14 @@ describe('voteProposal', () => {
   it('should produce same calldata with or without 0x prefix', () => {
     const withPrefix = voteProposal({
       authorSpaceId: '0x0eed5491b917cf58b33ac81255fe7ae9',
-      daoSpaceId: '0xabcdef12345678901234567890abcdef',
+      spaceId: '0xabcdef12345678901234567890abcdef',
       proposalId: '0x11111111111111111111111111111111',
       vote: 'YES',
     });
 
     const withoutPrefix = voteProposal({
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
-      daoSpaceId: 'abcdef12345678901234567890abcdef',
+      spaceId: 'abcdef12345678901234567890abcdef',
       proposalId: '11111111111111111111111111111111',
       vote: 'YES',
     });
@@ -146,29 +146,29 @@ describe('voteProposal', () => {
     expect(() =>
       voteProposal({
         authorSpaceId: 'invalid',
-        daoSpaceId: validDaoSpaceId,
+        spaceId: validDaoSpaceId,
         proposalId: validProposalId,
         vote: 'YES',
       }),
     ).toThrow('authorSpaceId must be bytes16 hex');
   });
 
-  it('should throw for invalid daoSpaceId format', () => {
+  it('should throw for invalid spaceId format', () => {
     expect(() =>
       voteProposal({
         authorSpaceId: validAuthorSpaceId,
-        daoSpaceId: 'tooshort',
+        spaceId: 'tooshort',
         proposalId: validProposalId,
         vote: 'YES',
       }),
-    ).toThrow('daoSpaceId must be bytes16 hex');
+    ).toThrow('spaceId must be bytes16 hex');
   });
 
   it('should throw for invalid proposalId format', () => {
     expect(() =>
       voteProposal({
         authorSpaceId: validAuthorSpaceId,
-        daoSpaceId: validDaoSpaceId,
+        spaceId: validDaoSpaceId,
         proposalId: 'badid',
         vote: 'YES',
       }),

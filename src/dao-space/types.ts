@@ -106,7 +106,7 @@ export type VoteProposalParams = {
    * The DAO space ID (bytes16 hex, with or without 0x prefix).
    * This is the toSpaceId in the enter() call.
    */
-  daoSpaceId: string;
+  spaceId: string;
   /**
    * The proposal to vote on (bytes16 hex, with or without 0x prefix).
    */
