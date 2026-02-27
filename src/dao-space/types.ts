@@ -125,3 +125,44 @@ export type VoteProposalResult = {
   /** The calldata for the enter() function call */
   calldata: `0x${string}`;
 };
+
+export type ProposeRemoveMemberParams = {
+  /**
+   * The DAO space contract address.
+   * This is the target of the removeMember() call in the proposal.
+   */
+  spaceAddress: `0x${string}`;
+  /**
+   * The proposer's space ID (bytes16 hex, with or without 0x prefix).
+   * This is the fromSpaceId in the enter() call.
+   */
+  authorSpaceId: string;
+  /**
+   * The DAO space ID (bytes16 hex, with or without 0x prefix).
+   * This is the toSpaceId in the enter() call.
+   */
+  spaceId: string;
+  /**
+   * The space ID of the member to remove (bytes16 hex, with or without 0x prefix).
+   */
+  memberToRemove: string;
+  /**
+   * Voting mode for the proposal.
+   * Defaults to 'SLOW' since removeMember is not a fast-path action.
+   */
+  votingMode?: VotingMode;
+  /**
+   * Optional bytes16 proposalId (0x + 32 hex chars, with or without 0x prefix).
+   * If omitted, a unique id is generated.
+   */
+  proposalId?: string;
+};
+
+export type ProposeRemoveMemberResult = {
+  /** The contract address to send the transaction to (Space Registry) */
+  to: `0x${string}`;
+  /** The calldata for the enter() function call */
+  calldata: `0x${string}`;
+  /** The proposal ID (bytes16 hex) */
+  proposalId: `0x${string}`;
+};
