@@ -28,7 +28,6 @@ describe('deleteEntity', () => {
 
   const entityId = Id('5cade5757ecd41ae83481b22ffc2f94e');
   const spaceId = Id('a1b2c3d4e5f647889012345678901234');
-  const spaceId2 = Id('c3d4e5f6a7b848899012345678901234');
   const propertyId = Id('fa269fd3de9849cf90c44235d905a67c');
   const propertyId2 = Id('ab369fd3de9849cf90c44235d905a67c');
   const relationId = Id('b2c3d4e5f6a748899012345678901234');
@@ -42,7 +41,7 @@ describe('deleteEntity', () => {
       }),
     );
 
-    const result = await deleteEntity({ id: entityId, spaceIds: [spaceId] });
+    const result = await deleteEntity({ id: entityId, spaceId });
 
     expect(result.id).toBe(entityId);
     expect(result.ops).toHaveLength(1);
@@ -60,7 +59,7 @@ describe('deleteEntity', () => {
       }),
     );
 
-    const result = await deleteEntity({ id: entityId, spaceIds: [spaceId] });
+    const result = await deleteEntity({ id: entityId, spaceId });
 
     expect(result.ops).toHaveLength(1);
     expect(result.ops[0]).toMatchObject({
@@ -83,7 +82,7 @@ describe('deleteEntity', () => {
       }),
     );
 
-    const result = await deleteEntity({ id: entityId, spaceIds: [spaceId] });
+    const result = await deleteEntity({ id: entityId, spaceId });
 
     expect(result.ops).toHaveLength(3); // 1 updateEntity + 2 deleteRelation
     expect(result.ops[0]).toMatchObject({ type: 'updateEntity' });
@@ -91,27 +90,33 @@ describe('deleteEntity', () => {
     expect(result.ops[2]).toMatchObject({ type: 'deleteRelation', id: toGrcId(relationId2) });
   });
 
-  it('should deduplicate property IDs across spaces', async () => {
+  it('should only include values and relations matching the spaceId', async () => {
+    const otherSpaceId = Id('c3d4e5f6a7b848899012345678901234');
+
     mockFetch.mockResolvedValueOnce(
       mockGraphQLResponse({
         valuesList: [
           { propertyId: propertyId, spaceId },
-          { propertyId: propertyId, spaceId: spaceId2 },
+          { propertyId: propertyId2, spaceId: otherSpaceId },
         ],
-        relationsList: [],
+        relationsList: [
+          { id: relationId, spaceId },
+          { id: relationId2, spaceId: otherSpaceId },
+        ],
       }),
     );
 
-    const result = await deleteEntity({ id: entityId, spaceIds: [spaceId, spaceId2] });
+    const result = await deleteEntity({ id: entityId, spaceId });
 
-    expect(result.ops).toHaveLength(1);
+    expect(result.ops).toHaveLength(2); // 1 updateEntity + 1 deleteRelation
     expect(result.ops[0]).toMatchObject({ type: 'updateEntity' });
+    expect(result.ops[1]).toMatchObject({ type: 'deleteRelation', id: toGrcId(relationId) });
   });
 
   it('should return empty ops when entity is not found', async () => {
     mockFetch.mockResolvedValueOnce(mockGraphQLResponse(null));
 
-    const result = await deleteEntity({ id: entityId, spaceIds: [spaceId] });
+    const result = await deleteEntity({ id: entityId, spaceId });
 
     expect(result.id).toBe(entityId);
     expect(result.ops).toHaveLength(0);
@@ -120,31 +125,25 @@ describe('deleteEntity', () => {
   it('should return empty ops when entity has no values or relations', async () => {
     mockFetch.mockResolvedValueOnce(mockGraphQLResponse({ valuesList: [], relationsList: [] }));
 
-    const result = await deleteEntity({ id: entityId, spaceIds: [spaceId] });
+    const result = await deleteEntity({ id: entityId, spaceId });
 
     expect(result.ops).toHaveLength(0);
   });
 
   it('should throw an error when entity ID is invalid', async () => {
-    await expect(deleteEntity({ id: 'invalid-id', spaceIds: [spaceId] })).rejects.toThrow('Invalid id: "invalid-id"');
+    await expect(deleteEntity({ id: 'invalid-id', spaceId })).rejects.toThrow('Invalid id: "invalid-id"');
   });
 
-  it('should throw an error when a space ID is invalid', async () => {
-    await expect(deleteEntity({ id: entityId, spaceIds: ['invalid-space'] })).rejects.toThrow(
+  it('should throw an error when space ID is invalid', async () => {
+    await expect(deleteEntity({ id: entityId, spaceId: 'invalid-space' })).rejects.toThrow(
       'Invalid id: "invalid-space"',
-    );
-  });
-
-  it('should throw an error when spaceIds is empty', async () => {
-    await expect(deleteEntity({ id: entityId, spaceIds: [] })).rejects.toThrow(
-      '`spaceIds` in `deleteEntity` must not be empty',
     );
   });
 
   it('should call the correct GraphQL endpoint', async () => {
     mockFetch.mockResolvedValueOnce(mockGraphQLResponse(null));
 
-    await deleteEntity({ id: entityId, spaceIds: [spaceId] });
+    await deleteEntity({ id: entityId, spaceId });
 
     expect(mockFetch).toHaveBeenCalledWith(
       'https://testnet-api.geobrowser.io/graphql',
@@ -158,7 +157,7 @@ describe('deleteEntity', () => {
   it('should throw when fetch fails', async () => {
     mockFetch.mockRejectedValueOnce(new Error('Network error'));
 
-    await expect(deleteEntity({ id: entityId, spaceIds: [spaceId] })).rejects.toThrow(/Could not fetch entity data/);
+    await expect(deleteEntity({ id: entityId, spaceId })).rejects.toThrow(/Could not fetch entity data/);
   });
 
   it('should throw when response parsing fails', async () => {
@@ -168,8 +167,6 @@ describe('deleteEntity', () => {
       },
     });
 
-    await expect(deleteEntity({ id: entityId, spaceIds: [spaceId] })).rejects.toThrow(
-      /Could not parse GraphQL response/,
-    );
+    await expect(deleteEntity({ id: entityId, spaceId })).rejects.toThrow(/Could not parse GraphQL response/);
   });
 });

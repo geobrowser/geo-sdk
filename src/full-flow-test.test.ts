@@ -462,7 +462,7 @@ it.skip('should create an entity and then delete it', async () => {
   // Step 2: Delete the entity by unsetting all values and relations
   const { ops: deleteOps } = await deleteEntity({
     id: entityId,
-    spaceIds: [spaceId],
+    spaceId,
     network: 'TESTNET',
   });
 

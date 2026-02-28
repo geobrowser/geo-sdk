@@ -25,40 +25,35 @@ type EntityGraphQLResponse = {
 
 /**
  * Deletes an entity by unsetting all its values and deleting all its relations
- * in the specified spaces.
+ * in the specified space.
  *
- * Queries the GraphQL API to discover the entity's values and relations,
+ * Queries the API to discover the entity's values and relations,
  * then creates the appropriate operations to remove them.
  *
  * @example
  * ```ts
  * const { ops } = await deleteEntity({
  *   id: entityId,
- *   spaceIds: [spaceId],
+ *   spaceId,
  * });
  * ```
  *
  * @param params – {@link DeleteEntityParams}
  * @returns The operations to delete the entity's values and relations.
  */
-export const deleteEntity = async ({ id, spaceIds, network }: DeleteEntityParams): Promise<CreateResult> => {
+export const deleteEntity = async ({ id, spaceId, network }: DeleteEntityParams): Promise<CreateResult> => {
   assertValid(id, '`id` in `deleteEntity`');
-  for (const spaceId of spaceIds) {
-    assertValid(spaceId, '`spaceIds` in `deleteEntity`');
-  }
-  if (spaceIds.length === 0) {
-    throw new Error('`spaceIds` in `deleteEntity` must not be empty');
-  }
+  assertValid(spaceId, '`spaceId` in `deleteEntity`');
 
   const resolvedNetwork: Network = network ?? 'TESTNET';
 
   const query = `query entity {
     entity(id: "${id}") {
-      valuesList(filter: { spaceId: { in: ${JSON.stringify(spaceIds)} } }) {
+      valuesList(filter: { spaceId: { in: [${JSON.stringify(spaceId)}] } }) {
         propertyId
         spaceId
       }
-      relationsList(filter: { spaceId: { in: ${JSON.stringify(spaceIds)} } }) {
+      relationsList(filter: { spaceId: { in: [${JSON.stringify(spaceId)}] } }) {
         id
         spaceId
       }
@@ -93,7 +88,10 @@ export const deleteEntity = async ({ id, spaceIds, network }: DeleteEntityParams
   const { valuesList, relationsList } = response.data.entity;
   const ops: Op[] = [];
 
-  const uniquePropertyIds = [...new Set(valuesList.map(v => v.propertyId))];
+  const matchingValues = valuesList.filter(v => v.spaceId === spaceId);
+  const matchingRelations = relationsList.filter(r => r.spaceId === spaceId);
+
+  const uniquePropertyIds = [...new Set(matchingValues.map(v => v.propertyId))];
 
   if (uniquePropertyIds.length > 0) {
     const unsetValues: GrcUnsetValue[] = uniquePropertyIds.map(propertyId => ({
@@ -110,7 +108,7 @@ export const deleteEntity = async ({ id, spaceIds, network }: DeleteEntityParams
     );
   }
 
-  for (const relation of relationsList) {
+  for (const relation of matchingRelations) {
     ops.push(grcDeleteRelation(toGrcId(relation.id)));
   }
 
