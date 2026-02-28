@@ -4,9 +4,11 @@ import { it } from 'vitest';
 
 import { TESTNET } from '../contracts.js';
 import { SpaceRegistryAbi } from './abis/index.js';
-import { DESCRIPTION_PROPERTY } from './core/ids/system.js';
+import { DESCRIPTION_PROPERTY, RELATION_TYPE } from './core/ids/system.js';
 import * as daoSpace from './dao-space/index.js';
 import { createEntity } from './graph/create-entity.js';
+import { createRelation } from './graph/create-relation.js';
+import { deleteEntity } from './graph/delete-entity.js';
 import { updateEntity } from './graph/update-entity.js';
 import * as personalSpace from './personal-space/index.js';
 import { getWalletClient, TESTNET_RPC_URL } from './smart-wallet.js';
@@ -47,7 +49,9 @@ it.skip('should create a space and publish an edit', async () => {
   });
 
   // Check if a personal space already exists for this address
-  const hasExistingSpace = await personalSpace.hasSpace({ address: account.address });
+  const hasExistingSpace = await personalSpace.hasSpace({
+    address: account.address,
+  });
 
   if (!hasExistingSpace) {
     console.log('Creating personal space...');
@@ -68,7 +72,9 @@ it.skip('should create a space and publish an edit', async () => {
   }
 
   // Verify space exists after potential creation
-  const hasSpaceNow = await personalSpace.hasSpace({ address: account.address });
+  const hasSpaceNow = await personalSpace.hasSpace({
+    address: account.address,
+  });
   if (!hasSpaceNow) {
     throw new Error(`Failed to create personal space for address ${account.address}`);
   }
@@ -176,7 +182,9 @@ it.skip('should create a DAO space and propose an edit', async () => {
   });
 
   // Check if a personal space already exists for this address
-  const hasExistingSpace = await personalSpace.hasSpace({ address: account.address });
+  const hasExistingSpace = await personalSpace.hasSpace({
+    address: account.address,
+  });
 
   if (!hasExistingSpace) {
     console.log('Creating personal space (required to be a DAO editor)...');
@@ -197,7 +205,9 @@ it.skip('should create a DAO space and propose an edit', async () => {
   }
 
   // Verify space exists after potential creation
-  const hasSpaceNow = await personalSpace.hasSpace({ address: account.address });
+  const hasSpaceNow = await personalSpace.hasSpace({
+    address: account.address,
+  });
   if (!hasSpaceNow) {
     throw new Error(`Failed to create personal space for address ${account.address}`);
   }
@@ -272,7 +282,9 @@ it.skip('should create a DAO space and propose an edit', async () => {
 
   console.log('daoSpaceIdHex:', daoSpaceIdHex);
 
-  const hasDaoSpace = await personalSpace.hasSpace({ address: daoSpaceAddress });
+  const hasDaoSpace = await personalSpace.hasSpace({
+    address: daoSpaceAddress,
+  });
   if (!hasDaoSpace) {
     throw new Error('DAO space was not registered in the Space Registry');
   }
@@ -331,4 +343,171 @@ it.skip('should create a DAO space and propose an edit', async () => {
 
   console.log('Successfully proposed edit to DAO space');
   console.log('Proposal ID:', proposalId.slice(2));
+}, 120000);
+
+it.skip('should create an entity and then delete it', async () => {
+  const privateKeyEnv = process.env.PRIVATE_KEY;
+  if (!privateKeyEnv) {
+    throw new Error('PRIVATE_KEY environment variable is required. Run `pnpm create-private-key` to generate one.');
+  }
+  const addressPrivateKey = privateKeyEnv as `0x${string}`;
+  const { address } = privateKeyToAccount(addressPrivateKey);
+
+  console.log('address', address);
+
+  // Get wallet client for testnet
+  const walletClient = await getWalletClient({
+    privateKey: addressPrivateKey,
+  });
+
+  const account = walletClient.account;
+  if (!account) {
+    throw new Error('Wallet client account is undefined');
+  }
+
+  // Create a public client for reading contract state
+  const publicClient = createPublicClient({
+    transport: http(TESTNET_RPC_URL),
+  });
+
+  // Check if a personal space already exists for this address
+  const hasExistingSpace = await personalSpace.hasSpace({
+    address: account.address,
+  });
+
+  if (!hasExistingSpace) {
+    console.log('Creating personal space...');
+
+    const { to, calldata } = personalSpace.createSpace();
+
+    const createSpaceTxHash = await walletClient.sendTransaction({
+      // @ts-expect-error - viem type mismatch for account
+      account: walletClient.account,
+      to,
+      value: 0n,
+      data: calldata,
+    });
+
+    console.log('createSpaceTxHash', createSpaceTxHash);
+
+    await publicClient.waitForTransactionReceipt({ hash: createSpaceTxHash });
+  }
+
+  const spaceIdHex = (await publicClient.readContract({
+    address: TESTNET.SPACE_REGISTRY_ADDRESS,
+    abi: SpaceRegistryAbi,
+    functionName: 'addressToSpaceId',
+    args: [account.address],
+  })) as Hex;
+
+  const spaceId = hexToUuid(spaceIdHex);
+  console.log('spaceId (UUID)', spaceId);
+
+  // Step 1: Create an entity with some data and a relation
+  const { ops: createOps, id: entityId } = createEntity({
+    name: 'Entity to Delete',
+    description: 'This entity will be deleted',
+  });
+
+  const { ops: relationOps, id: relationId } = createRelation({
+    fromEntity: entityId,
+    toEntity: '3dd25afe17ff40f290bd9f63799cd299',
+    type: RELATION_TYPE,
+  });
+
+  console.log('entityId', entityId);
+  console.log('relationId', relationId);
+
+  // Publish the create edit
+  const {
+    cid: createCid,
+    editId: createEditId,
+    to: createTo,
+    calldata: createCalldata,
+  } = await personalSpace.publishEdit({
+    name: 'Create Entity',
+    spaceId,
+    ops: [...createOps, ...relationOps],
+    author: spaceId,
+    network: 'TESTNET',
+  });
+
+  console.log('create cid', createCid);
+  console.log('create editId', createEditId);
+
+  const createTxHash = await walletClient.sendTransaction({
+    // @ts-expect-error - viem type mismatch for account
+    account: walletClient.account,
+    chain: walletClient.chain ?? null,
+    to: createTo,
+    data: createCalldata,
+  });
+
+  console.log('createTxHash', createTxHash);
+
+  const createReceipt = await publicClient.waitForTransactionReceipt({
+    hash: createTxHash,
+  });
+  console.log('createReceipt status', createReceipt.status);
+
+  if (createReceipt.status === 'reverted') {
+    throw new Error(`Create transaction reverted: ${createTxHash}`);
+  }
+
+  console.log('Successfully created entity', entityId);
+
+  // Wait for the entity to be indexed before deleting
+  await new Promise(resolve => setTimeout(resolve, 4000));
+
+  // Step 2: Delete the entity by unsetting all values and relations
+  const { ops: deleteOps } = await deleteEntity({
+    id: entityId,
+    spaceIds: [spaceId],
+    network: 'TESTNET',
+  });
+
+  console.log('deleteOps count', deleteOps.length);
+
+  if (deleteOps.length === 0) {
+    console.log('No ops to delete (entity may not have been indexed yet)');
+    return;
+  }
+
+  // Publish the delete edit
+  const {
+    cid: deleteCid,
+    editId: deleteEditId,
+    to: deleteTo,
+    calldata: deleteCalldata,
+  } = await personalSpace.publishEdit({
+    name: 'Delete Entity',
+    spaceId,
+    ops: deleteOps,
+    author: spaceId,
+    network: 'TESTNET',
+  });
+
+  console.log('delete cid', deleteCid);
+  console.log('delete editId', deleteEditId);
+
+  const deleteTxHash = await walletClient.sendTransaction({
+    // @ts-expect-error - viem type mismatch for account
+    account: walletClient.account,
+    chain: walletClient.chain ?? null,
+    to: deleteTo,
+    data: deleteCalldata,
+  });
+
+  console.log('deleteTxHash', deleteTxHash);
+
+  const deleteReceipt = await publicClient.waitForTransactionReceipt({
+    hash: deleteTxHash,
+  });
+  console.log('deleteReceipt status', deleteReceipt.status);
+
+  if (deleteReceipt.status === 'reverted') {
+    throw new Error(`Delete transaction reverted: ${deleteTxHash}`);
+  }
+
+  console.log('Successfully deleted entity', entityId);
 }, 120000);
