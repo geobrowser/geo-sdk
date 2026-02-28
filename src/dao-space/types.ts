@@ -128,11 +128,6 @@ export type VoteProposalResult = {
 
 export type ProposeRemoveMemberParams = {
   /**
-   * The DAO space contract address.
-   * This is the target of the removeMember() call in the proposal.
-   */
-  spaceAddress: `0x${string}`;
-  /**
    * The proposer's space ID (bytes16 hex, with or without 0x prefix).
    * This is the fromSpaceId in the enter() call.
    */
@@ -156,6 +151,8 @@ export type ProposeRemoveMemberParams = {
    * If omitted, a unique id is generated.
    */
   proposalId?: string;
+  /** Network to use (defaults to TESTNET) */
+  network?: Network;
 };
 
 export type ProposeRemoveMemberResult = {

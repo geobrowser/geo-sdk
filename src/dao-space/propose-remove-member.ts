@@ -27,10 +27,10 @@ import type { ProposeRemoveMemberParams, ProposeRemoveMemberResult } from './typ
  * import { daoSpace } from '@geoprotocol/geo-sdk';
  *
  * const { to, calldata, proposalId } = daoSpace.proposeRemoveMember({
- *   spaceAddress: '0xDAOSpaceContractAddress...',
  *   authorSpaceId: '0xAuthorBytes16SpaceId...',
  *   spaceId: '0xDAOBytes16SpaceId...',
  *   memberToRemoveSpaceId: '0xMemberBytes16SpaceId...',
+ *   network: 'TESTNET',
  * });
  *
  * // Submit the transaction using viem or another client
@@ -39,7 +39,6 @@ import type { ProposeRemoveMemberParams, ProposeRemoveMemberResult } from './typ
  */
 export function proposeRemoveMember(params: ProposeRemoveMemberParams): ProposeRemoveMemberResult {
   const {
-    spaceAddress,
     authorSpaceId: rawAuthorSpaceId,
     spaceId: rawSpaceId,
     memberToRemoveSpaceId: rawMemberToRemoveSpaceId,
@@ -79,10 +78,10 @@ export function proposeRemoveMember(params: ProposeRemoveMemberParams): ProposeR
     args: [memberToRemoveSpaceId],
   });
 
-  // Create the proposal action (calling removeMember on the DAO space)
+  // Create the proposal action (calling removeMember on the Space Registry)
   const proposalActions = [
     {
-      to: spaceAddress,
+      to: TESTNET.SPACE_REGISTRY_ADDRESS,
       value: 0n,
       data: proposalActionCalldata,
     },

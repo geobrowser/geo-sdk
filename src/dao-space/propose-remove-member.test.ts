@@ -8,12 +8,11 @@ describe('proposeRemoveMember', () => {
   // Valid test values
   const validAuthorSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validSpaceId = '0xabcdef12345678901234567890abcdef' as const;
-  const validSpaceAddress = '0x1234567890123456789012345678901234567890' as `0x${string}`;
+
   const validMemberToRemove = '0x11111111111111111111111111111111' as const;
 
   it('should return correct structure', () => {
     const result = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -26,7 +25,6 @@ describe('proposeRemoveMember', () => {
 
   it('should return the correct contract address (Space Registry)', () => {
     const { to } = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -37,7 +35,6 @@ describe('proposeRemoveMember', () => {
 
   it('should return valid calldata', () => {
     const { calldata } = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -49,7 +46,6 @@ describe('proposeRemoveMember', () => {
 
   it('should return valid proposalId (bytes16 hex)', () => {
     const { proposalId } = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -62,7 +58,6 @@ describe('proposeRemoveMember', () => {
     const customProposalId = '0x22222222222222222222222222222222';
 
     const { proposalId } = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -74,7 +69,6 @@ describe('proposeRemoveMember', () => {
 
   it('should default to SLOW voting mode', () => {
     const result = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -85,7 +79,6 @@ describe('proposeRemoveMember', () => {
 
   it('should accept FAST voting mode', () => {
     const result = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -97,7 +90,6 @@ describe('proposeRemoveMember', () => {
 
   it('should produce different calldata for different voting modes', () => {
     const params = {
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -118,7 +110,6 @@ describe('proposeRemoveMember', () => {
     const sharedProposalId = '0x44444444444444444444444444444444';
 
     const result1 = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -126,7 +117,6 @@ describe('proposeRemoveMember', () => {
     });
 
     const result2 = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: otherMember,
@@ -138,7 +128,6 @@ describe('proposeRemoveMember', () => {
 
   it('should accept IDs without 0x prefix', () => {
     const result = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: 'abcdef12345678901234567890abcdef',
       memberToRemoveSpaceId: '11111111111111111111111111111111',
@@ -151,7 +140,6 @@ describe('proposeRemoveMember', () => {
     const proposalId = '0x55555555555555555555555555555555';
 
     const withPrefix = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: '0x0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: '0xabcdef12345678901234567890abcdef',
       memberToRemoveSpaceId: '0x11111111111111111111111111111111',
@@ -159,7 +147,6 @@ describe('proposeRemoveMember', () => {
     });
 
     const withoutPrefix = proposeRemoveMember({
-      spaceAddress: validSpaceAddress,
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: 'abcdef12345678901234567890abcdef',
       memberToRemoveSpaceId: '11111111111111111111111111111111',
@@ -171,7 +158,6 @@ describe('proposeRemoveMember', () => {
 
   it('should generate unique proposalIds', () => {
     const params = {
-      spaceAddress: validSpaceAddress,
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
       memberToRemoveSpaceId: validMemberToRemove,
@@ -186,7 +172,6 @@ describe('proposeRemoveMember', () => {
   it('should throw for invalid authorSpaceId format', () => {
     expect(() =>
       proposeRemoveMember({
-        spaceAddress: validSpaceAddress,
         authorSpaceId: 'invalid',
         spaceId: validSpaceId,
         memberToRemoveSpaceId: validMemberToRemove,
@@ -197,7 +182,6 @@ describe('proposeRemoveMember', () => {
   it('should throw for invalid spaceId format', () => {
     expect(() =>
       proposeRemoveMember({
-        spaceAddress: validSpaceAddress,
         authorSpaceId: validAuthorSpaceId,
         spaceId: 'tooshort',
         memberToRemoveSpaceId: validMemberToRemove,
@@ -208,7 +192,6 @@ describe('proposeRemoveMember', () => {
   it('should throw for invalid memberToRemoveSpaceId format', () => {
     expect(() =>
       proposeRemoveMember({
-        spaceAddress: validSpaceAddress,
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
         memberToRemoveSpaceId: 'badid',
@@ -219,7 +202,6 @@ describe('proposeRemoveMember', () => {
   it('should throw for invalid proposalId format', () => {
     expect(() =>
       proposeRemoveMember({
-        spaceAddress: validSpaceAddress,
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
         memberToRemoveSpaceId: validMemberToRemove,
