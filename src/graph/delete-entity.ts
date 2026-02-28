@@ -45,15 +45,18 @@ export const deleteEntity = async ({ id, spaceId, network }: DeleteEntityParams)
   assertValid(id, '`id` in `deleteEntity`');
   assertValid(spaceId, '`spaceId` in `deleteEntity`');
 
+  // Normalize to dashless format (canonical form returned by the API)
+  const normalizedSpaceId = String(spaceId).replaceAll('-', '');
+
   const resolvedNetwork: Network = network ?? 'TESTNET';
 
   const query = `query entity {
     entity(id: "${id}") {
-      valuesList(filter: { spaceId: { in: [${JSON.stringify(spaceId)}] } }) {
+      valuesList(filter: { spaceId: { in: [${JSON.stringify(normalizedSpaceId)}] } }) {
         propertyId
         spaceId
       }
-      relationsList(filter: { spaceId: { in: [${JSON.stringify(spaceId)}] } }) {
+      relationsList(filter: { spaceId: { in: [${JSON.stringify(normalizedSpaceId)}] } }) {
         id
         spaceId
       }
@@ -88,8 +91,8 @@ export const deleteEntity = async ({ id, spaceId, network }: DeleteEntityParams)
   const { valuesList, relationsList } = response.data.entity;
   const ops: Op[] = [];
 
-  const matchingValues = valuesList.filter(v => v.spaceId === spaceId);
-  const matchingRelations = relationsList.filter(r => r.spaceId === spaceId);
+  const matchingValues = valuesList.filter(v => v.spaceId === normalizedSpaceId);
+  const matchingRelations = relationsList.filter(r => r.spaceId === normalizedSpaceId);
 
   const uniquePropertyIds = [...new Set(matchingValues.map(v => v.propertyId))];
 

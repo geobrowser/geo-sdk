@@ -113,6 +113,24 @@ describe('deleteEntity', () => {
     expect(result.ops[1]).toMatchObject({ type: 'deleteRelation', id: toGrcId(relationId) });
   });
 
+  it('should match when spaceId is passed with dashes', async () => {
+    const dashlessSpaceId = 'a1b2c3d4e5f647889012345678901234';
+    const dashedSpaceId = Id('a1b2c3d4-e5f6-4788-9012-345678901234');
+
+    mockFetch.mockResolvedValueOnce(
+      mockGraphQLResponse({
+        valuesList: [{ propertyId: propertyId, spaceId: dashlessSpaceId }],
+        relationsList: [{ id: relationId, spaceId: dashlessSpaceId }],
+      }),
+    );
+
+    const result = await deleteEntity({ id: entityId, spaceId: dashedSpaceId });
+
+    expect(result.ops).toHaveLength(2);
+    expect(result.ops[0]).toMatchObject({ type: 'updateEntity' });
+    expect(result.ops[1]).toMatchObject({ type: 'deleteRelation', id: toGrcId(relationId) });
+  });
+
   it('should return empty ops when entity is not found', async () => {
     mockFetch.mockResolvedValueOnce(mockGraphQLResponse(null));
 
