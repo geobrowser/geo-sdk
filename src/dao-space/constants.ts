@@ -13,6 +13,12 @@ export const PROPOSAL_CREATED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_CREA
 export const PROPOSAL_VOTED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_VOTED'));
 
 /**
+ * Action hash for GOVERNANCE.MEMBERSHIP_REQUESTED
+ * Used when requesting membership in a DAO space via SpaceRegistry.enter()
+ */
+export const MEMBERSHIP_REQUESTED_ACTION = keccak256(toHex('GOVERNANCE.MEMBERSHIP_REQUESTED'));
+
+/**
  * Maps VoteOption strings to their on-chain uint8 values (IDAOSpace.VoteOption enum).
  */
 export const VOTE_OPTION_VALUES = {

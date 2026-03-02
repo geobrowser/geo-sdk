@@ -126,6 +126,35 @@ export type VoteProposalResult = {
   calldata: `0x${string}`;
 };
 
+export type ProposeRequestMembershipParams = {
+  /**
+   * The requestor's space ID (bytes16 hex, with or without 0x prefix).
+   * This is the fromSpaceId in the enter() call and the member to be added.
+   */
+  authorSpaceId: string;
+  /**
+   * The DAO space ID (bytes16 hex, with or without 0x prefix).
+   * This is the toSpaceId in the enter() call.
+   */
+  spaceId: string;
+  /**
+   * Optional bytes16 proposalId (0x + 32 hex chars, with or without 0x prefix).
+   * If omitted, a unique id is generated.
+   */
+  proposalId?: string;
+  /** Network to use (defaults to TESTNET) */
+  network?: Network;
+};
+
+export type ProposeRequestMembershipResult = {
+  /** The contract address to send the transaction to (Space Registry) */
+  to: `0x${string}`;
+  /** The calldata for the enter() function call */
+  calldata: `0x${string}`;
+  /** The proposal ID (bytes16 hex) */
+  proposalId: `0x${string}`;
+};
+
 export type ProposeRemoveMemberParams = {
   /**
    * The proposer's space ID (bytes16 hex, with or without 0x prefix).
