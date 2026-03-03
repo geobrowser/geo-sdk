@@ -11,7 +11,7 @@ export type PublishEditParams = {
   name: string;
   spaceId: Id | string;
   ops: Op[];
-  /** The author's Person Entity ID (UUID). */
+  /** The author's personal space ID. */
   author: Id | string;
   network?: Network;
 };

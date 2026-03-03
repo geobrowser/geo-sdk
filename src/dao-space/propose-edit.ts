@@ -38,7 +38,7 @@ import type { ProposeEditParams, ProposeEditResult } from './types.js';
  * const { editId, cid, to, calldata, proposalId } = await daoSpace.proposeEdit({
  *   name: 'Add new entity',
  *   ops,
- *   author: 'your-person-entity-id',
+ *   author: 'your-personal-space-id',
  *   daoSpaceAddress: '0xDAOSpaceContractAddress...',
  *   callerSpaceId: '0xCallerBytes16SpaceId...',
  *   daoSpaceId: '0xDAOBytes16SpaceId...',

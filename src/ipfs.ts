@@ -22,7 +22,7 @@ class IpfsUploadError extends Error {
 type PublishEditProposalParams = {
   name: string;
   ops: Op[];
-  /** The author's Person Entity ID (UUID). Used as the `authors` field in the proto Edit message. */
+  /** The author's personal space ID. Used as the `authors` field in the proto Edit message. */
   author: Id | string;
   network?: Network;
 };
@@ -44,7 +44,7 @@ type PublishEditResult = {
  * const { cid, editId } = await IPFS.publishEdit({
  *   name: 'Edit name',
  *   ops: ops,
- *   author: 'your-person-entity-id',
+ *   author: 'your-personal-space-id',
  * });
  * ```
  *
