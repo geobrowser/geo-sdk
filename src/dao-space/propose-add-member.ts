@@ -3,7 +3,13 @@ import { encodeAbiParameters, encodeFunctionData } from 'viem';
 
 import { TESTNET } from '../../contracts.js';
 import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
-import { bytes16ToBytes32LeftAligned, EMPTY_SIGNATURE, isBytes16Hex, PROPOSAL_CREATED_ACTION } from './constants.js';
+import {
+  bytes16ToBytes32LeftAligned,
+  EMPTY_SIGNATURE,
+  ensure0xPrefix,
+  isBytes16Hex,
+  PROPOSAL_CREATED_ACTION,
+} from './constants.js';
 import type { ProposeAddMemberParams, ProposeAddMemberResult } from './types.js';
 
 /**
@@ -33,16 +39,22 @@ import type { ProposeAddMemberParams, ProposeAddMemberResult } from './types.js'
  */
 export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemberResult {
   const {
-    daoSpaceAddress,
-    callerSpaceId,
-    daoSpaceId,
-    newMemberSpaceId,
+    daoSpaceAddress: rawDaoSpaceAddress,
+    spaceId: rawSpaceId,
+    daoSpaceId: rawDaoSpaceId,
+    newMemberSpaceId: rawNewMemberSpaceId,
     votingMode = 'SLOW',
-    proposalId: proposalIdInput,
+    proposalId: rawProposalId,
   } = params;
 
-  if (!isBytes16Hex(callerSpaceId)) {
-    throw new Error(`callerSpaceId must be bytes16 hex (0x followed by 32 hex chars). Received: ${callerSpaceId}`);
+  // Validate inputs
+  const spaceId = ensure0xPrefix(rawSpaceId);
+  const newMemberSpaceId = ensure0xPrefix(rawNewMemberSpaceId);
+  const daoSpaceAddress = ensure0xPrefix(rawDaoSpaceAddress);
+  const daoSpaceId = ensure0xPrefix(rawDaoSpaceId);
+
+  if (!isBytes16Hex(spaceId)) {
+    throw new Error(`spaceId must be bytes16 hex (0x followed by 32 hex chars). Received: ${spaceId}`);
   }
   if (!isBytes16Hex(daoSpaceId)) {
     throw new Error(`daoSpaceId must be bytes16 hex (0x followed by 32 hex chars). Received: ${daoSpaceId}`);
@@ -53,11 +65,9 @@ export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemb
     );
   }
 
-  const proposalId = proposalIdInput ?? (`0x${uuidv4().replaceAll('-', '')}` as `0x${string}`);
-
-  if (!isBytes16Hex(proposalId)) {
-    throw new Error(`proposalId must be bytes16 hex (0x followed by 32 hex chars). Received: ${proposalId}`);
-  }
+  const proposalId = rawProposalId
+    ? ensure0xPrefix(rawProposalId)
+    : (`0x${uuidv4().replaceAll('-', '')}` as `0x${string}`);
 
   // Encode the addMember function call: addMember(bytes16 _newMemberSpaceId)
   const proposalActionCalldata = encodeFunctionData({
@@ -101,7 +111,7 @@ export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemb
     abi: SpaceRegistryAbi,
     functionName: 'enter',
     args: [
-      callerSpaceId, // fromSpaceId
+      spaceId, // fromSpaceId
       daoSpaceId, // toSpaceId
       PROPOSAL_CREATED_ACTION, // action
       topic, // topic (proposalId left-aligned to bytes32)
