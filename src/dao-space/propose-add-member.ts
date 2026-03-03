@@ -1,6 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
 import { encodeAbiParameters, encodeFunctionData } from 'viem';
-import { TESTNET } from '../../contracts.js';
 import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
 import {
   bytes16ToBytes32LeftAligned,
@@ -46,8 +45,6 @@ export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemb
     proposalId: rawProposalId,
     network = 'TESTNET',
   } = params;
-
-  
 
   // Validate inputs
   const authorSpaceId = ensure0xPrefix(rawAuthroSpaceId);

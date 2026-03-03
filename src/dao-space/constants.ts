@@ -1,6 +1,5 @@
 import { keccak256, toHex } from 'viem';
-import { TESTNET, MAINNET } from '../../contracts.js';
-
+import { TESTNET } from '../../contracts.js';
 
 /**
  * Action hash for GOVERNANCE.PROPOSAL_CREATED
@@ -85,6 +84,6 @@ export function bytes16ToBytes32LeftAligned(bytes16Hex: `0x${string}`): `0x${str
  * Get Contract Addresses based on Network
  */
 export function getContractAddressesBasedOnNetwork(network: 'TESTNET' | 'MAINNET'): typeof TESTNET {
-  if(network === 'MAINNET') throw Error('MAINNET not supported yet')
+  if (network === 'MAINNET') throw Error('MAINNET not supported yet');
   return TESTNET;
 }
