@@ -195,20 +195,15 @@ export type ProposeRemoveMemberResult = {
 
 export type ProposeAddMemberParams = {
   /**
-   * The DAO space contract address.
-   * This is the target of the addMember() call in the proposal.
-   */
-  daoSpaceAddress: string;
-  /**
    * The proposer's space ID (bytes16 hex).
    * This is the fromSpaceId in the enter() call.
    */
-  spaceId: string;
+  authorSpaceId: string;
   /**
    * The DAO space ID (bytes16 hex).
    * This is the toSpaceId in the enter() call.
    */
-  daoSpaceId: string;
+  spaceId: string;
   /**
    * The space ID of the new member to add (bytes16 hex).
    */

@@ -1,12 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import { encodeAbiParameters, encodeFunctionData } from 'viem';
-
 import { TESTNET } from '../../contracts.js';
 import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
 import {
   bytes16ToBytes32LeftAligned,
   EMPTY_SIGNATURE,
   ensure0xPrefix,
+  getContractAddressesBasedOnNetwork,
   isBytes16Hex,
   PROPOSAL_CREATED_ACTION,
 } from './constants.js';
@@ -28,8 +28,8 @@ import type { ProposeAddMemberParams, ProposeAddMemberResult } from './types.js'
  *
  * const { to, calldata } = daoSpace.proposeAddMember({
  *   daoSpaceAddress: '0xDAOSpaceContractAddress...',
- *   callerSpaceId: '0xCallerBytes16SpaceId...',
- *   daoSpaceId: '0xDAOBytes16SpaceId...',
+ *   authorSpaceId: '0xCallerBytes16SpaceId...',
+ *   spaceId: '0xDAOBytes16SpaceId...',
  *   newMemberSpaceId: '0xNewMemberBytes16SpaceId...',
  * });
  *
@@ -39,25 +39,26 @@ import type { ProposeAddMemberParams, ProposeAddMemberResult } from './types.js'
  */
 export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemberResult {
   const {
-    daoSpaceAddress: rawDaoSpaceAddress,
+    authorSpaceId: rawAuthroSpaceId,
     spaceId: rawSpaceId,
-    daoSpaceId: rawDaoSpaceId,
     newMemberSpaceId: rawNewMemberSpaceId,
     votingMode = 'SLOW',
     proposalId: rawProposalId,
+    network = 'TESTNET',
   } = params;
 
-  // Validate inputs
-  const spaceId = ensure0xPrefix(rawSpaceId);
-  const newMemberSpaceId = ensure0xPrefix(rawNewMemberSpaceId);
-  const daoSpaceAddress = ensure0xPrefix(rawDaoSpaceAddress);
-  const daoSpaceId = ensure0xPrefix(rawDaoSpaceId);
+  
 
+  // Validate inputs
+  const authorSpaceId = ensure0xPrefix(rawAuthroSpaceId);
+  const newMemberSpaceId = ensure0xPrefix(rawNewMemberSpaceId);
+  const spaceId = ensure0xPrefix(rawSpaceId);
+
+  if (!isBytes16Hex(authorSpaceId)) {
+    throw new Error(`authorSpaceId must be bytes16 hex (0x followed by 32 hex chars). Received: ${authorSpaceId}`);
+  }
   if (!isBytes16Hex(spaceId)) {
     throw new Error(`spaceId must be bytes16 hex (0x followed by 32 hex chars). Received: ${spaceId}`);
-  }
-  if (!isBytes16Hex(daoSpaceId)) {
-    throw new Error(`daoSpaceId must be bytes16 hex (0x followed by 32 hex chars). Received: ${daoSpaceId}`);
   }
   if (!isBytes16Hex(newMemberSpaceId)) {
     throw new Error(
@@ -76,10 +77,12 @@ export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemb
     args: [newMemberSpaceId],
   });
 
+  const contracts = getContractAddressesBasedOnNetwork(network);
+
   // Create the proposal action (calling addMember on the DAO space)
   const proposalActions = [
     {
-      to: daoSpaceAddress,
+      to: contracts.SPACE_REGISTRY_ADDRESS,
       value: 0n,
       data: proposalActionCalldata,
     },
@@ -111,8 +114,8 @@ export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemb
     abi: SpaceRegistryAbi,
     functionName: 'enter',
     args: [
-      spaceId, // fromSpaceId
-      daoSpaceId, // toSpaceId
+      authorSpaceId, // fromSpaceId
+      spaceId, // toSpaceId
       PROPOSAL_CREATED_ACTION, // action
       topic, // topic (proposalId left-aligned to bytes32)
       data, // data (encoded proposal)
@@ -121,7 +124,7 @@ export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemb
   });
 
   return {
-    to: TESTNET.SPACE_REGISTRY_ADDRESS,
+    to: contracts.SPACE_REGISTRY_ADDRESS,
     calldata,
     proposalId,
   };
