@@ -184,6 +184,8 @@ export type DeleteRelationParams = {
 
 export type DeleteEntityParams = {
   id: Id | string;
+  spaceId: Id | string;
+  network?: Network;
 };
 
 export type CreateTypeParams = DefaultProperties & {

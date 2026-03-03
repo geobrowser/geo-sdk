@@ -1,5 +1,29 @@
 # @geoprotocol/geo-sdk
 
+## 0.13.0
+
+### Minor Changes
+
+- 3b42341: Add `daoSpace.proposeRemoveMember` for creating governance proposals to remove a member from a DAO space
+- 02d7ad1: Add `daoSpace.proposeRequestMembership` for requesting membership in a DAO space via `SpaceRegistry.enter()` with the `MEMBERSHIP_REQUESTED` action.
+
+## 0.12.0
+
+### Minor Changes
+
+- 7efbb2b: Fix `deleteEntity` to properly remove an entity's values and relations. Breaking change: the function is now async and requires a `spaceId` parameter.
+
+## 0.11.0
+
+### Minor Changes
+
+- 7c96e9d: Add daoSpace.voteProposal for voting on DAO proposals
+
+### Patch Changes
+
+- e4f8f7b: fix: use correct `removeEditor` function name instead of `removeMember` in getRemoveEditorArguments
+- 7faad31: Update entities and knowledge graphs link and remove pluralism link from README
+
 ## 0.10.1
 
 ### Patch Changes
