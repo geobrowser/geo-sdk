@@ -19,6 +19,12 @@ export const PROPOSAL_VOTED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_VOTED'
 export const MEMBERSHIP_REQUESTED_ACTION = keccak256(toHex('GOVERNANCE.MEMBERSHIP_REQUESTED'));
 
 /**
+ * Action hash for GOVERNANCE.PROPOSAL_EXECUTED
+ * Used when executing a passed proposal via SpaceRegistry.enter()
+ */
+export const PROPOSAL_EXECUTED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_EXECUTED'));
+
+/**
  * Maps VoteOption strings to their on-chain uint8 values (IDAOSpace.VoteOption enum).
  */
 export const VOTE_OPTION_VALUES = {
