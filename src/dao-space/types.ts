@@ -192,3 +192,41 @@ export type ProposeRemoveMemberResult = {
   /** The proposal ID (bytes16 hex) */
   proposalId: `0x${string}`;
 };
+
+export type ProposeAddMemberParams = {
+  /**
+   * The proposer's space ID (bytes16 hex).
+   * This is the fromSpaceId in the enter() call.
+   */
+  authorSpaceId: string;
+  /**
+   * The DAO space ID (bytes16 hex).
+   * This is the toSpaceId in the enter() call.
+   */
+  spaceId: string;
+  /**
+   * The space ID of the new member to add (bytes16 hex).
+   */
+  newMemberSpaceId: string;
+  /**
+   * Voting mode for the proposal.
+   * Defaults to 'SLOW' since addMember() is a governance action.
+   */
+  votingMode?: VotingMode;
+  /**
+   * Optional bytes16 proposalId (0x + 32 hex chars).
+   * If omitted, a unique id is generated.
+   */
+  proposalId?: string;
+  /** Network to use (defaults to TESTNET) */
+  network?: Network;
+};
+
+export type ProposeAddMemberResult = {
+  /** The contract address to send the transaction to (Space Registry) */
+  to: `0x${string}`;
+  /** The calldata for the enter() function call */
+  calldata: `0x${string}`;
+  /** The proposal ID (bytes16 hex) */
+  proposalId: `0x${string}`;
+};
