@@ -25,9 +25,8 @@ import type { ProposeAddMemberParams, ProposeAddMemberResult } from './types.js'
  * ```ts
  * import { daoSpace } from '@geoprotocol/geo-sdk';
  *
- * const { to, calldata } = daoSpace.proposeAddMember({
- *   daoSpaceAddress: '0xDAOSpaceContractAddress...',
- *   authorSpaceId: '0xCallerBytes16SpaceId...',
+ * const { to, calldata, proposalId } = daoSpace.proposeAddMember({
+ *   authorSpaceId: '0xProposerBytes16SpaceId...',
  *   spaceId: '0xDAOBytes16SpaceId...',
  *   newMemberSpaceId: '0xNewMemberBytes16SpaceId...',
  * });
@@ -38,7 +37,7 @@ import type { ProposeAddMemberParams, ProposeAddMemberResult } from './types.js'
  */
 export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemberResult {
   const {
-    authorSpaceId: rawAuthroSpaceId,
+    authorSpaceId: rawAuthorSpaceId,
     spaceId: rawSpaceId,
     newMemberSpaceId: rawNewMemberSpaceId,
     votingMode = 'SLOW',
@@ -47,7 +46,7 @@ export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemb
   } = params;
 
   // Validate inputs
-  const authorSpaceId = ensure0xPrefix(rawAuthroSpaceId);
+  const authorSpaceId = ensure0xPrefix(rawAuthorSpaceId);
   const newMemberSpaceId = ensure0xPrefix(rawNewMemberSpaceId);
   const spaceId = ensure0xPrefix(rawSpaceId);
 

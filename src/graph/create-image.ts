@@ -13,9 +13,8 @@ import type { CreateImageParams, CreateImageResult, PropertiesParam } from '../t
 import { createEntity } from './create-entity.js';
 
 /**
- * Creates an entity with the given name, description, cover, properties, and types.
- * All IDs passed to this function (cover, types, property IDs, relation IDs, etc.) are validated.
- * If any invalid ID is provided, the function will throw an error.
+ * Creates an image entity by uploading an image to IPFS and generating the corresponding ops.
+ * Accepts either a URL or a Blob. If an ID is provided, it is validated; otherwise one is generated.
  *
  * @example
  * ```ts
