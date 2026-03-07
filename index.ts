@@ -6,6 +6,7 @@
  */
 export { Account } from './src/account.js';
 export { DataBlock, TextBlock } from './src/blocks.js';
+export { getPrivateKeyFromCast } from './src/cast-wallet.js';
 /**
  * This module provides utility functions for working with base58 ids
  * in TypeScript.
@@ -54,7 +55,6 @@ export { Position } from './src/position.js';
  * Ranks allow ordering or scoring entities within a collection.
  */
 export * as Rank from './src/ranks/index.js';
-
 /**
  * This module provides utility functions for working with Graph URIs in TypeScript.
  *
