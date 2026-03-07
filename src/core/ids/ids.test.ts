@@ -22,6 +22,7 @@ describe('SystemIds', () => {
     expect(SystemIds.WORKED_AT_PROPERTY).toBe('3e1f6873f4e8480da4ce447092a684fa');
     expect(SystemIds.STUDIED_AT_PROPERTY).toBe('3c8a7056fba7463cbdee319c835f2563');
     expect(SystemIds.TEAM_MEMBERS_PROPERTY).toBe('a09625a4b98448768f0da28a65e47f85');
+    expect(SystemIds.SPEAKERS_PROPERTY).toBe('0d68798b6bcc4bbc90e4f76ecc1180a8');
   });
 });
 
