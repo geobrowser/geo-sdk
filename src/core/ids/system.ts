@@ -283,6 +283,16 @@ export const VOTE_ORDINAL_VALUE_PROPERTY = Id('49ee1b8918204e75a1ae38a2dcaad4a5'
 export const VOTE_WEIGHTED_VALUE_PROPERTY = Id('103701ddcabe4a8e835b10345327b647');
 
 export const WORKS_AT_PROPERTY = Id('dac6e89e76be4f7788e10f556ceb6869');
+export const WORKED_AT_PROPERTY = Id('3e1f6873f4e8480da4ce447092a684fa');
+export const STUDIED_AT_PROPERTY = Id('3c8a7056fba7463cbdee319c835f2563');
+export const TEAM_MEMBERS_PROPERTY = Id('a09625a4b98448768f0da28a65e47f85');
+
+export const START_DATE_PROPERTY = Id('eed03a040acd4a9e81e08272ed70a817');
+export const END_DATE_PROPERTY = Id('b08b8f63dc1e41568b0819946f2b011c');
+export const DATE_FOUNDED_PROPERTY = Id('41aa3d9847b64a97b7ec427e575b910e');
+
+export const EVENT_TYPE = Id('4d876b81787e41fcab5d075d4da66a3f');
+export const INSTITUTION_TYPE = Id('7f5433a40628498f9de6311cb14709a8');
 
 // bounty
 export const BOUNTY_TYPE = Id('808af0bad5884e3391f09dd4b25e18be');

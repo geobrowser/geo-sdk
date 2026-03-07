@@ -14,8 +14,11 @@ export const PUBLISHER_TYPE = Id('531ac4c5e40946ad9dd3abcd2db955a0');
 export const QUOTE_TYPE = Id('043a171c69184dc3a7dbb8471ca6fcc2');
 export const REGION_TYPE = Id('c188844a722442abb4762991c9c913f1');
 export const SKILL_TYPE = Id('9ca6ab1f3a114e49bbaf72e0c9a985cf');
+export const TALK_TYPE = Id('86db141cf7cb471194ed39088926adb8');
 export const TAG_TYPE = Id('e0fcc66c9e8643f480802469d8a1a93a');
 export const TOPIC_TYPE = Id('5ef5a5860f274d8e8f6c59ae5b3e89e2');
+export const PODCAST_TYPE = Id('4c81561d1f9541319cdddd20ab831ba2');
+export const EPISODE_TYPE = Id('972d201ad78045689e01543f67b26bee');
 
 export const AVATAR_PROPERTY = Id('1155befffad549b7a2e0da4777b8792c');
 export const BROADER_GOALS_PROPERTY = Id('7072d8d0313649939ae5dacae05e25f9');
