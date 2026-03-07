@@ -1,7 +1,7 @@
 import type { Op } from '@geoprotocol/grc-20';
 import type { VotingSettingsInput } from '../encodings/get-create-dao-space-calldata.js';
 import type { Id } from '../id.js';
-import type { Network } from '../types.js';
+import type { GeoSmartAccount, Network } from '../types.js';
 
 export type CreateSpaceParams = {
   /** Name of the DAO space */
@@ -229,4 +229,26 @@ export type ProposeAddMemberResult = {
   calldata: `0x${string}`;
   /** The proposal ID (bytes16 hex) */
   proposalId: `0x${string}`;
+};
+
+export type PublishAndVoteParams = Omit<ProposeEditParams, 'proposalId'> & {
+  /** Smart account wallet client used to send transactions */
+  wallet: GeoSmartAccount;
+  /** Vote option (defaults to 'YES') */
+  vote?: VoteOption;
+  /** Optional bytes16 proposalId (0x + 32 hex chars). If omitted, a unique id is generated. */
+  proposalId?: `0x${string}`;
+};
+
+export type PublishAndVoteResult = {
+  /** The proposal ID (bytes16 hex) */
+  proposalId: `0x${string}`;
+  /** The generated edit ID */
+  editId: Id;
+  /** The IPFS CID of the published edit */
+  cid: string;
+  /** Transaction hash for the propose transaction */
+  proposeTxHash: `0x${string}`;
+  /** Transaction hash for the vote transaction */
+  voteTxHash: `0x${string}`;
 };
