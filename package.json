@@ -18,6 +18,7 @@
     "./abis": "./dist/abis.js"
   },
   "scripts": {
+    "prepare": "tsc",
     "clean": "rm -rf dist",
     "build": "tsc",
     "test": "vitest",
