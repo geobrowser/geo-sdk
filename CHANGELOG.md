@@ -1,5 +1,16 @@
 # @geoprotocol/geo-sdk
 
+## 0.13.1
+
+### Patch Changes
+
+- 747fd66: Fix stale JSDoc that described the `author` field as "Person Entity ID" — updated to "personal space ID" across the SDK.
+- b06043d: Add `proposeAddMember` function to `dao-space` module.
+
+  Encodes a governance proposal that calls `addMember()` on a DAO space contract, submitted via `SpaceRegistry.enter()`. Returns `to`, `calldata`, and `proposalId` — no IPFS publication required.
+
+- 8db4cb5: Upgrade @geoprotocol/grc-20 from ^0.4.0 to ^0.4.1
+
 ## 0.13.0
 
 ### Minor Changes
