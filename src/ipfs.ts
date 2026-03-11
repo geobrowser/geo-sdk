@@ -75,6 +75,13 @@ export async function publishEdit(args: PublishEditProposalParams): Promise<Publ
   // Encode to binary format
   const binary = encodeEdit(grcEdit);
 
+  const MAX_EDIT_SIZE = 10 * 1024 * 1024; // 10MB
+  if (binary.byteLength > MAX_EDIT_SIZE) {
+    throw new Error(
+      `Edit size (${(binary.byteLength / 1024 / 1024).toFixed(2)}MB) exceeds the ${MAX_EDIT_SIZE / 1024 / 1024}MB limit. Reduce the number of ops or split into multiple edits.`,
+    );
+  }
+
   // Create a copy to ensure we have a regular ArrayBuffer for Blob compatibility
   const binaryArray = new Uint8Array(binary);
   const blob = new Blob([binaryArray], { type: 'application/octet-stream' });
