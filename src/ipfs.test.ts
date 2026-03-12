@@ -43,7 +43,13 @@ describe('publishEdit', () => {
       id: entityId,
       name: 'updated name',
       description: 'updated description',
-      values: [{ property: WEBSITE_PROPERTY, type: 'text', value: 'https://example.com' }],
+      values: [
+        {
+          property: WEBSITE_PROPERTY,
+          type: 'text',
+          value: 'https://example.com',
+        },
+      ],
     });
 
     const { cid, editId } = await publishEdit({
@@ -128,8 +134,16 @@ describe('publishEdit', () => {
         { property: pointPropertyId, type: 'point', lon: -122.4, lat: 37.8 },
         { property: datePropertyId, type: 'date', value: '2024-01-15' },
         { property: timePropertyId, type: 'time', value: '14:30:00Z' },
-        { property: datetimePropertyId, type: 'datetime', value: '2024-01-15T14:30:00Z' },
-        { property: schedulePropertyId, type: 'schedule', value: 'FREQ=WEEKLY;BYDAY=MO' },
+        {
+          property: datetimePropertyId,
+          type: 'datetime',
+          value: '2024-01-15T14:30:00Z',
+        },
+        {
+          property: schedulePropertyId,
+          type: 'schedule',
+          value: 'FREQ=WEEKLY;BYDAY=MO',
+        },
       ],
     });
 
@@ -153,6 +167,29 @@ describe('publishEdit', () => {
         network: 'TESTNET',
       }),
     ).rejects.toThrow('`ops` in `publishEdit` must not be empty');
+  });
+
+  it('throws when edit size exceeds 10MB', async () => {
+    // Create ops that will produce a binary larger than 10MB
+    // Each text value op with a large string contributes significantly to the encoded size
+    const largeValue = 'x'.repeat(1_000_000); // 1MB string
+    const ops: Op[] = [];
+    for (let i = 0; i < 12; i++) {
+      const { ops: entityOps } = createEntity({
+        name: `large entity ${i}`,
+        values: [{ property: WEBSITE_PROPERTY, type: 'text', value: largeValue }],
+      });
+      ops.push(...entityOps);
+    }
+
+    await expect(
+      publishEdit({
+        name: 'oversized edit',
+        ops,
+        author: TEST_AUTHOR_SPACE_ID,
+        network: 'TESTNET',
+      }),
+    ).rejects.toThrow('exceeds the 10MB limit');
   });
 
   it('handles multiple ops in a single edit', async () => {
