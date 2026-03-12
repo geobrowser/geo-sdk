@@ -349,7 +349,7 @@ const { cid, editId, to, calldata } = await personalSpace.publishEdit({
   name: "Test Edit",
   spaceId,
   ops,
-  author: smartAccountAddress,
+  author: spaceId,
   network: "TESTNET",
 });
 console.log("cid", cid);
@@ -446,7 +446,7 @@ const { cid, editId, to, calldata } = await personalSpace.publishEdit({
   name: "Test Edit",
   spaceId,
   ops,
-  author: account.address,
+  author: spaceId,
   network: "TESTNET",
 });
 console.log("cid", cid);
