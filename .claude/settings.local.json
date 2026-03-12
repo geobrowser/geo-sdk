@@ -14,7 +14,9 @@
       "Bash(pnpm create-private-key:*)",
       "Bash(pnpm clean:*)",
       "Bash(curl:*)",
-      "Bash(pnpm install:*)"
+      "Bash(pnpm install:*)",
+      "Bash(npx tsx:*)",
+      "Bash(pnpm vitest:*)"
     ]
   }
 }
