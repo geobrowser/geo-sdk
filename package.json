@@ -34,7 +34,9 @@
     "fractional-indexing-jittered": "^1.0.0",
     "image-size": "^2.0.2",
     "permissionless": "^0.2.35",
-    "uuid": "^13.0.0",
+    "uuid": "^13.0.0"
+  },
+  "peerDependencies": {
     "viem": "^2.37.6"
   },
   "devDependencies": {
@@ -42,6 +44,7 @@
     "@changesets/cli": "^2.29.7",
     "@types/uuid": "^11.0.0",
     "typescript": "^5.9.2",
+    "viem": "^2.37.6",
     "vitest": "^3.2.4"
   },
   "packageManager": "pnpm@10.5.2",

@@ -29,9 +29,6 @@ importers:
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
-      viem:
-        specifier: ^2.37.6
-        version: 2.37.6(typescript@5.9.2)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.2.4
@@ -45,6 +42,9 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.2
+      viem:
+        specifier: ^2.37.6
+        version: 2.37.6(typescript@5.9.2)
       vitest:
         specifier: ^3.2.4
         version: 3.2.4
