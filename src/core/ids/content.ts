@@ -3,6 +3,7 @@ import { Id } from '../../id.js';
 export const ARTICLE_TYPE = Id('a2a5ed0cacef46b1835de457956ce915');
 export const CITY_TYPE = Id('01b05333941a4b00bc78fac5a15b467d');
 export const CLAIM_TYPE = Id('96f859efa1ca4b229372c86ad58b694b');
+export const COMMENT_TYPE = Id('82f6123a03234c6ca811701c5bc026e9');
 export const CONTINENT_TYPE = Id('3317d044a7004a9dbbaf4c16ade42f76');
 export const COUNTRY_TYPE = Id('42a0a7618c82459fad0834bfeb437cde');
 export const GOAL_TYPE = Id('1845ee9980c648a3abc3809de1753c63');
