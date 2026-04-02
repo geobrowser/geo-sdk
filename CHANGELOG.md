@@ -1,5 +1,16 @@
 # @geoprotocol/geo-sdk
 
+## 0.15.0
+
+### Minor Changes
+
+- 4106020: Move `viem` from dependencies to peerDependencies. This is a breaking change: consumers must now install `viem` themselves (e.g. add `viem` to your project's `dependencies`) to avoid runtime/module resolution errors.
+
+### Patch Changes
+
+- c7dc5e9: Add `COMMENT_TYPE` to content IDs.
+- c7dc5e9: Add `@geoprotocol/geo-sdk/lite` subpath export for a lightweight entry point.
+
 ## 0.14.0
 
 ### Minor Changes
