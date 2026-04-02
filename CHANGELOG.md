@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.15.2
+
+### Patch Changes
+
+- Fix build.
+
 ## 0.15.1
 
 ### Patch Changes
