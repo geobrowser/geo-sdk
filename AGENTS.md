@@ -33,3 +33,18 @@ pnpm lint:fix       # Fix linting issues
 - Use `assertValid()` from `id-utils.js` for ID validation in functions
 - 2-space indentation, single quotes, trailing commas
 - Use Effect library's `Micro` for async error handling in IPFS operations
+
+## Changesets
+
+When making any user-facing change (features, bug fixes, refactors that affect the public API), create a changeset entry:
+
+1. Create a new markdown file in `.changeset/` with a random kebab-case name (e.g., `.changeset/cool-dogs-fly.md`)
+2. Use this format:
+   ```markdown
+   ---
+   "@geoprotocol/geo-sdk": patch
+   ---
+
+   Short description of the change.
+   ```
+3. Use `patch` for bug fixes, `minor` for new features, `major` for breaking changes
