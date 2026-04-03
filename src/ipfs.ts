@@ -22,7 +22,7 @@ class IpfsUploadError extends Error {
 type PublishEditProposalParams = {
   name: string;
   ops: Op[];
-  /** The author's personal space ID. Used as the `authors` field in the proto Edit message. */
+  /** The author's personal space ID. Used as the `authors` field in the GRC-20 Edit message. */
   author: Id | string;
   network?: Network;
 };
