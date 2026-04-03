@@ -20,7 +20,7 @@ pnpm lint:fix       # Fix linting issues
 
 ### Data Flow
 1. Create ops using `Graph.*` functions (e.g., `Graph.createEntity`, `Graph.createProperty`)
-2. Publish ops to IPFS using `Ipfs.publishEdit` - this encodes ops into protobuf binary format
+2. Publish ops to IPFS using `Ipfs.publishEdit` - this encodes ops into GRC-20 binary format
 3. Get calldata for the space's governance contract
 4. Submit transaction onchain using wallet client
 
