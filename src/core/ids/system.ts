@@ -310,3 +310,7 @@ export const COMMUNITY_CALL_PARENT_PROPERTY = Id('6da0310b8aaa46f79f1f23ea5d6df6
 export const PARTICIPANTS_PROPERTY = Id('0b9b1a35206844318f7d2350f958a728');
 export const COMMUNITY_CALL_EVENT_TYPE = Id('0419ca20118b4cdb84dfdb9ed73b50c2');
 export const CALL_RSVP_PROPERTY = Id('74261aaad0ab4756bde405be00ae6bc6');
+
+// comments
+export const REPLY_TO_PROPERTY = Id('310d4a240e5b451cb2151bfce40d0fe6');
+export const RESOLVED_PROPERTY = Id('902d154b700a4fcabec2b072196687bc');

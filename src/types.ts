@@ -202,6 +202,17 @@ export type CreatePropertyParams = DefaultProperties &
       }
   );
 
+export type CreateCommentParams = {
+  id?: Id | string;
+  content: string;
+  replyTo: {
+    entityId: Id | string;
+    spaceId: Id | string;
+  };
+  resolved?: boolean;
+  network?: Network;
+};
+
 export type CreateImageParams =
   | {
       blob: Blob;

@@ -3,6 +3,7 @@ export {
   getApiOrigin,
   TESTNET_API_ORIGIN,
 } from './constants.js';
+export * from './create-comment.js';
 export * from './create-entity.js';
 export * from './create-image.js';
 export * from './create-property.js';
