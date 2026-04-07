@@ -1,19 +1,33 @@
+import type { CreateRelation, Op } from '@geoprotocol/grc-20';
 import { createPublicClient, type Hex, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { it } from 'vitest';
+import { expect, it } from 'vitest';
 
 import { TESTNET } from '../contracts.js';
 import { SpaceRegistryAbi } from './abis/index.js';
-import { DESCRIPTION_PROPERTY, RELATION_TYPE } from './core/ids/system.js';
+import { DESCRIPTION_PROPERTY, RELATION_TYPE, REPLY_TO_PROPERTY } from './core/ids/system.js';
 import * as daoSpace from './dao-space/index.js';
+import { createComment } from './graph/create-comment.js';
 import { createEntity } from './graph/create-entity.js';
 import { createRelation } from './graph/create-relation.js';
 import { deleteEntity } from './graph/delete-entity.js';
 import { updateEntity } from './graph/update-entity.js';
+import { toGrcId } from './id-utils.js';
 import * as personalSpace from './personal-space/index.js';
 import { getWalletClient, TESTNET_RPC_URL } from './smart-wallet.js';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Hex;
+
+const replyToGrcId = toGrcId(REPLY_TO_PROPERTY);
+
+function filterReplyToRelations(ops: Op[]): CreateRelation[] {
+  return ops.filter(
+    (op): op is CreateRelation =>
+      op.type === 'createRelation' &&
+      'relationType' in op &&
+      (op as CreateRelation).relationType.every((b, i) => b === replyToGrcId[i]),
+  );
+}
 
 /**
  * Converts a bytes16 hex space ID to a UUID string (without dashes).
@@ -511,3 +525,185 @@ it.skip('should create an entity and then delete it', async () => {
 
   console.log('Successfully deleted entity', entityId);
 }, 120000);
+
+it.skip('should create an entity, comment on it, and comment on the comment with correct reply-to chains', async () => {
+  const privateKeyEnv = process.env.PRIVATE_KEY;
+  if (!privateKeyEnv) {
+    throw new Error('PRIVATE_KEY environment variable is required. Run `pnpm create-private-key` to generate one.');
+  }
+  const addressPrivateKey = privateKeyEnv as `0x${string}`;
+  const { address } = privateKeyToAccount(addressPrivateKey);
+
+  console.log('address', address);
+
+  const walletClient = await getWalletClient({
+    privateKey: addressPrivateKey,
+  });
+
+  const account = walletClient.account;
+  if (!account) {
+    throw new Error('Wallet client account is undefined');
+  }
+
+  const publicClient = createPublicClient({
+    transport: http(TESTNET_RPC_URL),
+  });
+
+  // Ensure personal space exists
+  const hasExistingSpace = await personalSpace.hasSpace({
+    address: account.address,
+  });
+
+  if (!hasExistingSpace) {
+    console.log('Creating personal space...');
+
+    const { to, calldata } = personalSpace.createSpace();
+
+    const createSpaceTxHash = await walletClient.sendTransaction({
+      // @ts-expect-error - viem type mismatch for account
+      account: walletClient.account,
+      to,
+      value: 0n,
+      data: calldata,
+    });
+
+    console.log('createSpaceTxHash', createSpaceTxHash);
+    await publicClient.waitForTransactionReceipt({ hash: createSpaceTxHash });
+  }
+
+  const spaceIdHex = (await publicClient.readContract({
+    address: TESTNET.SPACE_REGISTRY_ADDRESS,
+    abi: SpaceRegistryAbi,
+    functionName: 'addressToSpaceId',
+    args: [account.address],
+  })) as Hex;
+
+  const spaceId = hexToUuid(spaceIdHex);
+  console.log('spaceId (UUID)', spaceId);
+
+  // Step 1: Create an entity
+  const { ops: entityOps, id: entityId } = createEntity({
+    name: 'Entity with Comments',
+    description: 'This entity will have comments',
+  });
+
+  console.log('entityId', entityId);
+
+  // Step 2: Create Comment A on the entity
+  const { ops: commentAOps, id: commentAId } = await createComment({
+    content: 'This is Comment A on the entity',
+    replyTo: { entityId, spaceId },
+  });
+
+  console.log('commentAId', commentAId);
+
+  // Comment A should have 1 reply-to: the entity
+  const commentAReplyTos = filterReplyToRelations(commentAOps);
+  console.log('Comment A reply-to count:', commentAReplyTos.length);
+  expect(commentAReplyTos).toHaveLength(1);
+
+  // Publish entity + Comment A
+  const {
+    cid: cid1,
+    to: to1,
+    calldata: calldata1,
+  } = await personalSpace.publishEdit({
+    name: 'Create Entity and Comment A',
+    spaceId,
+    ops: [...entityOps, ...commentAOps],
+    author: spaceId,
+    network: 'TESTNET',
+  });
+
+  console.log('cid1', cid1);
+
+  const tx1Hash = await walletClient.sendTransaction({
+    // @ts-expect-error - viem type mismatch for account
+    account: walletClient.account,
+    chain: walletClient.chain ?? null,
+    to: to1,
+    data: calldata1,
+  });
+
+  console.log('tx1Hash', tx1Hash);
+
+  const receipt1 = await publicClient.waitForTransactionReceipt({
+    hash: tx1Hash,
+  });
+  console.log('receipt1 status', receipt1.status);
+
+  if (receipt1.status === 'reverted') {
+    throw new Error(`First publish transaction reverted: ${tx1Hash}`);
+  }
+
+  // Wait for Comment A to be indexed
+  await new Promise(resolve => setTimeout(resolve, 4000));
+
+  // Step 3: Create Comment B on Comment A
+  // Since Comment A is now published, its reply-to relations can be fetched.
+  // Comment B should have 2 reply-tos: the entity (carried forward from A) + Comment A (direct parent)
+  const { ops: commentBOps, id: commentBId } = await createComment({
+    content: 'This is Comment B on Comment A',
+    replyTo: { entityId: commentAId, spaceId },
+  });
+
+  console.log('commentBId', commentBId);
+
+  const commentBReplyTos = filterReplyToRelations(commentBOps);
+  console.log('Comment B reply-to count:', commentBReplyTos.length);
+  // Comment B should reply to both: the root entity + Comment A
+  expect(commentBReplyTos).toHaveLength(2);
+
+  // Publish Comment B
+  const {
+    cid: cid2,
+    to: to2,
+    calldata: calldata2,
+  } = await personalSpace.publishEdit({
+    name: 'Create Comment B',
+    spaceId,
+    ops: commentBOps,
+    author: spaceId,
+    network: 'TESTNET',
+  });
+
+  console.log('cid2', cid2);
+
+  const tx2Hash = await walletClient.sendTransaction({
+    // @ts-expect-error - viem type mismatch for account
+    account: walletClient.account,
+    chain: walletClient.chain ?? null,
+    to: to2,
+    data: calldata2,
+  });
+
+  console.log('tx2Hash', tx2Hash);
+
+  const receipt2 = await publicClient.waitForTransactionReceipt({
+    hash: tx2Hash,
+  });
+  console.log('receipt2 status', receipt2.status);
+
+  if (receipt2.status === 'reverted') {
+    throw new Error(`Second publish transaction reverted: ${tx2Hash}`);
+  }
+
+  // Wait for Comment B to be indexed
+  await new Promise(resolve => setTimeout(resolve, 4000));
+
+  // Step 4: Create Comment C on Comment B
+  // Comment C should have 3 reply-tos: the entity + Comment A + Comment B (full ancestor chain)
+  const { ops: commentCOps, id: commentCId } = await createComment({
+    content: 'This is Comment C on Comment B',
+    replyTo: { entityId: commentBId, spaceId },
+  });
+
+  console.log('commentCId', commentCId);
+
+  const commentCReplyTos = filterReplyToRelations(commentCOps);
+  console.log('Comment C reply-to count:', commentCReplyTos.length);
+  // Comment C should reply to: the root entity + Comment A + Comment B
+  expect(commentCReplyTos).toHaveLength(3);
+
+  console.log('Successfully verified comment reply-to chain accumulation');
+}, 180000);

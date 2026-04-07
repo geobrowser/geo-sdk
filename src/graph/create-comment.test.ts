@@ -157,46 +157,28 @@ describe('createComment', () => {
     expect(parentReply?.toSpace).toEqual(toGrcId(spaceId));
   });
 
-  it('creates exactly 2 reply-tos at depth 3 (root + direct parent)', async () => {
+  it('creates reply-tos for all ancestors at depth 3 (root + commentA + direct parent)', async () => {
     const rootEntityId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     const rootSpaceId = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
     const commentAId = 'cccccccccccccccccccccccccccccccc';
     const commentASpaceId = 'dddddddddddddddddddddddddddddddd';
 
     // Target is Comment B which has 2 reply-tos: [CommentA, RootEntity]
-    // We need to find the root (the one with no reply-tos)
-    let fetchCallCount = 0;
+    // Creating Comment C on Comment B should carry forward all of B's reply-tos
+    // plus B itself, resulting in 3 reply-to relations.
     vi.spyOn(global, 'fetch').mockImplementation(url => {
       if (url.toString() === graphqlUrl) {
-        fetchCallCount++;
-        if (fetchCallCount === 1) {
-          // Comment B's reply-tos
-          return Promise.resolve({
-            status: 200,
-            json: () =>
-              Promise.resolve({
-                data: {
-                  entity: {
-                    relationsList: [mockRelation(commentAId, commentASpaceId), mockRelation(rootEntityId, rootSpaceId)],
-                  },
-                },
-              }),
-          } as Response);
-        }
-        if (fetchCallCount === 2) {
-          // CommentA has reply-tos → not the root
-          return Promise.resolve({
-            status: 200,
-            json: () =>
-              Promise.resolve({
-                data: { entity: { relationsList: [mockRelation(rootEntityId, rootSpaceId)] } },
-              }),
-          } as Response);
-        }
-        // Root entity has no reply-tos
+        // Comment B's reply-tos
         return Promise.resolve({
           status: 200,
-          json: () => Promise.resolve({ data: { entity: { relationsList: [] } } }),
+          json: () =>
+            Promise.resolve({
+              data: {
+                entity: {
+                  relationsList: [mockRelation(commentAId, commentASpaceId), mockRelation(rootEntityId, rootSpaceId)],
+                },
+              },
+            }),
         } as Response);
       }
       return vi.fn() as never;
@@ -212,12 +194,16 @@ describe('createComment', () => {
         op.type === 'createRelation' &&
         (op as CreateRelation).relationType.every((b, i) => b === toGrcId(REPLY_TO_PROPERTY)[i]),
     ) as CreateRelation[];
-    // Always exactly 2: root entity + direct parent
-    expect(replyRels).toHaveLength(2);
+    // All ancestors: root entity + commentA + direct parent
+    expect(replyRels).toHaveLength(3);
 
-    // Root entity (not CommentA)
+    // Root entity
     const rootReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(rootEntityId)[i]));
     expect(rootReply).toBeDefined();
+
+    // Comment A (intermediate ancestor)
+    const commentAReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(commentAId)[i]));
+    expect(commentAReply).toBeDefined();
 
     // Direct parent (entityId, the comment being replied to)
     const parentReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(entityId)[i]));
