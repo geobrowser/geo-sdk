@@ -1,5 +1,13 @@
 # @geoprotocol/geo-sdk
 
+## 0.16.0
+
+### Minor Changes
+
+- 3c389d9: Add `Graph.createComment` for creating comment entities with reply-to relations and optional resolved status.
+- 00c2f0e: Add `Graph.updateComment` for updating a comment's content and/or resolved status.
+- fa6c822: Remove proto module and related exports. The SDK now uses the custom GRC-20 binary encoding exclusively, so the legacy proto re-exports are no longer needed.
+
 ## 0.15.2
 
 ### Patch Changes
