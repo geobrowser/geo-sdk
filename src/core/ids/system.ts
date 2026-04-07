@@ -302,6 +302,21 @@ export const ALLOCATE_PROPERTY = Id('cfeb642223c54df4b3f9375a489d9e22');
 export const CREATOR_PROPERTY = Id('e200041dba1a4ca7b28497fe22d8e234');
 // bounty submission
 export const SUBMISSION_PROPERTY = Id('3b4c516ff3ac41e0a939374119a27d6e');
+// bounty status — single-value relation from bounty to a status entity
+export const BOUNTY_TASK_STATUS_PROPERTY = Id('054a7993ec2843e29688c84ac7a09220');
+export const BOUNTY_TASK_STATUS_TYPE = Id('b69f2e11ec7b4ab4a5024947aca078bb');
+export const BOUNTY_STATUS_BACKLOG = Id('ee3dd49a49754ff696d0af79044dc21c');
+export const BOUNTY_STATUS_TODO = Id('76b5b831a5fa4203ad61b3f93915edec');
+export const BOUNTY_STATUS_IN_PROGRESS = Id('548fca08e94743668457b0d8429d5bf9');
+export const BOUNTY_STATUS_IN_REVIEW = Id('16f543624376498ea00d5aad45096a45');
+export const BOUNTY_STATUS_DONE = Id('425f3e809cf9488696581775159dfc33');
+export const BOUNTY_STATUS_CANCELLED = Id('0fb6253b9f2c405886bc49f170f317b3');
+// bounty payout — payout is a multi-relation entity
+export const PAYOUT_TYPE = Id('f5132deb102d64553049f1e9cb662f50');
+export const PAYOUT_AMOUNT_PROPERTY = Id('82fe45a31df74c0291afa6e68d41cddf');
+export const PAYOUT_RECIPIENT_PROPERTY = Id('fddacaae85138a43ec1a50ff71564d42');
+export const PAYOUT_BOUNTY_PROPERTY = Id('1b595a8b81fc25856a9b503e3e993331');
+export const PAYOUT_SUBMISSION_PROPERTY = Id('8128964c1ec54829beb380a21ab64c51');
 
 // community call
 export const MEETING_TIME_PROPERTY = Id('3ae3d1efebfc433da4bdebaa823348c9');
