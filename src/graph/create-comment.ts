@@ -98,8 +98,10 @@ async function fetchReplyToRelations(entityId: Id | string, network: Network): P
  * Creates a comment entity. Content can be plain text or markdown.
  *
  * When replying to a root entity (no existing reply-to relations), creates 1 reply-to relation.
- * When replying to a comment (has existing reply-to relations), creates 2 reply-to relations:
- * the root entity and the direct parent comment.
+ * When replying to a comment that has already been published on the Knowledge Graph, carries
+ * forward all of the parent's reply-to relations and adds the parent itself, accumulating the
+ * full ancestor chain. The parent comment must be published before creating a reply so that its
+ * reply-to relations can be fetched.
  *
  * @example
  * ```ts
@@ -131,22 +133,17 @@ export const createComment = async ({
 
   // Fetch existing reply-to relations from the target entity.
   // If the target has no reply-to relations, it is a root entity — use it directly.
-  // If the target has reply-to relations, it is a comment — find the root
-  // entity (the non-comment target with no reply-tos) and create exactly
-  // 2 relations: root entity + direct parent comment.
+  // If the target has reply-to relations, it is a comment — carry forward all
+  // of the parent's reply-tos and add the parent itself. This accumulates the
+  // full ancestor chain at any depth.
   const existingReplyTos = await fetchReplyToRelations(replyTo.entityId, network);
 
   const replyToTargets: Array<{ toEntity: Id | string; toSpace: Id | string }> = [];
 
   if (existingReplyTos.length > 0) {
-    // Target is a comment. Find the root entity by checking which
-    // of the target's reply-tos has no reply-to relations itself.
-    for (const candidate of existingReplyTos) {
-      const candidateReplyTos = await fetchReplyToRelations(candidate.entityId, network);
-      if (candidateReplyTos.length === 0) {
-        replyToTargets.push({ toEntity: candidate.entityId, toSpace: candidate.spaceId });
-        break;
-      }
+    // Target is a comment. Carry forward all its reply-to relations.
+    for (const existing of existingReplyTos) {
+      replyToTargets.push({ toEntity: existing.entityId, toSpace: existing.spaceId });
     }
     // Add the direct parent comment
     replyToTargets.push({ toEntity: replyTo.entityId, toSpace: replyTo.spaceId });
