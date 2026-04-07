@@ -213,6 +213,12 @@ export type CreateCommentParams = {
   network?: Network;
 };
 
+export type UpdateCommentParams = {
+  id: Id | string;
+  content?: string;
+  resolved?: boolean;
+};
+
 export type CreateImageParams =
   | {
       blob: Blob;
