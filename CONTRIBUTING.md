@@ -60,10 +60,7 @@ pnpm changeset
 
 ## Publishing a new version
 
-```bash
-pnpm changeset version # commit the changes
-pnpm build
-pnpm changeset publish
-git push origin <version tag> # e.g. v0.23.0
-gh release create
-```
+Publishing is automated via CI. When a PR with changesets is merged to `main`:
+
+1. The CI creates a "Version Packages" PR that bumps the version and updates the changelog
+2. When that PR is merged, the CI publishes to npm, pushes the git tag, and creates a GitHub release
