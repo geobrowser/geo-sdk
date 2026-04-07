@@ -1,0 +1,47 @@
+name: Bump Version
+
+on:
+  workflow_dispatch:
+
+jobs:
+  bump:
+    name: Bump Version
+    if: github.actor == 'nikgraf' || github.actor == 'yanivtal'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Bump versions
+        run: pnpm bump
+
+      - name: Create Pull Request
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          BRANCH="changeset-release/v${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "Version Packages v${VERSION}"
+          git push origin "$BRANCH"
+
+          gh pr create \
+            --title "Version Packages v${VERSION}" \
+            --body "This PR was created by the bump version workflow. Merge it and then run the **Publish** workflow to release to npm." \
+            --base main \
+            --head "$BRANCH"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

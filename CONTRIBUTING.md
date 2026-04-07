@@ -60,7 +60,8 @@ pnpm changeset
 
 ## Publishing a new version
 
-Publishing is automated via CI. When a PR with changesets is merged to `main`:
+Publishing is done via two manually triggered GitHub Actions workflows (restricted to nikgraf and yanivtal):
 
-1. The CI creates a "Version Packages" PR that bumps the version and updates the changelog
-2. When that PR is merged, the CI publishes to npm, pushes the git tag, and creates a GitHub release
+1. Run the **Bump Version** workflow (Actions tab → Bump Version → Run workflow). This creates a PR that bumps the version and updates the changelog.
+2. Merge the PR.
+3. Run the **Publish** workflow (Actions tab → Publish → Run workflow). This publishes to npm, pushes the git tag, and creates a GitHub release.

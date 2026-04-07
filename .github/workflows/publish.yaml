@@ -1,12 +1,7 @@
 name: Publish
 
 on:
-  push:
-    branches:
-      - main
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -15,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -34,23 +28,19 @@ jobs:
       - name: Setup npm auth
         run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" > ~/.npmrc
 
-      - name: Create Release Pull Request or Publish
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: pnpm bump
-          publish: pnpm changeset publish
+      - name: Publish to npm
+        run: pnpm changeset publish
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Push tags
+        run: git push --follow-tags
+
       - name: Create GitHub Release
-        if: steps.changesets.outputs.published == 'true'
         run: |
-          VERSION=$(echo '${{ steps.changesets.outputs.publishedPackages }}' | jq -r '.[0].version')
+          VERSION=$(node -p "require('./package.json').version")
           TAG="@geoprotocol/geo-sdk@${VERSION}"
 
-          # Extract changelog entry for this version
           BODY=$(sed -n "/^## ${VERSION}/,/^## [0-9]/p" CHANGELOG.md | sed '$d')
 
           gh release create "$TAG" --title "v${VERSION}" --notes "$BODY"
