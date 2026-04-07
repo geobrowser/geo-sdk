@@ -1,4 +1,4 @@
-import type { CreateRelation } from '@geoprotocol/grc-20';
+import type { CreateRelation, Op } from '@geoprotocol/grc-20';
 import { createPublicClient, type Hex, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { expect, it } from 'vitest';
@@ -12,10 +12,22 @@ import { createEntity } from './graph/create-entity.js';
 import { createRelation } from './graph/create-relation.js';
 import { deleteEntity } from './graph/delete-entity.js';
 import { updateEntity } from './graph/update-entity.js';
+import { toGrcId } from './id-utils.js';
 import * as personalSpace from './personal-space/index.js';
 import { getWalletClient, TESTNET_RPC_URL } from './smart-wallet.js';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Hex;
+
+const replyToGrcId = toGrcId(REPLY_TO_PROPERTY);
+
+function filterReplyToRelations(ops: Op[]): CreateRelation[] {
+  return ops.filter(
+    (op): op is CreateRelation =>
+      op.type === 'createRelation' &&
+      'relationType' in op &&
+      (op as CreateRelation).relationType.every((b, i) => b === replyToGrcId[i]),
+  );
+}
 
 /**
  * Converts a bytes16 hex space ID to a UUID string (without dashes).
@@ -586,17 +598,7 @@ it.skip('should create an entity, comment on it, and comment on the comment with
   console.log('commentAId', commentAId);
 
   // Comment A should have 1 reply-to: the entity
-  const commentAReplyTos = commentAOps
-    .filter(op => op.type === 'createRelation' && 'relationType' in op)
-    .filter(op => {
-      const rel = op as CreateRelation;
-      const replyToBytes = new Uint8Array(
-        REPLY_TO_PROPERTY.replace(/-/g, '')
-          .match(/.{2}/g)
-          ?.map(b => parseInt(b, 16)),
-      );
-      return rel.relationType.every((b, i) => b === replyToBytes[i]);
-    });
+  const commentAReplyTos = filterReplyToRelations(commentAOps);
   console.log('Comment A reply-to count:', commentAReplyTos.length);
   expect(commentAReplyTos).toHaveLength(1);
 
@@ -647,17 +649,7 @@ it.skip('should create an entity, comment on it, and comment on the comment with
 
   console.log('commentBId', commentBId);
 
-  const commentBReplyTos = commentBOps
-    .filter(op => op.type === 'createRelation' && 'relationType' in op)
-    .filter(op => {
-      const rel = op as CreateRelation;
-      const replyToBytes = new Uint8Array(
-        REPLY_TO_PROPERTY.replace(/-/g, '')
-          .match(/.{2}/g)
-          ?.map(b => parseInt(b, 16)),
-      );
-      return rel.relationType.every((b, i) => b === replyToBytes[i]);
-    });
+  const commentBReplyTos = filterReplyToRelations(commentBOps);
   console.log('Comment B reply-to count:', commentBReplyTos.length);
   // Comment B should reply to both: the root entity + Comment A
   expect(commentBReplyTos).toHaveLength(2);
@@ -708,17 +700,7 @@ it.skip('should create an entity, comment on it, and comment on the comment with
 
   console.log('commentCId', commentCId);
 
-  const commentCReplyTos = commentCOps
-    .filter(op => op.type === 'createRelation' && 'relationType' in op)
-    .filter(op => {
-      const rel = op as CreateRelation;
-      const replyToBytes = new Uint8Array(
-        REPLY_TO_PROPERTY.replace(/-/g, '')
-          .match(/.{2}/g)
-          ?.map(b => parseInt(b, 16)),
-      );
-      return rel.relationType.every((b, i) => b === replyToBytes[i]);
-    });
+  const commentCReplyTos = filterReplyToRelations(commentCOps);
   console.log('Comment C reply-to count:', commentCReplyTos.length);
   // Comment C should reply to: the root entity + Comment A + Comment B
   expect(commentCReplyTos).toHaveLength(3);
