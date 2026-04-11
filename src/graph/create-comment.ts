@@ -1,6 +1,7 @@
 import { Micro } from 'effect';
 import { COMMENT_TYPE } from '../core/ids/content.js';
 import { MARKDOWN_CONTENT, REPLY_TO_PROPERTY, RESOLVED_PROPERTY } from '../core/ids/system.js';
+import { generateBetween } from '../core/position.js';
 import { Id } from '../id.js';
 import { assertValid, generate } from '../id-utils.js';
 import type { CreateCommentParams, CreateResult, Network } from '../types.js';
@@ -18,6 +19,7 @@ type EntityRelationsResponse = {
       relationsList: Array<{
         toEntity: { id: string };
         toSpace: { id: string } | null;
+        position: string | null;
       }>;
     } | null;
   };
@@ -26,6 +28,7 @@ type EntityRelationsResponse = {
 type ReplyTo = {
   entityId: string;
   spaceId: string;
+  position: string | null;
 };
 
 async function fetchReplyToRelations(entityId: Id | string, network: Network): Promise<Array<ReplyTo>> {
@@ -34,6 +37,7 @@ async function fetchReplyToRelations(entityId: Id | string, network: Network): P
       relationsList(filter: { typeId: { in: ["${REPLY_TO_PROPERTY}"] } }) {
         toEntity { id }
         toSpace { id }
+        position
       }
     }
   }`;
@@ -68,6 +72,7 @@ async function fetchReplyToRelations(entityId: Id | string, network: Network): P
     .map(r => ({
       entityId: r.toEntity.id,
       spaceId: r.toSpace.id,
+      position: r.position,
     }));
 }
 
@@ -77,8 +82,8 @@ async function fetchReplyToRelations(entityId: Id | string, network: Network): P
  * When replying to a root entity (no existing reply-to relations), creates 1 reply-to relation.
  * When replying to a comment that has already been published on the Knowledge Graph, carries
  * forward all of the parent's reply-to relations and adds the parent itself, accumulating the
- * full ancestor chain. The parent comment must be published before creating a reply so that its
- * reply-to relations can be fetched.
+ * full ancestor chain. Reply-to relations are ordered by position: the direct parent comment
+ * has the lowest position and the root entity has the highest.
  *
  * @example
  * ```ts
@@ -111,26 +116,42 @@ export const createComment = async ({
   // Fetch existing reply-to relations from the target entity.
   // If the target has no reply-to relations, it is a root entity — use it directly.
   // If the target has reply-to relations, it is a comment — carry forward all
-  // of the parent's reply-tos and add the parent itself. This accumulates the
-  // full ancestor chain at any depth.
+  // of the parent's reply-tos and add the parent itself.
+  // Order: direct parent first (lowest position), root entity last (highest position).
   const existingReplyTos = await fetchReplyToRelations(replyTo.entityId, network);
 
-  const replyToTargets: Array<{ toEntity: Id | string; toSpace: Id | string }> = [];
+  const orderedTargets: Array<{ toEntity: Id | string; toSpace: Id | string }> = [];
 
   if (existingReplyTos.length > 0) {
-    // Target is a comment. Carry forward all its reply-to relations.
-    for (const existing of existingReplyTos) {
-      replyToTargets.push({ toEntity: existing.entityId, toSpace: existing.spaceId });
+    // Direct parent first
+    orderedTargets.push({ toEntity: replyTo.entityId, toSpace: replyTo.spaceId });
+
+    // Then the parent's reply-tos sorted by position ascending
+    // (parent's direct parent first, root entity last)
+    const sorted = [...existingReplyTos].sort((a, b) => {
+      if (a.position === null && b.position === null) return 0;
+      if (a.position === null) return 1;
+      if (b.position === null) return -1;
+      return a.position.localeCompare(b.position);
+    });
+    for (const rt of sorted) {
+      orderedTargets.push({ toEntity: rt.entityId, toSpace: rt.spaceId });
     }
-    // Add the direct parent comment
-    replyToTargets.push({ toEntity: replyTo.entityId, toSpace: replyTo.spaceId });
   } else {
-    // Target is a root entity
-    replyToTargets.push({ toEntity: replyTo.entityId, toSpace: replyTo.spaceId });
+    orderedTargets.push({ toEntity: replyTo.entityId, toSpace: replyTo.spaceId });
   }
 
-  const replyToRelations: Record<string, Array<{ toEntity: Id | string; toSpace: Id | string }>> = {
-    [REPLY_TO_PROPERTY]: replyToTargets,
+  // Assign ascending positions: first target gets lowest, last gets highest
+  let lastPosition: string | null = null;
+  const replyToRelationEntries: Array<{ toEntity: Id | string; toSpace: Id | string; position: string }> = [];
+  for (const target of orderedTargets) {
+    const position = generateBetween(lastPosition, null);
+    replyToRelationEntries.push({ ...target, position });
+    lastPosition = position;
+  }
+
+  const replyToRelations: Record<string, Array<{ toEntity: Id | string; toSpace: Id | string; position: string }>> = {
+    [REPLY_TO_PROPERTY]: replyToRelationEntries,
   };
 
   const { ops } = createEntity({
