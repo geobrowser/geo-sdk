@@ -326,6 +326,15 @@ export const PARTICIPANTS_PROPERTY = Id('0b9b1a35206844318f7d2350f958a728');
 export const COMMUNITY_CALL_EVENT_TYPE = Id('0419ca20118b4cdb84dfdb9ed73b50c2');
 export const CALL_RSVP_PROPERTY = Id('74261aaad0ab4756bde405be00ae6bc6');
 
+// bounty review
+export const BOUNTY_REVIEW_TYPE = Id('36efe3dcd94046e6a4276a3827d72f85');
+export const PROPOSALS_PROPERTY = Id('8128964c1ec54829beb380a21ab64c51');
+export const PASS_PROPERTY = Id('88cb2cbe3a6a4949bea9606e93686877');
+export const COMPLETENESS_RATING_PROPERTY = Id('a6183aada4324c91aed229221306543e');
+export const ACCURACY_RATING_PROPERTY = Id('6858ea8c5f1d4fa3a8de1034607d0460');
+export const SKILL_RATING_PROPERTY = Id('0db7b66387a54044a752e9bf4517304a');
+export const EFFORT_RATING_PROPERTY = Id('3c83be2afadf449c94259ff6ce0dd10e');
+
 // comments
 export const REPLY_TO_PROPERTY = Id('310d4a240e5b451cb2151bfce40d0fe6');
 export const RESOLVED_PROPERTY = Id('902d154b700a4fcabec2b072196687bc');

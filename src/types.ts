@@ -219,6 +219,38 @@ export type UpdateCommentParams = {
   resolved?: boolean;
 };
 
+export type StarRating = 0 | 0.2 | 0.4 | 0.6 | 0.8 | 1;
+
+export type CreateProposalReviewParams =
+  | {
+      proposal: { id: Id | string; name: string };
+      pass: boolean;
+    }
+  | {
+      proposal: { id: Id | string; name: string };
+      pass: boolean;
+      completeness: StarRating;
+      accuracy: StarRating;
+      skill: StarRating;
+      effort: StarRating;
+    };
+
+export type UpdateProposalReviewParams =
+  | {
+      proposalReviewId: Id | string;
+      proposal?: { id: Id | string; name: string };
+      pass: boolean;
+    }
+  | {
+      proposalReviewId: Id | string;
+      proposal?: { id: Id | string; name: string };
+      pass: boolean;
+      completeness: StarRating;
+      accuracy: StarRating;
+      skill: StarRating;
+      effort: StarRating;
+    };
+
 export type CreateImageParams =
   | {
       blob: Blob;
