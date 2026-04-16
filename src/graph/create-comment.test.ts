@@ -126,16 +126,21 @@ describe('createComment', () => {
     ) as CreateRelation[];
     expect(replyRels).toHaveLength(2);
 
-    // Both should have positions
     const parentReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(entityId)[i]));
     const rootReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(rootEntityId)[i]));
     expect(parentReply).toBeDefined();
     expect(rootReply).toBeDefined();
+    expect(parentReply?.toSpace).toEqual(toGrcId(spaceId));
+    expect(rootReply?.toSpace).toEqual(toGrcId(rootSpaceId));
+    expect(parentReply?.position).toBeDefined();
+    expect(rootReply?.position).toBeDefined();
 
     // Direct parent should have lower position than root entity
-    if (parentReply?.position && rootReply?.position) {
-      expect(parentReply.position.localeCompare(rootReply.position)).toBeLessThan(0);
-    }
+    expect(parentReply!.position!.localeCompare(rootReply!.position!)).toBeLessThan(0);
+
+    // Emission order must also be parent → root
+    expect(replyRels[0]?.to).toEqual(toGrcId(entityId));
+    expect(replyRels[1]?.to).toEqual(toGrcId(rootEntityId));
   });
 
   it('orders reply-tos correctly at depth 3', async () => {
@@ -168,12 +173,21 @@ describe('createComment', () => {
     expect(parentReply).toBeDefined();
     expect(commentAReply).toBeDefined();
     expect(rootReply).toBeDefined();
+    expect(parentReply?.toSpace).toEqual(toGrcId(spaceId));
+    expect(commentAReply?.toSpace).toEqual(toGrcId(commentASpaceId));
+    expect(rootReply?.toSpace).toEqual(toGrcId(rootSpaceId));
+    expect(parentReply?.position).toBeDefined();
+    expect(commentAReply?.position).toBeDefined();
+    expect(rootReply?.position).toBeDefined();
 
     // Order: direct parent < commentA < root entity
-    if (parentReply?.position && commentAReply?.position && rootReply?.position) {
-      expect(parentReply.position.localeCompare(commentAReply.position)).toBeLessThan(0);
-      expect(commentAReply.position.localeCompare(rootReply.position)).toBeLessThan(0);
-    }
+    expect(parentReply!.position!.localeCompare(commentAReply!.position!)).toBeLessThan(0);
+    expect(commentAReply!.position!.localeCompare(rootReply!.position!)).toBeLessThan(0);
+
+    // Emission order must also be parent → commentA → root
+    expect(replyRels[0]?.to).toEqual(toGrcId(entityId));
+    expect(replyRels[1]?.to).toEqual(toGrcId(commentAId));
+    expect(replyRels[2]?.to).toEqual(toGrcId(rootEntityId));
   });
 
   it('sets resolved to false by default', async () => {

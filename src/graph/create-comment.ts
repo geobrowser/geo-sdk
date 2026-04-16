@@ -82,8 +82,10 @@ async function fetchReplyToRelations(entityId: Id | string, network: Network): P
  * When replying to a root entity (no existing reply-to relations), creates 1 reply-to relation.
  * When replying to a comment that has already been published on the Knowledge Graph, carries
  * forward all of the parent's reply-to relations and adds the parent itself, accumulating the
- * full ancestor chain. Reply-to relations are ordered by position: the direct parent comment
- * has the lowest position and the root entity has the highest.
+ * full ancestor chain at any depth. The parent comment must be published before creating a
+ * reply so that its reply-to relations can be fetched. Reply-to relations are ordered by
+ * position: the direct parent comment has the lowest position and the root entity has the
+ * highest.
  *
  * @example
  * ```ts
@@ -116,7 +118,8 @@ export const createComment = async ({
   // Fetch existing reply-to relations from the target entity.
   // If the target has no reply-to relations, it is a root entity — use it directly.
   // If the target has reply-to relations, it is a comment — carry forward all
-  // of the parent's reply-tos and add the parent itself.
+  // of the parent's reply-tos and add the parent itself. This accumulates the
+  // full ancestor chain at any depth.
   // Order: direct parent first (lowest position), root entity last (highest position).
   const existingReplyTos = await fetchReplyToRelations(replyTo.entityId, network);
 
