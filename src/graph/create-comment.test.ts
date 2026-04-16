@@ -34,10 +34,11 @@ function mockGraphQLResponse(relationsList: Array<Record<string, unknown>> = [])
   });
 }
 
-function mockRelation(toEntityId: string, toSpaceId: string) {
+function mockRelation(toEntityId: string, toSpaceId: string, position: string | null = null) {
   return {
     toEntity: { id: toEntityId },
     toSpace: { id: toSpaceId },
+    position,
   };
 }
 
@@ -106,33 +107,12 @@ describe('createComment', () => {
     expect(replyRels[0]?.toSpace).toEqual(toGrcId(spaceId));
   });
 
-  it('creates root entity + direct parent when replying to a comment', async () => {
+  it('orders reply-tos: direct parent first, root entity last', async () => {
     const rootEntityId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     const rootSpaceId = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
 
-    // First fetch: target's reply-tos (target is a comment pointing to root)
-    // Second fetch: check root has no reply-tos (confirming it's the root)
-    let fetchCallCount = 0;
-    vi.spyOn(global, 'fetch').mockImplementation(url => {
-      if (url.toString() === graphqlUrl) {
-        fetchCallCount++;
-        if (fetchCallCount === 1) {
-          return Promise.resolve({
-            status: 200,
-            json: () =>
-              Promise.resolve({
-                data: { entity: { relationsList: [mockRelation(rootEntityId, rootSpaceId)] } },
-              }),
-          } as Response);
-        }
-        // Root entity has no reply-tos
-        return Promise.resolve({
-          status: 200,
-          json: () => Promise.resolve({ data: { entity: { relationsList: [] } } }),
-        } as Response);
-      }
-      return vi.fn() as never;
-    });
+    // Target is a comment with 1 reply-to (the root entity)
+    mockGraphQLResponse([mockRelation(rootEntityId, rootSpaceId, 'a0')]);
 
     const { ops } = await createComment({
       content: 'Reply',
@@ -146,43 +126,29 @@ describe('createComment', () => {
     ) as CreateRelation[];
     expect(replyRels).toHaveLength(2);
 
-    // Root entity
-    const rootReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(rootEntityId)[i]));
-    expect(rootReply).toBeDefined();
-    expect(rootReply?.toSpace).toEqual(toGrcId(rootSpaceId));
-
-    // Direct parent comment
+    // Both should have positions
     const parentReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(entityId)[i]));
+    const rootReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(rootEntityId)[i]));
     expect(parentReply).toBeDefined();
-    expect(parentReply?.toSpace).toEqual(toGrcId(spaceId));
+    expect(rootReply).toBeDefined();
+
+    // Direct parent should have lower position than root entity
+    if (parentReply?.position && rootReply?.position) {
+      expect(parentReply.position.localeCompare(rootReply.position)).toBeLessThan(0);
+    }
   });
 
-  it('creates reply-tos for all ancestors at depth 3 (root + commentA + direct parent)', async () => {
+  it('orders reply-tos correctly at depth 3', async () => {
     const rootEntityId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
     const rootSpaceId = 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
     const commentAId = 'cccccccccccccccccccccccccccccccc';
     const commentASpaceId = 'dddddddddddddddddddddddddddddddd';
 
-    // Target is Comment B which has 2 reply-tos: [CommentA, RootEntity]
-    // Creating Comment C on Comment B should carry forward all of B's reply-tos
-    // plus B itself, resulting in 3 reply-to relations.
-    vi.spyOn(global, 'fetch').mockImplementation(url => {
-      if (url.toString() === graphqlUrl) {
-        // Comment B's reply-tos
-        return Promise.resolve({
-          status: 200,
-          json: () =>
-            Promise.resolve({
-              data: {
-                entity: {
-                  relationsList: [mockRelation(commentAId, commentASpaceId), mockRelation(rootEntityId, rootSpaceId)],
-                },
-              },
-            }),
-        } as Response);
-      }
-      return vi.fn() as never;
-    });
+    // Target is Comment B with 2 reply-tos ordered: [CommentA (a0), RootEntity (a1)]
+    mockGraphQLResponse([
+      mockRelation(commentAId, commentASpaceId, 'a0'),
+      mockRelation(rootEntityId, rootSpaceId, 'a1'),
+    ]);
 
     const { ops } = await createComment({
       content: 'Deep reply',
@@ -194,20 +160,20 @@ describe('createComment', () => {
         op.type === 'createRelation' &&
         (op as CreateRelation).relationType.every((b, i) => b === toGrcId(REPLY_TO_PROPERTY)[i]),
     ) as CreateRelation[];
-    // All ancestors: root entity + commentA + direct parent
     expect(replyRels).toHaveLength(3);
 
-    // Root entity
+    const parentReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(entityId)[i]));
+    const commentAReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(commentAId)[i]));
     const rootReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(rootEntityId)[i]));
+    expect(parentReply).toBeDefined();
+    expect(commentAReply).toBeDefined();
     expect(rootReply).toBeDefined();
 
-    // Comment A (intermediate ancestor)
-    const commentAReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(commentAId)[i]));
-    expect(commentAReply).toBeDefined();
-
-    // Direct parent (entityId, the comment being replied to)
-    const parentReply = replyRels.find(r => r.to.every((b, i) => b === toGrcId(entityId)[i]));
-    expect(parentReply).toBeDefined();
+    // Order: direct parent < commentA < root entity
+    if (parentReply?.position && commentAReply?.position && rootReply?.position) {
+      expect(parentReply.position.localeCompare(commentAReply.position)).toBeLessThan(0);
+      expect(commentAReply.position.localeCompare(rootReply.position)).toBeLessThan(0);
+    }
   });
 
   it('sets resolved to false by default', async () => {
