@@ -59,7 +59,6 @@ export const updateProposalReview = (params: UpdateProposalReviewParams): Create
 
   return updateEntity({
     id: params.proposalReviewId,
-    name: params.proposal?.name,
     values,
   });
 };

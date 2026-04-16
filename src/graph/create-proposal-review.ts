@@ -42,9 +42,10 @@ import { createEntity } from './create-entity.js';
  * @returns – {@link CreateResult}
  */
 export const createProposalReview = (params: CreateProposalReviewParams): CreateResult => {
+  if (params.id) assertValid(params.id, '`id` in `createProposalReview`');
   assertValid(params.proposal.id, '`proposal.id` in `createProposalReview`');
 
-  const id = generate();
+  const id = params.id ?? generate();
 
   const values: PropertiesParam = [
     {

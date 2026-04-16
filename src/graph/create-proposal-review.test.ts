@@ -193,4 +193,27 @@ describe('createProposalReview', () => {
       }),
     ).toThrow('Invalid id: "invalid" for `proposal.id` in `createProposalReview`');
   });
+
+  it('uses the provided id when given', () => {
+    const providedId = Id('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb');
+    const { id, ops } = createProposalReview({
+      id: providedId,
+      proposal: { id: proposalId, name: proposalName },
+      pass: true,
+    });
+
+    expect(id).toBe(providedId);
+    const entityOp = ops[0] as CreateEntity;
+    expect(entityOp.id).toEqual(toGrcId(providedId));
+  });
+
+  it('throws for invalid id', () => {
+    expect(() =>
+      createProposalReview({
+        id: 'invalid',
+        proposal: { id: proposalId, name: proposalName },
+        pass: true,
+      }),
+    ).toThrow('Invalid id: "invalid" for `id` in `createProposalReview`');
+  });
 });

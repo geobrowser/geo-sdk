@@ -113,69 +113,6 @@ describe('updateProposalReview', () => {
     }
   });
 
-  it('updates name when proposal is provided', () => {
-    const { ops } = updateProposalReview({
-      proposalReviewId: reviewId,
-      proposal: { id: Id('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'), name: 'Updated Proposal' },
-      pass: true,
-    });
-
-    const op = ops[0] as UpdateEntity;
-    const nameValue = op.set.find(v => v.property.every((b, i) => b === toGrcId(NAME_PROPERTY)[i]));
-    expect(nameValue).toBeDefined();
-    expect(nameValue?.value.type).toBe('text');
-    if (nameValue?.value.type === 'text') {
-      expect(nameValue?.value.value).toBe('Updated Proposal');
-    }
-  });
-
-  it('does not update name when proposal is not provided', () => {
-    const { ops } = updateProposalReview({
-      proposalReviewId: reviewId,
-      pass: true,
-    });
-
-    const op = ops[0] as UpdateEntity;
-    const nameValue = op.set.find(v => v.property.every((b, i) => b === toGrcId(NAME_PROPERTY)[i]));
-    expect(nameValue).toBeUndefined();
-  });
-
-  it('updates name and ratings when proposal is provided with ratings', () => {
-    const { ops } = updateProposalReview({
-      proposalReviewId: reviewId,
-      proposal: { id: Id('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'), name: 'Updated Proposal' },
-      pass: false,
-      completeness: 0.2,
-      accuracy: 0.4,
-      skill: 0.6,
-      effort: 0.8,
-    });
-
-    const op = ops[0] as UpdateEntity;
-
-    // Name updated
-    const nameValue = op.set.find(v => v.property.every((b, i) => b === toGrcId(NAME_PROPERTY)[i]));
-    expect(nameValue).toBeDefined();
-    expect(nameValue?.value.type).toBe('text');
-    if (nameValue?.value.type === 'text') {
-      expect(nameValue?.value.value).toBe('Updated Proposal');
-    }
-
-    // Ratings present
-    const completenessValue = op.set.find(v =>
-      v.property.every((b, i) => b === toGrcId(COMPLETENESS_RATING_PROPERTY)[i]),
-    );
-    expect(completenessValue).toBeDefined();
-
-    // Pass
-    const passValue = op.set.find(v => v.property.every((b, i) => b === toGrcId(PASS_PROPERTY)[i]));
-    expect(passValue).toBeDefined();
-    expect(passValue?.value.type).toBe('boolean');
-    if (passValue?.value.type === 'boolean') {
-      expect(passValue?.value.value).toBe(false);
-    }
-  });
-
   it('throws for invalid proposalReviewId', () => {
     expect(() =>
       updateProposalReview({

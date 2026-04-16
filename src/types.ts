@@ -223,10 +223,12 @@ export type StarRating = 0 | 0.2 | 0.4 | 0.6 | 0.8 | 1;
 
 export type CreateProposalReviewParams =
   | {
+      id?: Id | string;
       proposal: { id: Id | string; name: string };
       pass: boolean;
     }
   | {
+      id?: Id | string;
       proposal: { id: Id | string; name: string };
       pass: boolean;
       completeness: StarRating;
@@ -238,12 +240,10 @@ export type CreateProposalReviewParams =
 export type UpdateProposalReviewParams =
   | {
       proposalReviewId: Id | string;
-      proposal?: { id: Id | string; name: string };
       pass: boolean;
     }
   | {
       proposalReviewId: Id | string;
-      proposal?: { id: Id | string; name: string };
       pass: boolean;
       completeness: StarRating;
       accuracy: StarRating;
