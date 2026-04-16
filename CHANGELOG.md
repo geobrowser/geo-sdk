@@ -1,5 +1,16 @@
 # @geoprotocol/geo-sdk
 
+## 0.18.0
+
+### Minor Changes
+
+- 83d084f: Add `Graph.createProposalReview` and `Graph.updateProposalReview` for creating and updating bounty proposal reviews with pass/fail status and optional star ratings.
+
+### Patch Changes
+
+- 78efd6b: Fix README typos, outdated type names (INT64/FLOAT64 to INTEGER/FLOAT, bool to boolean), and legacy ID format. Add documentation for updateEntity, deleteEntity, relations, positions, personalSpace.publishEdit (with author parameter clarification), and daoSpace (proposeEdit, requestMembership).
+- ab85f59: Order reply-to relations by position in `Graph.createComment` — immediate parent gets the lowest position, root entity gets the highest.
+
 ## 0.17.0
 
 ### Minor Changes
