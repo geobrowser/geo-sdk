@@ -8,6 +8,10 @@ A collection of tools for interacting with The Graph.
 npm install @geoprotocol/geo-sdk
 ```
 
+## AI Harnesses
+
+If you're using an AI coding assistant (e.g. Claude Code, Codex, Cursor) to work with this SDK, check out [geobrowser/geo-skills](https://github.com/geobrowser/geo-skills) for skills and prompts that help agents use the Geo SDK effectively.
+
 ## Overview
 
 ### Data flow
@@ -277,8 +281,8 @@ const { ops: updateOps } = Graph.updateEntity({
 const { ops: unsetOps } = Graph.updateEntity({
   id: entityId,
   unset: [
-    { property: propertyId },                                  // unset all languages
-    { property: propertyId2, language: { type: "all" } },      // explicit all languages
+    { property: propertyId }, // unset all languages
+    { property: propertyId2, language: { type: "all" } }, // explicit all languages
   ],
 });
 ```
@@ -310,7 +314,7 @@ import { Graph, Position } from "@geoprotocol/geo-sdk";
 const { id: relationId, ops: createRelOps } = Graph.createRelation({
   fromEntity: personId,
   toEntity: restaurantId,
-  type: likesPropertyId,                // the relation type property
+  type: likesPropertyId, // the relation type property
   position: Position.generateBetween(), // optional ordering
 });
 
@@ -403,8 +407,8 @@ import { personalSpace } from "@geoprotocol/geo-sdk";
 
 const { cid, editId, to, calldata } = await personalSpace.publishEdit({
   name: "My Edit",
-  spaceId,       // your personal space ID (dashless hex UUID)
-  ops,           // array of Op from Graph.* functions
+  spaceId, // your personal space ID (dashless hex UUID)
+  ops, // array of Op from Graph.* functions
   author: spaceId, // your personal space ID (same as spaceId for personal spaces)
   network: "TESTNET",
 });
@@ -428,10 +432,10 @@ const { ops } = Graph.createEntity({ name: "New Entity" });
 const { editId, cid, to, calldata, proposalId } = await daoSpace.proposeEdit({
   name: "Add new entity",
   ops,
-  author: callerSpaceId,                        // your personal space ID (as `0x${string}`)
-  daoSpaceAddress: "0xDAOSpaceContractAddress",  // the DAO space contract address
-  callerSpaceId: "0xCallerBytes16SpaceId",       // your personal space ID (bytes16 hex)
-  daoSpaceId: "0xDAOBytes16SpaceId",             // the DAO space ID (bytes16 hex)
+  author: callerSpaceId, // your personal space ID (as `0x${string}`)
+  daoSpaceAddress: "0xDAOSpaceContractAddress", // the DAO space contract address
+  callerSpaceId: "0xCallerBytes16SpaceId", // your personal space ID (bytes16 hex)
+  daoSpaceId: "0xDAOBytes16SpaceId", // the DAO space ID (bytes16 hex)
   network: "TESTNET",
 });
 
