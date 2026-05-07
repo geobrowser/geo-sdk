@@ -4,6 +4,7 @@ import {
   ACCURACY_RATING_PROPERTY,
   COMPLETENESS_RATING_PROPERTY,
   EFFORT_RATING_PROPERTY,
+  MARKDOWN_CONTENT,
   NAME_PROPERTY,
   PASS_PROPERTY,
   SKILL_RATING_PROPERTY,
@@ -110,6 +111,64 @@ describe('updateProposalReview', () => {
     expect(effortValue?.value.type).toBe('float');
     if (effortValue?.value.type === 'float') {
       expect(effortValue?.value.value).toBe(0.4);
+    }
+  });
+
+  it('includes content value when content is provided', () => {
+    const { ops } = updateProposalReview({
+      proposalReviewId: reviewId,
+      pass: true,
+      content: 'Updated notes',
+    });
+
+    const op = ops[0] as UpdateEntity;
+    const contentValue = op.set.find(v => v.property.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]));
+    expect(contentValue).toBeDefined();
+    expect(contentValue?.value.type).toBe('text');
+    if (contentValue?.value.type === 'text') {
+      expect(contentValue?.value.value).toBe('Updated notes');
+    }
+  });
+
+  it('does not include content value when content is omitted', () => {
+    const { ops } = updateProposalReview({
+      proposalReviewId: reviewId,
+      pass: true,
+    });
+
+    const op = ops[0] as UpdateEntity;
+    const contentValue = op.set.find(v => v.property.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]));
+    expect(contentValue).toBeUndefined();
+  });
+
+  it('does not include content value when content is an empty string', () => {
+    const { ops } = updateProposalReview({
+      proposalReviewId: reviewId,
+      pass: true,
+      content: '',
+    });
+
+    const op = ops[0] as UpdateEntity;
+    const contentValue = op.set.find(v => v.property.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]));
+    expect(contentValue).toBeUndefined();
+  });
+
+  it('includes content value alongside ratings', () => {
+    const { ops } = updateProposalReview({
+      proposalReviewId: reviewId,
+      pass: false,
+      content: 'Notes with ratings',
+      completeness: 0.8,
+      accuracy: 1,
+      skill: 0.6,
+      effort: 0.4,
+    });
+
+    const op = ops[0] as UpdateEntity;
+    const contentValue = op.set.find(v => v.property.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]));
+    expect(contentValue).toBeDefined();
+    if (contentValue?.value.type === 'text') {
+      expect(contentValue?.value.value).toBe('Notes with ratings');
     }
   });
 

@@ -5,6 +5,7 @@ import {
   BOUNTY_REVIEW_TYPE,
   COMPLETENESS_RATING_PROPERTY,
   EFFORT_RATING_PROPERTY,
+  MARKDOWN_CONTENT,
   NAME_PROPERTY,
   PASS_PROPERTY,
   PROPOSALS_PROPERTY,
@@ -182,6 +183,64 @@ describe('createProposalReview', () => {
     expect(completenessValue).toBeDefined();
     if (completenessValue?.value.type === 'float') {
       expect(completenessValue?.value.value).toBe(0);
+    }
+  });
+
+  it('includes content value when content is provided', () => {
+    const { ops } = createProposalReview({
+      proposal: { id: proposalId, name: proposalName },
+      pass: true,
+      content: 'Detailed review notes',
+    });
+
+    const entityOp = ops[0] as CreateEntity;
+    const contentValue = entityOp.values.find(v => v.property.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]));
+    expect(contentValue).toBeDefined();
+    expect(contentValue?.value.type).toBe('text');
+    if (contentValue?.value.type === 'text') {
+      expect(contentValue?.value.value).toBe('Detailed review notes');
+    }
+  });
+
+  it('does not include content value when content is omitted', () => {
+    const { ops } = createProposalReview({
+      proposal: { id: proposalId, name: proposalName },
+      pass: true,
+    });
+
+    const entityOp = ops[0] as CreateEntity;
+    const contentValue = entityOp.values.find(v => v.property.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]));
+    expect(contentValue).toBeUndefined();
+  });
+
+  it('does not include content value when content is an empty string', () => {
+    const { ops } = createProposalReview({
+      proposal: { id: proposalId, name: proposalName },
+      pass: true,
+      content: '',
+    });
+
+    const entityOp = ops[0] as CreateEntity;
+    const contentValue = entityOp.values.find(v => v.property.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]));
+    expect(contentValue).toBeUndefined();
+  });
+
+  it('includes content value alongside ratings', () => {
+    const { ops } = createProposalReview({
+      proposal: { id: proposalId, name: proposalName },
+      pass: false,
+      content: 'Notes with ratings',
+      completeness: 0.8,
+      accuracy: 1,
+      skill: 0.6,
+      effort: 0.4,
+    });
+
+    const entityOp = ops[0] as CreateEntity;
+    const contentValue = entityOp.values.find(v => v.property.every((b, i) => b === toGrcId(MARKDOWN_CONTENT)[i]));
+    expect(contentValue).toBeDefined();
+    if (contentValue?.value.type === 'text') {
+      expect(contentValue?.value.value).toBe('Notes with ratings');
     }
   });
 
