@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.18.1
+
+### Patch Changes
+
+- 7032bd5: Add optional `content` parameter to `Graph.createProposalReview` and `Graph.updateProposalReview`.
+
 ## 0.18.0
 
 ### Minor Changes
