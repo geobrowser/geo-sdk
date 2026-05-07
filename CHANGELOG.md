@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.18.2
+
+### Patch Changes
+
+- 42c0369: Add `daoSpace.proposeAddEditor` and `daoSpace.proposeRemoveEditor` for proposing to add or remove an editor in a DAO space.
+
 ## 0.18.1
 
 ### Patch Changes
