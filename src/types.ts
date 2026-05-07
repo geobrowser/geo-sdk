@@ -226,11 +226,13 @@ export type CreateProposalReviewParams =
       id?: Id | string;
       proposal: { id: Id | string; name: string };
       pass: boolean;
+      content?: string;
     }
   | {
       id?: Id | string;
       proposal: { id: Id | string; name: string };
       pass: boolean;
+      content?: string;
       completeness: StarRating;
       accuracy: StarRating;
       skill: StarRating;
@@ -241,10 +243,12 @@ export type UpdateProposalReviewParams =
   | {
       proposalReviewId: Id | string;
       pass: boolean;
+      content?: string;
     }
   | {
       proposalReviewId: Id | string;
       pass: boolean;
+      content?: string;
       completeness: StarRating;
       accuracy: StarRating;
       skill: StarRating;

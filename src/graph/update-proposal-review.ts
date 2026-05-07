@@ -2,6 +2,7 @@ import {
   ACCURACY_RATING_PROPERTY,
   COMPLETENESS_RATING_PROPERTY,
   EFFORT_RATING_PROPERTY,
+  MARKDOWN_CONTENT,
   PASS_PROPERTY,
   SKILL_RATING_PROPERTY,
 } from '../core/ids/system.js';
@@ -17,16 +18,18 @@ import { updateEntity } from './update-entity.js';
  * ```ts
  * import { Graph } from '@geoprotocol/geo-sdk';
  *
- * // Update pass only (low difficulty)
+ * // Update pass + optional content (low difficulty)
  * const { id, ops } = Graph.updateProposalReview({
  *   proposalReviewId: reviewId,
  *   pass: false,
+ *   content: 'Updated review notes', // optional, plain text or markdown
  * });
  *
- * // Update with ratings (medium/hard difficulty)
+ * // Update with ratings + optional content (medium/hard difficulty)
  * const { id, ops } = Graph.updateProposalReview({
  *   proposalReviewId: reviewId,
  *   pass: true,
+ *   content: 'Updated review notes', // optional, plain text or markdown
  *   completeness: 0.8,
  *   accuracy: 1,
  *   skill: 0.6,
@@ -47,6 +50,14 @@ export const updateProposalReview = (params: UpdateProposalReviewParams): Create
       value: params.pass,
     },
   ];
+
+  if (params.content) {
+    values.push({
+      property: MARKDOWN_CONTENT,
+      type: 'text',
+      value: params.content,
+    });
+  }
 
   if ('completeness' in params) {
     values.push(

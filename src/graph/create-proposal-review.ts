@@ -3,6 +3,7 @@ import {
   BOUNTY_REVIEW_TYPE,
   COMPLETENESS_RATING_PROPERTY,
   EFFORT_RATING_PROPERTY,
+  MARKDOWN_CONTENT,
   PASS_PROPERTY,
   PROPOSALS_PROPERTY,
   SKILL_RATING_PROPERTY,
@@ -21,16 +22,18 @@ import { createEntity } from './create-entity.js';
  * ```ts
  * import { Graph } from '@geoprotocol/geo-sdk';
  *
- * // Low-difficulty bounty review (pass only)
+ * // Low-difficulty bounty review (pass + optional content)
  * const { id, ops } = Graph.createProposalReview({
  *   proposal: { id: proposalId, name: 'Proposal name' },
  *   pass: true,
+ *   content: 'Review notes', // optional, plain text or markdown
  * });
  *
- * // Medium/hard bounty review (with ratings)
+ * // Medium/hard bounty review (with ratings + optional content)
  * const { id, ops } = Graph.createProposalReview({
  *   proposal: { id: proposalId, name: 'Proposal name' },
  *   pass: true,
+ *   content: 'Review notes', // optional, plain text or markdown
  *   completeness: 0.8,
  *   accuracy: 1,
  *   skill: 0.6,
@@ -54,6 +57,14 @@ export const createProposalReview = (params: CreateProposalReviewParams): Create
       value: params.pass,
     },
   ];
+
+  if (params.content) {
+    values.push({
+      property: MARKDOWN_CONTENT,
+      type: 'text',
+      value: params.content,
+    });
+  }
 
   if ('completeness' in params) {
     values.push(
