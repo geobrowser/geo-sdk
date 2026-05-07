@@ -3,6 +3,7 @@ export { executeProposal } from './execute-proposal.js';
 export { proposeAddEditor } from './propose-add-editor.js';
 export { proposeAddMember } from './propose-add-member.js';
 export { proposeEdit } from './propose-edit.js';
+export { proposeRemoveEditor } from './propose-remove-editor.js';
 export { proposeRemoveMember } from './propose-remove-member.js';
 export { proposeRequestMembership } from './propose-request-membership.js';
 export type {
@@ -16,6 +17,8 @@ export type {
   ProposeAddMemberResult,
   ProposeEditParams,
   ProposeEditResult,
+  ProposeRemoveEditorParams,
+  ProposeRemoveEditorResult,
   ProposeRemoveMemberParams,
   ProposeRemoveMemberResult,
   ProposeRequestMembershipParams,
