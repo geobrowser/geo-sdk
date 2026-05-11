@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.18.3
+
+### Patch Changes
+
+- d4111cf: Add Graph helpers for creating entity upvote, downvote, and vote withdrawal calldata.
+
 ## 0.18.2
 
 ### Patch Changes
