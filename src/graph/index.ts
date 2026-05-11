@@ -12,6 +12,7 @@ export * from './create-relation.js';
 export * from './create-type.js';
 export * from './delete-entity.js';
 export * from './delete-relation.js';
+export * from './entity-vote.js';
 export * from './update-comment.js';
 export * from './update-entity.js';
 export * from './update-proposal-review.js';
