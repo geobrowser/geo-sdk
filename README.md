@@ -49,7 +49,7 @@ The preferred API splits pure op construction from networked workflows:
 
 - `Ops.*` creates GRC-20 ops and never uploads, fetches, or reads network config.
 - `createGeoClient({ network })` owns API/IPFS calls and contract calldata.
-- `Networks.TESTNET`, `Networks.MAINNET`, and `defineGeoNetwork(...)` describe built-in or custom deployments.
+- `Networks.TESTNET` and `defineGeoNetwork(...)` describe built-in or custom deployments.
 
 ```ts
 import { Ops, Networks, createGeoClient } from "@geoprotocol/geo-sdk";

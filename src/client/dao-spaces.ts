@@ -32,9 +32,6 @@ export function createDaoSpacesClient(context: GeoClientContext) {
         initialTopicId: params.initialTopicId,
       });
 
-      const { createEditsClient } = await import('./edits.js');
-      const edits = createEditsClient(context);
-
       const spaceEntityId = IdUtils.generate();
       const ops: Op[] = [];
       const { ops: createSpaceEntityOps } = Ops.entities.create({
@@ -45,7 +42,8 @@ export function createDaoSpacesClient(context: GeoClientContext) {
       ops.push(...createSpaceEntityOps);
       ops.push(...(params.ops ?? []));
 
-      const { cid } = await edits.publish({
+      const { publish } = await import('./edits.js');
+      const { cid } = await publish(context, {
         name: `Create DAO Space: ${params.name}`,
         ops,
         author: params.author,

@@ -13,9 +13,8 @@ export function createPersonalSpacesClient(context: GeoClientContext) {
     },
 
     async publishEdit(params: PublishEditToSpaceParams) {
-      const { createEditsClient } = await import('./edits.js');
-      const edits = createEditsClient(context);
-      return edits.publishToSpace(params);
+      const { publishToSpace } = await import('./edits.js');
+      return publishToSpace(context, params);
     },
   };
 }

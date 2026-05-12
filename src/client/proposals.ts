@@ -196,9 +196,8 @@ export function createProposalsClient(context: GeoClientContext) {
         spaceRegistryAddress,
       });
 
-      const { createEditsClient } = await import('./edits.js');
-      const edits = createEditsClient(context);
-      const { cid, editId } = await edits.publish({
+      const { publish } = await import('./edits.js');
+      const { cid, editId } = await publish(context, {
         name: params.name,
         ops: params.ops,
         author: params.author,

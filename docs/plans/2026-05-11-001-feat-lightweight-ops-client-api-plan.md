@@ -13,12 +13,12 @@ updated: 2026-05-12
 
 Introduce a lightweight-first public API where pure edit-op builders live under `Ops.*` and networked workflows live on a configured Geo client. Keep all legacy exports available for now, mark them deprecated, and route them through the new API/client while preserving the current contract payload semantics.
 
-This release intentionally defers contract upgrades. TESTNET/MAINNET/custom-network configuration is added as API structure, but v2 contract behavior and local contract e2e coverage should ship in a later, separate release.
+This release intentionally defers contract upgrades. TESTNET/custom-network configuration is added as API structure, but v2 contract behavior and local contract e2e coverage should ship in a later, separate release.
 
 ## Requirements
 
 - R1. Expose pure GRC-20 edit-op builders under a small, discoverable `Ops` namespace with plural domain groups.
-- R2. Move networked behavior behind `createGeoClient({ network })`, accepting built-in TESTNET/MAINNET configs or a custom network config.
+- R2. Move networked behavior behind `createGeoClient({ network })`, accepting the built-in TESTNET config or a custom network config.
 - R3. Keep the lightweight import path explicit through `@geoprotocol/geo-sdk/ops` and avoid pulling storage/client helpers into that path.
 - R4. Keep existing public exports and function names available for this release line.
 - R5. Mark legacy public APIs deprecated and delegate them to the new `Ops` functions or configured client workflows where practical.
@@ -56,7 +56,7 @@ This release intentionally defers contract upgrades. TESTNET/MAINNET/custom-netw
 
 ### U1. Network Configuration
 
-- Add `Networks.TESTNET`, `Networks.MAINNET`, `defineGeoNetwork`, and `resolveGeoNetwork`.
+- Add `Networks.TESTNET`, `defineGeoNetwork`, and `resolveGeoNetwork`.
 - Keep legacy `Network` typed to the legacy-supported network set while adding a separate `Networkish` shape for new client configuration.
 - Allow custom configs to provide API origins and contract addresses.
 

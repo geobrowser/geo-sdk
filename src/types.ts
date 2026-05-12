@@ -7,7 +7,7 @@ import type { Id } from './id.js';
 
 export type Network = 'TESTNET';
 
-export type BuiltInGeoNetworkId = 'TESTNET' | 'MAINNET';
+export type BuiltInGeoNetworkId = 'TESTNET';
 
 export type GeoNetworkId = BuiltInGeoNetworkId | (string & {});
 

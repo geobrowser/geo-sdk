@@ -14,6 +14,12 @@ export type PublishEditToSpaceParams = PublishEditParams & {
   spaceId: Id | string;
 };
 
+export type PublishEditToSpaceCalldataParams = {
+  spaceId: Id | string;
+  cid: `ipfs://${string}`;
+  spaceRegistryAddress: `0x${string}`;
+};
+
 function spaceIdToBytes16(spaceId: string): `0x${string}` {
   if (UUID_DASHLESS_REGEX.test(spaceId)) {
     return `0x${spaceId.toLowerCase()}` as `0x${string}`;
@@ -26,41 +32,46 @@ function spaceIdToBytes16(spaceId: string): `0x${string}` {
   throw new Error(`Invalid spaceId: "${spaceId}". Expected a valid UUID or 32-character hex string.`);
 }
 
-export function createEditsClient(context: GeoClientContext) {
+export function encodePublishEditToSpaceCalldata({
+  spaceId,
+  cid,
+  spaceRegistryAddress,
+}: PublishEditToSpaceCalldataParams) {
+  const spaceIdBytes16 = spaceIdToBytes16(spaceId);
+  const encodedCid = encodeAbiParameters([{ type: 'string' }], [cid]);
+  const calldata = encodeFunctionData({
+    abi: SpaceRegistryAbi,
+    functionName: 'enter',
+    args: [spaceIdBytes16, spaceIdBytes16, EDITS_PUBLISHED, EMPTY_TOPIC, encodedCid, EMPTY_SIGNATURE],
+  });
+
   return {
-    publish(params: PublishEditParams) {
-      return publishEditCore({
-        ...params,
-        apiOrigin: context.network.apiOrigin,
-        fetch: requireFetch(context, 'Edit publishing'),
-      });
-    },
+    to: spaceRegistryAddress,
+    calldata,
+  };
+}
 
-    async publishToSpace(params: PublishEditToSpaceParams) {
-      const spaceIdBytes16 = spaceIdToBytes16(params.spaceId);
-      const spaceRegistryAddress = requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS');
+export function publish(context: GeoClientContext, params: PublishEditParams) {
+  return publishEditCore({
+    ...params,
+    apiOrigin: context.network.apiOrigin,
+    fetch: requireFetch(context, 'Edit publishing'),
+  });
+}
 
-      const { cid, editId } = await publishEditCore({
-        name: params.name,
-        ops: params.ops,
-        author: params.author,
-        apiOrigin: context.network.apiOrigin,
-        fetch: requireFetch(context, 'Edit publishing'),
-      });
+export async function publishToSpace(context: GeoClientContext, params: PublishEditToSpaceParams) {
+  const spaceRegistryAddress = requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS');
+  const { cid, editId } = await publish(context, params);
+  const { to, calldata } = encodePublishEditToSpaceCalldata({
+    spaceId: params.spaceId,
+    cid,
+    spaceRegistryAddress,
+  });
 
-      const encodedCid = encodeAbiParameters([{ type: 'string' }], [cid]);
-      const calldata = encodeFunctionData({
-        abi: SpaceRegistryAbi,
-        functionName: 'enter',
-        args: [spaceIdBytes16, spaceIdBytes16, EDITS_PUBLISHED, EMPTY_TOPIC, encodedCid, EMPTY_SIGNATURE],
-      });
-
-      return {
-        editId,
-        cid,
-        to: spaceRegistryAddress,
-        calldata,
-      };
-    },
+  return {
+    editId,
+    cid,
+    to,
+    calldata,
   };
 }

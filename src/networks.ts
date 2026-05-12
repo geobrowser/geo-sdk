@@ -1,11 +1,9 @@
-import { MAINNET, TESTNET } from '../contracts.js';
+import { TESTNET } from '../contracts.js';
 import type { GeoContractAddresses, GeoNetworkConfig, Networkish } from './types.js';
 
 export const TESTNET_API_ORIGIN = 'https://testnet-api.geobrowser.io';
-export const MAINNET_API_ORIGIN = 'https://api.geobrowser.io';
 
 const GEO_TESTNET_RPC_URL = 'https://rpc-geo-test-zc16z3tcvf.t.conduit.xyz';
-const GEO_MAINNET_RPC_URL = 'https://rpc-geo-genesis-h0q2s21xx8.t.conduit.xyz';
 
 function asContractAddresses(contracts: Record<string, string | undefined>): GeoContractAddresses {
   return contracts as GeoContractAddresses;
@@ -40,28 +38,14 @@ export const Networks = {
     },
     contracts: asContractAddresses(TESTNET),
   }),
-  MAINNET: defineGeoNetwork({
-    id: 'MAINNET',
-    name: 'Geo Mainnet',
-    apiOrigin: MAINNET_API_ORIGIN,
-    chain: {
-      id: 80451,
-      name: 'Geo Mainnet',
-      rpcUrl: GEO_MAINNET_RPC_URL,
-    },
-    contracts: asContractAddresses(MAINNET),
-  }),
 } as const;
 
 export function resolveGeoNetwork(network: Networkish = 'TESTNET'): GeoNetworkConfig {
   if (network === 'TESTNET') {
     return Networks.TESTNET;
   }
-  if (network === 'MAINNET') {
-    return Networks.MAINNET;
-  }
   if (typeof network === 'string') {
-    throw new Error(`Unknown Geo network "${network}". Use Networks.TESTNET, Networks.MAINNET, or defineGeoNetwork().`);
+    throw new Error(`Unknown Geo network "${network}". Use Networks.TESTNET or defineGeoNetwork().`);
   }
 
   return defineGeoNetwork(network);

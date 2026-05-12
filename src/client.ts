@@ -4,7 +4,7 @@ import type { FetchLike, GeoClientContext } from './client/context.js';
 import { createDaoSpacesClient } from './client/dao-spaces.js';
 import type { PublishEditToSpaceParams } from './client/edits.js';
 import { createEntitiesClient } from './client/entities.js';
-import { createEntityVotesClient } from './client/entity-votes.js';
+import * as EntityVotes from './client/entity-votes.js';
 import type { CreateImageParams } from './client/images.js';
 import { createPersonalSpacesClient } from './client/personal-spaces.js';
 import { createProposalsClient } from './client/proposals.js';
@@ -42,12 +42,12 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
     },
     edits: {
       async publish(params: PublishEditParams) {
-        const { createEditsClient } = await import('./client/edits.js');
-        return createEditsClient(context).publish(params);
+        const { publish } = await import('./client/edits.js');
+        return publish(context, params);
       },
       async publishToSpace(params: PublishEditToSpaceParams) {
-        const { createEditsClient } = await import('./client/edits.js');
-        return createEditsClient(context).publishToSpace(params);
+        const { publishToSpace } = await import('./client/edits.js');
+        return publishToSpace(context, params);
       },
     },
     entities: createEntitiesClient(context),
@@ -61,6 +61,10 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
     personalSpaces: createPersonalSpacesClient(context),
     daoSpaces: createDaoSpacesClient(context),
     proposals: createProposalsClient(context),
-    entityVotes: createEntityVotesClient(context),
+    entityVotes: {
+      upvote: (params: EntityVotes.ClientEntityVoteParams) => EntityVotes.upvote(context, params),
+      downvote: (params: EntityVotes.ClientEntityVoteParams) => EntityVotes.downvote(context, params),
+      withdraw: (params: EntityVotes.ClientEntityVoteParams) => EntityVotes.withdraw(context, params),
+    },
   };
 }

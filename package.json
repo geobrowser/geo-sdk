@@ -15,9 +15,18 @@
     "./package.json": "./package.json",
     ".": "./dist/index.js",
     "./lite": "./dist/lite.js",
-    "./ops": "./dist/src/ops/index.js",
-    "./client": "./dist/src/client.js",
-    "./networks": "./dist/src/networks.js",
+    "./ops": {
+      "types": "./dist/src/ops/index.d.ts",
+      "import": "./dist/src/ops/index.js"
+    },
+    "./client": {
+      "types": "./dist/src/client.d.ts",
+      "import": "./dist/src/client.js"
+    },
+    "./networks": {
+      "types": "./dist/src/networks.d.ts",
+      "import": "./dist/src/networks.js"
+    },
     "./contracts": "./dist/contracts.js",
     "./abis": "./dist/abis.js"
   },

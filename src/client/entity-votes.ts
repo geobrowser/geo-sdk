@@ -20,6 +20,10 @@ export type ClientEntityVoteParams = {
   entityId: Id | string;
 };
 
+export type EntityVoteCalldataParams = ClientEntityVoteParams & {
+  spaceRegistryAddress: `0x${string}`;
+};
+
 function idToBytes16(id: Id | string, sourceHint: string): `0x${string}` {
   const normalized = id.startsWith('0x') ? id.slice(2) : id.replaceAll('-', '');
   assertValid(normalized, sourceHint);
@@ -40,7 +44,7 @@ function encodeEntityVoteData(authorSpaceId: `0x${string}`, spaceId: `0x${string
   );
 }
 
-function createEntityVote(context: GeoClientContext, params: ClientEntityVoteParams, action: EntityVoteAction) {
+function encodeEntityVoteCalldata(params: EntityVoteCalldataParams, action: EntityVoteAction) {
   const authorSpaceId = idToBytes16(params.authorSpaceId, '`authorSpaceId` in entity vote');
   const spaceId = idToBytes16(params.spaceId, '`spaceId` in entity vote');
   const topic = encodeEntityVoteTopic(params.entityId);
@@ -53,21 +57,38 @@ function createEntityVote(context: GeoClientContext, params: ClientEntityVotePar
   });
 
   return {
-    to: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
+    to: params.spaceRegistryAddress,
     calldata,
   };
 }
 
-export function createEntityVotesClient(context: GeoClientContext) {
+function withSpaceRegistry(context: GeoClientContext, params: ClientEntityVoteParams): EntityVoteCalldataParams {
   return {
-    upvote(params: ClientEntityVoteParams) {
-      return createEntityVote(context, params, UPVOTED_ACTION);
-    },
-    downvote(params: ClientEntityVoteParams) {
-      return createEntityVote(context, params, DOWNVOTED_ACTION);
-    },
-    withdraw(params: ClientEntityVoteParams) {
-      return createEntityVote(context, params, UNVOTED_ACTION);
-    },
+    ...params,
+    spaceRegistryAddress: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
   };
+}
+
+export function encodeUpvoteEntityCalldata(params: EntityVoteCalldataParams) {
+  return encodeEntityVoteCalldata(params, UPVOTED_ACTION);
+}
+
+export function encodeDownvoteEntityCalldata(params: EntityVoteCalldataParams) {
+  return encodeEntityVoteCalldata(params, DOWNVOTED_ACTION);
+}
+
+export function encodeWithdrawEntityVoteCalldata(params: EntityVoteCalldataParams) {
+  return encodeEntityVoteCalldata(params, UNVOTED_ACTION);
+}
+
+export function upvote(context: GeoClientContext, params: ClientEntityVoteParams) {
+  return encodeUpvoteEntityCalldata(withSpaceRegistry(context, params));
+}
+
+export function downvote(context: GeoClientContext, params: ClientEntityVoteParams) {
+  return encodeDownvoteEntityCalldata(withSpaceRegistry(context, params));
+}
+
+export function withdraw(context: GeoClientContext, params: ClientEntityVoteParams) {
+  return encodeWithdrawEntityVoteCalldata(withSpaceRegistry(context, params));
 }
