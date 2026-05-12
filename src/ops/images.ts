@@ -14,7 +14,7 @@ import { create as createEntity } from './entities.js';
 export type CreateImageOpsParams = {
   /** Uploaded IPFS URI for the image file. */
   cid: string;
-  /** Optional dimensions detected during upload. */
+  /** Optional image dimensions. */
   dimensions?: { width: number; height: number };
   /** Optional name value for the image entity. */
   name?: string;
@@ -25,10 +25,7 @@ export type CreateImageOpsParams = {
 };
 
 /**
- * Builds image entity ops from an already-uploaded image CID.
- *
- * This pure helper does not upload files or fetch image dimensions. Use
- * `geo.images.create(...)` when the SDK should upload the image first.
+ * Builds image entity ops from an image CID and optional metadata.
  *
  * @example
  * ```ts

@@ -1,6 +1,7 @@
 import { createGeoClient } from '../client.js';
 import { isValid } from '../id.js';
 import { UUID_DASHLESS_REGEX } from '../internal/uuid.js';
+import { resolveGeoNetwork } from '../networks.js';
 import type { PublishEditParams, PublishEditResult } from './types.js';
 
 function assertValidSpaceId(spaceId: string) {
@@ -20,5 +21,5 @@ function assertValidSpaceId(spaceId: string) {
 export async function publishEdit(params: PublishEditParams): Promise<PublishEditResult> {
   const { network = 'TESTNET', ...args } = params;
   assertValidSpaceId(String(args.spaceId));
-  return createGeoClient({ network }).personalSpaces.publishEdit(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).personalSpaces.publishEdit(args);
 }

@@ -29,14 +29,11 @@ export type CreateCommentOpsParams = {
 };
 
 /**
- * Builds create-comment ops without network access.
+ * Builds create-comment ops.
  *
  * The direct `replyTo` target is always included. If `replyToRelations` are
  * provided, they are sorted by position and appended after the direct parent so
  * nested comments preserve a parent-to-root reply chain.
- *
- * Use `geo.comments.create(...)` when reply-chain context should be fetched
- * from the configured Geo API.
  *
  * @example
  * Create a comment on an entity.
@@ -129,7 +126,7 @@ export const create = ({
 };
 
 /**
- * Builds update-comment ops without network access.
+ * Builds update-comment ops.
  *
  * If `content` is supplied, both markdown content and the derived comment name
  * are updated. If `resolved` is supplied, the resolved property is updated.

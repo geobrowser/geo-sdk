@@ -1,4 +1,5 @@
 import { createGeoClient } from '../client.js';
+import { resolveGeoNetwork } from '../networks.js';
 import { isBytes16Hex } from './constants.js';
 import type { ProposeEditParams, ProposeEditResult } from './types.js';
 
@@ -19,5 +20,5 @@ export async function proposeEdit(params: ProposeEditParams): Promise<ProposeEdi
     throw new Error(`proposalId must be bytes16 hex (0x followed by 32 hex chars). Received: ${args.proposalId}`);
   }
 
-  return createGeoClient({ network }).daoSpaces.proposeEdit(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).daoSpaces.proposeEdit(args);
 }

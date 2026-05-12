@@ -9,9 +9,9 @@ import { createEntity } from '../graph/create-entity.js';
 import { createRelation } from '../graph/create-relation.js';
 import type { Id } from '../id.js';
 import * as IdUtils from '../id-utils.js';
+import type { PublishEditParams } from '../ipfs-core.js';
 import { requireGeoContract } from '../networks.js';
 import type { GeoClientContext } from './context.js';
-import type { PublishEditToSpaceParams } from './edits.js';
 
 export type CreatePersonalSpaceParams = {
   name: string;
@@ -29,6 +29,10 @@ export type CreatePersonalSpaceResult = {
 export type HasSpaceParams = {
   address: Hex;
   rpcUrl?: string;
+};
+
+export type PublishPersonalSpaceEditParams = PublishEditParams & {
+  spaceId: Id | string;
 };
 
 /**
@@ -171,7 +175,7 @@ export async function hasSpace(context: GeoClientContext, { address, rpcUrl }: H
  * @returns Edit ID, CID, target registry address, and calldata.
  * @throws When the configured network is missing required contracts or edit publishing fails.
  */
-export async function publishEdit(context: GeoClientContext, params: PublishEditToSpaceParams) {
+export async function publishEdit(context: GeoClientContext, params: PublishPersonalSpaceEditParams) {
   const { publishToSpace } = await import('./edits.js');
   return publishToSpace(context, params);
 }

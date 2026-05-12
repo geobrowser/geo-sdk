@@ -2,7 +2,7 @@ import { createType } from '../graph/create-type.js';
 import type { CreateResult, CreateTypeParams } from '../types.js';
 
 /**
- * Builds create-type ops without network access.
+ * Builds create-type ops.
  *
  * @example
  * ```ts

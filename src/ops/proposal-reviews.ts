@@ -19,7 +19,7 @@ import type {
 import { create as createEntity, update as updateEntity } from './entities.js';
 
 /**
- * Builds create-proposal-review ops without network access.
+ * Builds create-proposal-review ops.
  *
  * The review is linked to the proposal through the proposals relation and can
  * include pass/fail, optional markdown content, and optional rating values.
@@ -85,7 +85,7 @@ export const create = (params: CreateProposalReviewParams): CreateResult => {
 };
 
 /**
- * Builds update-proposal-review ops without network access.
+ * Builds update-proposal-review ops.
  *
  * @example
  * ```ts

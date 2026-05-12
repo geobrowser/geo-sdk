@@ -2,23 +2,23 @@ import * as Api from './client/api.js';
 import * as Comments from './client/comments.js';
 import type { FetchLike, GeoClientContext } from './client/context.js';
 import * as DaoSpaces from './client/dao-spaces.js';
-import type { PublishEditToSpaceParams } from './client/edits.js';
 import { deleteEntity } from './client/entities.js';
 import * as EntityVotes from './client/entity-votes.js';
 import type { CreateImageParams } from './client/images.js';
 import * as PersonalSpaces from './client/personal-spaces.js';
-import * as Proposals from './client/proposals.js';
-import type { PublishEditParams, PublishImageParams } from './ipfs-core.js';
-import { resolveGeoNetwork } from './networks.js';
-import type { Networkish } from './types.js';
+import type { PublishImageParams } from './ipfs-core.js';
+import { defineGeoNetworkConfig } from './networks.js';
+import type { GeoNetworkConfig } from './types.js';
 
 export type CreateGeoClientParams = {
   /**
-   * Built-in network ID or a custom network configuration.
+   * Built-in or custom network configuration.
    *
-   * Omit this to use Geo TESTNET. Pass `GeoTestnetConfig` for the built-in
-   * testnet config, or `defineGeoNetworkConfig(...)` when running against a
-   * local or custom deployment.
+   * Pass `GeoTestnetConfig` for the built-in testnet config, or
+   * `defineGeoNetworkConfig(...)` when running against a local or custom
+   * deployment. The network config is required so callers make an explicit
+   * environment choice. String IDs such as `"TESTNET"` are intentionally not
+   * accepted by the client.
    *
    * @example
    * ```ts
@@ -27,12 +27,12 @@ export type CreateGeoClientParams = {
    * const geo = createGeoClient({ network: GeoTestnetConfig });
    * ```
    */
-  network?: Networkish;
+  network: GeoNetworkConfig;
   /**
    * Fetch implementation used by API, IPFS, and GraphQL-backed helpers.
    *
-   * Sync calldata helpers do not require fetch. Async helpers that upload or
-   * query data will use this value, then fall back to `globalThis.fetch`.
+   * Async helpers that upload or query data use this value, then fall back to
+   * `globalThis.fetch`.
    *
    * @example
    * ```ts
@@ -92,11 +92,22 @@ export type CreateGeoClientParams = {
  * @param params Network and fetch configuration for context-aware helpers.
  * @returns A configured client with API helpers and transaction workflows.
  */
-export function createGeoClient(params: CreateGeoClientParams = {}) {
+export function createGeoClient(params: CreateGeoClientParams) {
+  if (!params?.network) {
+    throw new Error(
+      'createGeoClient requires a Geo network config. Pass GeoTestnetConfig or defineGeoNetworkConfig().',
+    );
+  }
+  if (typeof params.network === 'string') {
+    throw new Error(
+      'createGeoClient requires a full Geo network config. Pass GeoTestnetConfig or defineGeoNetworkConfig().',
+    );
+  }
+
   const fetchFn = params.fetch ?? globalThis.fetch;
 
   const context: GeoClientContext = {
-    network: resolveGeoNetwork(params.network),
+    network: defineGeoNetworkConfig(params.network),
     fetch: fetchFn,
   };
 
@@ -173,50 +184,6 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
         return uploadCSV(context, csvString);
       },
     },
-    /** Edit publishing helpers. */
-    edits: {
-      /**
-       * Publishes an edit to IPFS and returns its CID and generated edit ID.
-       *
-       * @example
-       * ```ts
-       * import * as Ops from '@geoprotocol/geo-sdk/ops';
-       *
-       * const { ops } = Ops.entities.create({ name: 'Geo entity' });
-       * const edit = await geo.edits.publish({
-       *   name: 'Create Geo entity',
-       *   author: authorSpaceId,
-       *   ops,
-       * });
-       * ```
-       */
-      async publish(params: PublishEditParams) {
-        const { publish } = await import('./client/edits.js');
-        return publish(context, params);
-      },
-      /**
-       * Publishes an edit to IPFS and returns personal-space calldata for the configured registry.
-       *
-       * @example
-       * ```ts
-       * const tx = await geo.edits.publishToSpace({
-       *   name: 'Create entity',
-       *   spaceId,
-       *   author: spaceId,
-       *   ops,
-       * });
-       *
-       * await walletClient.sendTransaction({
-       *   to: tx.to,
-       *   data: tx.calldata,
-       * });
-       * ```
-       */
-      async publishToSpace(params: PublishEditToSpaceParams) {
-        const { publishToSpace } = await import('./client/edits.js');
-        return publishToSpace(context, params);
-      },
-    },
     /** Entity helpers that need graph context from the configured API. */
     entities: {
       /**
@@ -265,7 +232,7 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
        */
       create: (params: Parameters<typeof Comments.create>[1]) => Comments.create(context, params),
       /**
-       * Builds update-comment ops without network access.
+       * Builds update-comment ops.
        *
        * @example
        * ```ts
@@ -317,7 +284,8 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
        * });
        * ```
        */
-      publishEdit: (params: PublishEditToSpaceParams) => PersonalSpaces.publishEdit(context, params),
+      publishEdit: (params: PersonalSpaces.PublishPersonalSpaceEditParams) =>
+        PersonalSpaces.publishEdit(context, params),
     },
     /** DAO-space transaction helpers. */
     daoSpaces: {
@@ -355,7 +323,7 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
        * });
        * ```
        */
-      proposeEdit: (params: Proposals.ProposeEditParams) => DaoSpaces.proposeEdit(context, params),
+      proposeEdit: (params: DaoSpaces.ProposeEditParams) => DaoSpaces.proposeEdit(context, params),
       /**
        * Builds calldata for a DAO proposal that adds a member.
        *
@@ -442,7 +410,7 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
          * });
          * ```
          */
-        create: (params: Proposals.CreateProposalParams) => Proposals.create(context, params),
+        create: (params: DaoSpaces.CreateProposalParams) => DaoSpaces.createProposal(context, params),
         /**
          * Builds calldata for voting on a DAO proposal.
          *
@@ -456,7 +424,7 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
          * });
          * ```
          */
-        vote: (params: Proposals.VoteProposalParams) => Proposals.vote(context, params),
+        vote: (params: DaoSpaces.VoteProposalParams) => DaoSpaces.voteProposal(context, params),
         /**
          * Builds calldata for executing a passed DAO proposal.
          *
@@ -469,7 +437,7 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
          * });
          * ```
          */
-        execute: (params: Proposals.ExecuteProposalParams) => Proposals.execute(context, params),
+        execute: (params: DaoSpaces.ExecuteProposalParams) => DaoSpaces.executeProposal(context, params),
         /**
          * Helpers for constructing DAO proposal actions.
          *
@@ -481,7 +449,7 @@ export function createGeoClient(params: CreateGeoClientParams = {}) {
          * ];
          * ```
          */
-        actions: Proposals.actions,
+        actions: DaoSpaces.actions,
       },
     },
     /** Entity vote transaction helpers. */

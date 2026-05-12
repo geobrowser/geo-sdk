@@ -1,4 +1,4 @@
-import type { CreateRelation, Op, UpdateEntity } from '@geoprotocol/grc-20';
+import type { CreateRelation, Op } from '@geoprotocol/grc-20';
 import { describe, expect, it } from 'vitest';
 import { DESCRIPTION_PROPERTY, MARKDOWN_CONTENT, NAME_PROPERTY, REPLY_TO_PROPERTY } from '../core/ids/system.js';
 import { createEntity } from '../graph/create-entity.js';
@@ -29,6 +29,7 @@ describe('Ops', () => {
 
     expect(Ops.entities.create(params)).toEqual(createEntity(params));
     expect(Ops.entities.update({ id, name: 'Updated' })).toEqual(updateEntity({ id, name: 'Updated' }));
+    expect('delete' in Ops.entities).toBe(false);
   });
 
   it('matches Graph schema and relation builders', () => {
@@ -69,7 +70,7 @@ describe('Ops', () => {
     expect(result.ops.length).toBeGreaterThan(0);
   });
 
-  it('creates and updates comment ops without fetching', () => {
+  it('creates and updates comment ops', () => {
     const id = generate();
     const root = generate();
     const space = generate();
@@ -87,7 +88,7 @@ describe('Ops', () => {
     expect(MARKDOWN_CONTENT).toBeTruthy();
   });
 
-  it('creates comment reply chains from supplied context without fetching', () => {
+  it('creates comment reply chains from supplied context', () => {
     const id = generate();
     const parent = generate();
     const commentA = generate();
@@ -116,33 +117,6 @@ describe('Ops', () => {
     expect(replyRels[2]?.to).toEqual(toGrcId(root));
     expect(replyRels[0]?.position?.localeCompare(replyRels[1]?.position ?? '')).toBeLessThan(0);
     expect(replyRels[1]?.position?.localeCompare(replyRels[2]?.position ?? '')).toBeLessThan(0);
-  });
-
-  it('deletes fetched entity values and relations without fetching', () => {
-    const id = generate();
-    const space = generate();
-    const otherSpace = generate();
-    const propertyA = generate();
-    const propertyB = generate();
-    const relation = generate();
-
-    const result = Ops.entities.delete({
-      id,
-      spaceId: space,
-      values: [
-        { propertyId: propertyA, spaceId: space },
-        { propertyId: propertyA, spaceId: space },
-        { propertyId: propertyB, spaceId: otherSpace },
-      ],
-      relations: [
-        { id: relation, spaceId: space },
-        { id: generate(), spaceId: otherSpace },
-      ],
-    });
-
-    expect(result.id).toBe(id);
-    expect(result.ops.map(op => op.type)).toEqual(['updateEntity', 'deleteRelation']);
-    expect((result.ops[0] as UpdateEntity).unset).toHaveLength(1);
   });
 
   it('matches Graph proposal review builders', () => {

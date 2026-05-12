@@ -1,4 +1,5 @@
 import { createGeoClient } from '../client.js';
+import { resolveGeoNetwork } from '../networks.js';
 import { ensure0xPrefix, isBytes16Hex } from './constants.js';
 import type { ExecuteProposalParams, ExecuteProposalResult } from './types.js';
 
@@ -19,5 +20,5 @@ export function executeProposal(params: ExecuteProposalParams): ExecuteProposalR
     throw new Error(`proposalId must be bytes16 hex (32 hex chars). Received: ${args.proposalId}`);
   }
 
-  return createGeoClient({ network }).daoSpaces.proposals.execute(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).daoSpaces.proposals.execute(args);
 }

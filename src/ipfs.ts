@@ -29,7 +29,8 @@ type PublishEditResult = {
 /**
  * Generates correct GRC-20 v2 binary encoding for an Edit and uploads it to IPFS.
  *
- * @deprecated Use `createGeoClient({ network }).edits.publish(...)`.
+ * @deprecated Use `createGeoClient({ network }).personalSpaces.publishEdit(...)` or
+ * `createGeoClient({ network }).daoSpaces.proposeEdit(...)`.
  */
 export async function publishEdit(args: PublishEditProposalParams): Promise<PublishEditResult> {
   const { network = 'TESTNET', ...params } = args;

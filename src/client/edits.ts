@@ -10,7 +10,7 @@ import { EDITS_PUBLISHED, EMPTY_SIGNATURE, EMPTY_TOPIC } from '../personal-space
 import type { GeoClientContext } from './context.js';
 import { requireFetch } from './context.js';
 
-export type PublishEditToSpaceParams = PublishEditParams & {
+type PublishEditToSpaceParams = PublishEditParams & {
   spaceId: Id | string;
 };
 
@@ -33,7 +33,7 @@ function spaceIdToBytes16(spaceId: string): `0x${string}` {
 }
 
 /**
- * Encodes personal-space edit publish calldata without publishing or fetching.
+ * Encodes personal-space edit publish calldata.
  *
  * Use this when an edit is already uploaded and you only need calldata for the
  * configured or supplied space registry. The function accepts dashless UUID
@@ -87,7 +87,7 @@ export function encodePublishEditToSpaceCalldata({
  * import * as Ops from '@geoprotocol/geo-sdk/ops';
  *
  * const { ops } = Ops.entities.create({ name: 'Geo entity' });
- * const edit = await geo.edits.publish({
+ * const edit = await publish(context, {
  *   name: 'Create Geo entity',
  *   author: authorSpaceId,
  *   ops,
@@ -117,7 +117,7 @@ export function publish(context: GeoClientContext, params: PublishEditParams) {
  *
  * @example
  * ```ts
- * const tx = await geo.edits.publishToSpace({
+ * const tx = await geo.personalSpaces.publishEdit({
  *   name: 'Create entity',
  *   spaceId,
  *   author: spaceId,

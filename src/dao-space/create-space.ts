@@ -1,4 +1,5 @@
 import { createGeoClient } from '../client.js';
+import { resolveGeoNetwork } from '../networks.js';
 import type { CreateSpaceParams, CreateSpaceResult } from './types.js';
 
 /**
@@ -8,5 +9,5 @@ import type { CreateSpaceParams, CreateSpaceResult } from './types.js';
  */
 export async function createSpace(params: CreateSpaceParams): Promise<CreateSpaceResult> {
   const { network = 'TESTNET', ...args } = params;
-  return createGeoClient({ network }).daoSpaces.create(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).daoSpaces.create(args);
 }

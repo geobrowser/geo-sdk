@@ -1,5 +1,6 @@
 import type { Hex } from 'viem';
 import { createGeoClient } from '../client.js';
+import { resolveGeoNetwork } from '../networks.js';
 import type { Networkish } from '../types.js';
 
 /**
@@ -16,5 +17,5 @@ export async function hasSpace({
   network?: Networkish;
   rpcUrl?: string;
 }): Promise<boolean> {
-  return createGeoClient({ network }).personalSpaces.hasSpace({ address, rpcUrl });
+  return createGeoClient({ network: resolveGeoNetwork(network) }).personalSpaces.hasSpace({ address, rpcUrl });
 }

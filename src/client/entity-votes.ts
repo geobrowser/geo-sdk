@@ -70,7 +70,7 @@ function withSpaceRegistry(context: GeoClientContext, params: ClientEntityVotePa
 }
 
 /**
- * Encodes upvote calldata without reading network config or fetching.
+ * Encodes upvote calldata.
  *
  * Use this pure helper when you already have the target space registry address.
  * Use `geo.entityVotes.upvote(...)` when the address should come from the
@@ -95,7 +95,7 @@ export function encodeUpvoteEntityCalldata(params: EntityVoteCalldataParams) {
 }
 
 /**
- * Encodes downvote calldata without reading network config or fetching.
+ * Encodes downvote calldata.
  *
  * @example
  * ```ts
@@ -116,7 +116,7 @@ export function encodeDownvoteEntityCalldata(params: EntityVoteCalldataParams) {
 }
 
 /**
- * Encodes vote-withdrawal calldata without reading network config or fetching.
+ * Encodes vote-withdrawal calldata.
  *
  * @example
  * ```ts

@@ -39,6 +39,7 @@ describe('createGeoClient', () => {
   it('scopes proposal helpers under daoSpaces', () => {
     const geo = createGeoClient({ network: customNetwork() });
 
+    expect('edits' in geo).toBe(false);
     expect('proposals' in geo).toBe(false);
     expect(Object.keys(geo.daoSpaces)).toEqual([
       'create',
@@ -52,8 +53,12 @@ describe('createGeoClient', () => {
     ]);
   });
 
-  it('throws for unknown network strings', () => {
-    expect(() => createGeoClient({ network: 'LOCAL' as never })).toThrow('Unknown Geo network "LOCAL"');
+  it('requires an explicit network config', () => {
+    expect(() => createGeoClient(undefined as never)).toThrow('requires a Geo network config');
+  });
+
+  it('rejects string network IDs', () => {
+    expect(() => createGeoClient({ network: 'TESTNET' as never })).toThrow('requires a full Geo network config');
   });
 
   it('allows sync calldata helpers without global fetch', () => {

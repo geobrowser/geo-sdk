@@ -49,8 +49,7 @@ async function fetchReplyToRelations(context: GeoClientContext, entityId: Id | s
  * a comment, existing reply-to relations are fetched and appended so reply
  * chains preserve parent-to-root ordering.
  *
- * Use `Ops.comments.create(...)` when reply-chain context is already available
- * locally and no fetch should happen.
+ * Use `Ops.comments.create(...)` when reply-chain context is already available.
  *
  * @example
  * ```ts
@@ -100,7 +99,7 @@ export async function create(
 }
 
 /**
- * Builds update-comment ops without reading network config or fetching graph data.
+ * Builds update-comment ops.
  *
  * @example
  * ```ts

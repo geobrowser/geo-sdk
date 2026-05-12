@@ -2,7 +2,7 @@ import { createProperty } from '../graph/create-property.js';
 import type { CreatePropertyParams, CreateResult } from '../types.js';
 
 /**
- * Builds create-property ops without network access.
+ * Builds create-property ops.
  *
  * @example
  * ```ts

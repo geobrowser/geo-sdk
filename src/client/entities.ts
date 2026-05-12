@@ -1,7 +1,12 @@
+import {
+  type UnsetValue as GrcUnsetValue,
+  deleteRelation as grcDeleteRelation,
+  updateEntity as grcUpdateEntity,
+  type Op,
+} from '@geoprotocol/grc-20';
 import { Id } from '../id.js';
-import { assertValid } from '../id-utils.js';
-import * as Ops from '../ops/index.js';
-import type { DeleteEntityParams } from '../types.js';
+import { assertValid, toGrcId } from '../id-utils.js';
+import type { CreateResult, DeleteEntityParams } from '../types.js';
 import { graphqlData } from './api.js';
 import type { GeoClientContext } from './context.js';
 
@@ -16,12 +21,48 @@ type EntityGraphQLResponse = {
   } | null;
 };
 
+type DeleteEntityOpsParams = Omit<DeleteEntityParams, 'network'> & {
+  values: Array<{ propertyId: string; spaceId: string }>;
+  relations: Array<{ id: string; spaceId: string }>;
+};
+
+function createDeleteEntityOps({ id, spaceId, values, relations }: DeleteEntityOpsParams): CreateResult {
+  assertValid(id, '`id` in `deleteEntity`');
+  assertValid(spaceId, '`spaceId` in `deleteEntity`');
+
+  const normalizedSpaceId = String(spaceId).replaceAll('-', '');
+  const ops: Op[] = [];
+  const matchingValues = values.filter(v => v.spaceId === normalizedSpaceId);
+  const matchingRelations = relations.filter(r => r.spaceId === normalizedSpaceId);
+  const uniquePropertyIds = [...new Set(matchingValues.map(v => v.propertyId))];
+
+  if (uniquePropertyIds.length > 0) {
+    const unsetValues: GrcUnsetValue[] = uniquePropertyIds.map(propertyId => ({
+      property: toGrcId(propertyId),
+      language: { type: 'all' as const },
+    }));
+
+    ops.push(
+      grcUpdateEntity({
+        id: toGrcId(id),
+        set: [],
+        unset: unsetValues,
+      }),
+    );
+  }
+
+  for (const relation of matchingRelations) {
+    ops.push(grcDeleteRelation(toGrcId(relation.id)));
+  }
+
+  return { id: Id(id), ops };
+}
+
 /**
  * Fetches the current entity values and relations for a space, then builds delete ops.
  *
  * Entity deletion requires current graph context so the SDK can unset existing
- * values and delete existing relations in the target space. For a pure version
- * that accepts pre-fetched context, use `Ops.entities.delete(...)`.
+ * values and delete existing relations in the target space.
  *
  * @example
  * ```ts
@@ -69,7 +110,7 @@ export async function deleteEntity(context: GeoClientContext, { id, spaceId }: O
     return { id: Id(id), ops: [] };
   }
 
-  return Ops.entities.delete({
+  return createDeleteEntityOps({
     id,
     spaceId,
     values: response.entity.valuesList,

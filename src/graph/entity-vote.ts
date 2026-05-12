@@ -1,6 +1,7 @@
 import { createGeoClient } from '../client.js';
 import type { Id } from '../id.js';
 import { assertValid } from '../id-utils.js';
+import { resolveGeoNetwork } from '../networks.js';
 import type { Network } from '../types.js';
 
 export type EntityVoteParams = {
@@ -36,7 +37,7 @@ export function upvoteEntity(params: EntityVoteParams): EntityVoteResult {
   validateEntityVoteId(args.authorSpaceId, '`authorSpaceId` in entity vote');
   validateEntityVoteId(args.spaceId, '`spaceId` in entity vote');
   validateEntityVoteId(args.entityId, '`entityId` in entity vote');
-  return createGeoClient({ network }).entityVotes.upvote(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).entityVotes.upvote(args);
 }
 
 /**
@@ -49,7 +50,7 @@ export function downvoteEntity(params: EntityVoteParams): EntityVoteResult {
   validateEntityVoteId(args.authorSpaceId, '`authorSpaceId` in entity vote');
   validateEntityVoteId(args.spaceId, '`spaceId` in entity vote');
   validateEntityVoteId(args.entityId, '`entityId` in entity vote');
-  return createGeoClient({ network }).entityVotes.downvote(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).entityVotes.downvote(args);
 }
 
 /**
@@ -62,5 +63,5 @@ export function withdrawEntityVote(params: EntityVoteParams): EntityVoteResult {
   validateEntityVoteId(args.authorSpaceId, '`authorSpaceId` in entity vote');
   validateEntityVoteId(args.spaceId, '`spaceId` in entity vote');
   validateEntityVoteId(args.entityId, '`entityId` in entity vote');
-  return createGeoClient({ network }).entityVotes.withdraw(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).entityVotes.withdraw(args);
 }

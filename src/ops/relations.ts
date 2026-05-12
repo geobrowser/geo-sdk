@@ -4,7 +4,7 @@ import { updateRelation } from '../graph/update-relation.js';
 import type { CreateResult, DeleteRelationParams, RelationParams, UpdateRelationParams } from '../types.js';
 
 /**
- * Builds create-relation ops without network access.
+ * Builds create-relation ops.
  *
  * @example
  * ```ts
@@ -25,7 +25,7 @@ import type { CreateResult, DeleteRelationParams, RelationParams, UpdateRelation
 export const create = (params: RelationParams): CreateResult => createRelation(params);
 
 /**
- * Builds update-relation ops without network access.
+ * Builds update-relation ops.
  *
  * @example
  * ```ts
@@ -44,7 +44,7 @@ export const create = (params: RelationParams): CreateResult => createRelation(p
 export const update = (params: UpdateRelationParams): CreateResult => updateRelation(params);
 
 /**
- * Builds delete-relation ops without network access.
+ * Builds delete-relation ops.
  *
  * @example
  * ```ts
