@@ -277,6 +277,34 @@ describe('geo DAO proposal client', () => {
     ).toThrow('proposeAddEditor only supports SLOW voting mode');
   });
 
+  it('requires daoSpaceAddress for DAO role proposal actions', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    expect(() =>
+      geo.daoSpaces.proposeAddMember({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        newMemberSpaceId: MEMBER_SPACE_ID,
+        proposalId: PROPOSAL_ID,
+      } as never),
+    ).toThrow('daoSpaceAddress is required');
+  });
+
+  it('rejects unknown voting modes at runtime', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+    const action = geo.daoSpaces.proposals.actions.addMember(DAO_SPACE_ADDRESS, MEMBER_SPACE_ID);
+
+    expect(() =>
+      geo.daoSpaces.proposals.create({
+        fromSpaceId: CALLER_SPACE_ID,
+        daoSpaceId: DAO_SPACE_ID,
+        proposalId: PROPOSAL_ID,
+        votingMode: 'MAYBE' as never,
+        actions: [action],
+      }),
+    ).toThrow('votingMode must be "FAST" or "SLOW"');
+  });
+
   it('creates membership request calldata from daoSpaces', () => {
     const geo = createGeoClient({ network: customNetwork() });
 

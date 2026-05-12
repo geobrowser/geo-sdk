@@ -77,15 +77,15 @@ describe('proposeRemoveEditor', () => {
     expect(result.calldata).toBeTruthy();
   });
 
-  it('should reject FAST voting mode', () => {
-    expect(() =>
-      proposeRemoveEditor({
-        authorSpaceId: validAuthorSpaceId,
-        spaceId: validSpaceId,
-        editorToRemoveSpaceId: validEditorToRemove,
-        votingMode: 'FAST' as never,
-      }),
-    ).toThrow('proposeRemoveEditor only supports SLOW voting mode');
+  it('should preserve legacy FAST voting mode support', () => {
+    const result = proposeRemoveEditor({
+      authorSpaceId: validAuthorSpaceId,
+      spaceId: validSpaceId,
+      editorToRemoveSpaceId: validEditorToRemove,
+      votingMode: 'FAST',
+    });
+
+    expect(result.calldata).toBeTruthy();
   });
 
   it('should accept explicit SLOW voting mode', () => {

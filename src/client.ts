@@ -1,14 +1,278 @@
+import type { Op } from '@geoprotocol/grc-20';
+import type { Address, Hex } from 'viem';
 import * as Api from './client/api.js';
 import * as Comments from './client/comments.js';
-import type { FetchLike, GeoClientContext } from './client/context.js';
+import type { GeoClientContext } from './client/context.js';
 import * as DaoSpaces from './client/dao-spaces.js';
 import { deleteEntity } from './client/entities.js';
 import * as EntityVotes from './client/entity-votes.js';
-import type { CreateImageParams } from './client/images.js';
 import * as PersonalSpaces from './client/personal-spaces.js';
-import type { PublishImageParams } from './ipfs-core.js';
+import type { Id } from './id.js';
 import { defineGeoNetworkConfig } from './networks.js';
 import type { GeoNetworkConfig } from './types.js';
+
+export type GeoFetch = typeof fetch;
+
+export type GeoGraphQlResponse<T> = {
+  data?: T;
+  errors?: unknown;
+};
+
+export type GeoEditCalldataParams = {
+  spaceId: string;
+  cid: string;
+};
+
+export type GeoApiCalldataResult = {
+  to: `0x${string}`;
+  data: `0x${string}`;
+};
+
+export type GeoImageSource = { blob: Blob } | { url: string };
+
+export type GeoUploadImageParams = GeoImageSource & {
+  alternativeGateway?: boolean;
+};
+
+export type GeoUploadImageResult = {
+  cid: `ipfs://${string}`;
+  dimensions?: { width: number; height: number };
+};
+
+export type GeoCreateImageParams = GeoImageSource & {
+  name?: string;
+  description?: string;
+  id?: Id | string;
+  alternativeGateway?: boolean;
+};
+
+export type GeoCreateResult = {
+  id: Id;
+  ops: Op[];
+};
+
+export type GeoCreateImageResult = GeoCreateResult & {
+  cid: string;
+  dimensions?: { width: number; height: number };
+};
+
+export type GeoDeleteEntityParams = {
+  id: Id | string;
+  spaceId: Id | string;
+};
+
+export type GeoCreateCommentParams = {
+  id?: Id | string;
+  content: string;
+  replyTo: {
+    entityId: Id | string;
+    spaceId: Id | string;
+  };
+  resolved?: boolean;
+};
+
+export type GeoUpdateCommentParams = {
+  id: Id | string;
+  content?: string;
+  resolved?: boolean;
+};
+
+export type GeoCalldataResult = {
+  to: `0x${string}`;
+  calldata: `0x${string}`;
+};
+
+export type GeoCreatePersonalSpaceParams = {
+  name: string;
+  accountAddress: Address;
+};
+
+export type GeoCreatePersonalSpaceResult = GeoCalldataResult & {
+  spaceEntityId: Id;
+  accountId: string;
+  ops: Op[];
+};
+
+export type GeoHasPersonalSpaceParams = {
+  address: Hex;
+  rpcUrl?: string;
+};
+
+export type GeoPublishEditParams = {
+  name: string;
+  ops: Op[];
+  author: Id | string;
+};
+
+export type GeoPublishEditResult = {
+  cid: `ipfs://${string}`;
+  editId: Id;
+};
+
+export type GeoPublishPersonalSpaceEditParams = GeoPublishEditParams & {
+  spaceId: Id | string;
+};
+
+export type GeoPublishPersonalSpaceEditResult = GeoPublishEditResult & GeoCalldataResult;
+
+export type GeoVotingSettingsInput = {
+  slowPathPercentageThreshold: number;
+  fastPathFlatThreshold: number;
+  quorum: number;
+  durationInDays: number;
+};
+
+export type GeoVotingMode = 'SLOW' | 'FAST';
+
+export type GeoVoteOption = 'YES' | 'NO' | 'ABSTAIN';
+
+export type GeoCreateDaoSpaceParams = {
+  name: string;
+  author: Id | string;
+  votingSettings: GeoVotingSettingsInput;
+  initialEditorSpaceIds: `0x${string}`[];
+  initialMemberSpaceIds?: `0x${string}`[];
+  initialTopicId?: string;
+  ops?: Op[];
+};
+
+export type GeoCreateDaoSpaceResult = GeoCalldataResult & {
+  spaceEntityId: Id;
+  cid: `ipfs://${string}`;
+};
+
+export type GeoProposalAction = {
+  to: `0x${string}`;
+  value: bigint;
+  data: `0x${string}`;
+};
+
+export type GeoCreateProposalParams = {
+  fromSpaceId: string;
+  daoSpaceId: string;
+  proposalId?: string;
+  votingMode?: GeoVotingMode;
+  actions: GeoProposalAction[];
+};
+
+export type GeoProposalResult = GeoCalldataResult & {
+  proposalId: `0x${string}`;
+};
+
+export type GeoProposeEditParams = GeoPublishEditParams & {
+  daoSpaceAddress: `0x${string}`;
+  callerSpaceId: string;
+  daoSpaceId: string;
+  votingMode?: GeoVotingMode;
+  proposalId?: string;
+};
+
+export type GeoProposeEditResult = GeoPublishEditResult & GeoProposalResult;
+
+export type GeoDaoSpaceRoleProposalBaseParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  daoSpaceAddress: `0x${string}`;
+  votingMode?: GeoVotingMode;
+  proposalId?: string;
+};
+
+export type GeoProposeAddMemberParams = GeoDaoSpaceRoleProposalBaseParams & {
+  newMemberSpaceId: string;
+};
+
+export type GeoProposeRemoveMemberParams = GeoDaoSpaceRoleProposalBaseParams & {
+  memberToRemoveSpaceId: string;
+};
+
+export type GeoProposeAddEditorParams = Omit<GeoDaoSpaceRoleProposalBaseParams, 'votingMode'> & {
+  votingMode?: 'SLOW';
+  newEditorSpaceId: string;
+};
+
+export type GeoProposeRemoveEditorParams = Omit<GeoDaoSpaceRoleProposalBaseParams, 'votingMode'> & {
+  votingMode?: 'SLOW';
+  editorToRemoveSpaceId: string;
+};
+
+export type GeoProposeRequestMembershipParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  proposalId?: string;
+};
+
+export type GeoVoteProposalParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  proposalId: string;
+  vote: GeoVoteOption;
+};
+
+export type GeoExecuteProposalParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  proposalId: string;
+};
+
+export type GeoEntityVoteParams = {
+  authorSpaceId: Id | string;
+  spaceId: Id | string;
+  entityId: Id | string;
+};
+
+export type GeoClient = {
+  network: GeoNetworkConfig;
+  api: {
+    graphql<T>(query: string): Promise<GeoGraphQlResponse<T>>;
+    getEditCalldata(params: GeoEditCalldataParams): Promise<GeoApiCalldataResult>;
+  };
+  storage: {
+    uploadImage(params: GeoUploadImageParams): Promise<GeoUploadImageResult>;
+    uploadCSV(csvString: string): Promise<`ipfs://${string}`>;
+  };
+  entities: {
+    delete(params: GeoDeleteEntityParams): Promise<GeoCreateResult>;
+  };
+  images: {
+    create(params: GeoCreateImageParams): Promise<GeoCreateImageResult>;
+  };
+  comments: {
+    create(params: GeoCreateCommentParams): Promise<GeoCreateResult>;
+    update(params: GeoUpdateCommentParams): GeoCreateResult;
+  };
+  personalSpaces: {
+    create(params: GeoCreatePersonalSpaceParams): GeoCreatePersonalSpaceResult;
+    hasSpace(params: GeoHasPersonalSpaceParams): Promise<boolean>;
+    publishEdit(params: GeoPublishPersonalSpaceEditParams): Promise<GeoPublishPersonalSpaceEditResult>;
+  };
+  daoSpaces: {
+    create(params: GeoCreateDaoSpaceParams): Promise<GeoCreateDaoSpaceResult>;
+    proposeEdit(params: GeoProposeEditParams): Promise<GeoProposeEditResult>;
+    proposeAddMember(params: GeoProposeAddMemberParams): GeoProposalResult;
+    proposeRemoveMember(params: GeoProposeRemoveMemberParams): GeoProposalResult;
+    proposeAddEditor(params: GeoProposeAddEditorParams): GeoProposalResult;
+    proposeRemoveEditor(params: GeoProposeRemoveEditorParams): GeoProposalResult;
+    proposeRequestMembership(params: GeoProposeRequestMembershipParams): GeoProposalResult;
+    proposals: {
+      create(params: GeoCreateProposalParams): GeoProposalResult;
+      vote(params: GeoVoteProposalParams): GeoCalldataResult;
+      execute(params: GeoExecuteProposalParams): GeoCalldataResult;
+      actions: {
+        publishEdit(daoSpaceAddress: `0x${string}`, cid: string): GeoProposalAction;
+        addEditor(daoSpaceAddress: `0x${string}`, spaceId: string): GeoProposalAction;
+        removeEditor(daoSpaceAddress: `0x${string}`, spaceId: string): GeoProposalAction;
+        addMember(daoSpaceAddress: `0x${string}`, spaceId: string): GeoProposalAction;
+        removeMember(daoSpaceAddress: `0x${string}`, spaceId: string): GeoProposalAction;
+        updateVotingSettings(daoSpaceAddress: `0x${string}`, votingSettings: GeoVotingSettingsInput): GeoProposalAction;
+      };
+    };
+  };
+  entityVotes: {
+    upvote(params: GeoEntityVoteParams): GeoCalldataResult;
+    downvote(params: GeoEntityVoteParams): GeoCalldataResult;
+    withdraw(params: GeoEntityVoteParams): GeoCalldataResult;
+  };
+};
 
 export type CreateGeoClientParams = {
   /**
@@ -42,7 +306,7 @@ export type CreateGeoClientParams = {
    * });
    * ```
    */
-  fetch?: FetchLike;
+  fetch?: GeoFetch;
 };
 
 /**
@@ -92,7 +356,7 @@ export type CreateGeoClientParams = {
  * @param params Network and fetch configuration for context-aware helpers.
  * @returns A configured client with API helpers and transaction workflows.
  */
-export function createGeoClient(params: CreateGeoClientParams) {
+export function createGeoClient(params: CreateGeoClientParams): GeoClient {
   if (!params?.network) {
     throw new Error(
       'createGeoClient requires a Geo network config. Pass GeoTestnetConfig or defineGeoNetworkConfig().',
@@ -167,7 +431,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * console.log(uploaded.cid, uploaded.dimensions);
        * ```
        */
-      async uploadImage(params: PublishImageParams & { alternativeGateway?: boolean }) {
+      async uploadImage(params: GeoUploadImageParams) {
         const { uploadImage } = await import('./client/storage.js');
         return uploadImage(context, params);
       },
@@ -197,7 +461,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      delete: (params: Parameters<typeof deleteEntity>[1]) => deleteEntity(context, params),
+      delete: (params: GeoDeleteEntityParams) => deleteEntity(context, params),
     },
     /** Image workflow helpers. */
     images: {
@@ -212,7 +476,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      async create(params: CreateImageParams) {
+      async create(params: GeoCreateImageParams) {
         const { create } = await import('./client/images.js');
         return create(context, params);
       },
@@ -230,7 +494,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      create: (params: Parameters<typeof Comments.create>[1]) => Comments.create(context, params),
+      create: (params: GeoCreateCommentParams) => Comments.create(context, params),
       /**
        * Builds update-comment ops.
        *
@@ -259,7 +523,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * await walletClient.sendTransaction({ to, data: calldata });
        * ```
        */
-      create: (params: PersonalSpaces.CreatePersonalSpaceParams) => PersonalSpaces.create(context, params),
+      create: (params: GeoCreatePersonalSpaceParams) => PersonalSpaces.create(context, params),
       /**
        * Checks whether an address already has a personal space.
        *
@@ -270,7 +534,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      hasSpace: (params: PersonalSpaces.HasSpaceParams) => PersonalSpaces.hasSpace(context, params),
+      hasSpace: (params: GeoHasPersonalSpaceParams) => PersonalSpaces.hasSpace(context, params),
       /**
        * Publishes an edit and returns calldata for submitting it to a personal space.
        *
@@ -284,8 +548,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      publishEdit: (params: PersonalSpaces.PublishPersonalSpaceEditParams) =>
-        PersonalSpaces.publishEdit(context, params),
+      publishEdit: (params: GeoPublishPersonalSpaceEditParams) => PersonalSpaces.publishEdit(context, params),
     },
     /** DAO-space transaction helpers. */
     daoSpaces: {
@@ -307,7 +570,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      create: (params: DaoSpaces.CreateDaoSpaceParams) => DaoSpaces.create(context, params),
+      create: (params: GeoCreateDaoSpaceParams) => DaoSpaces.create(context, params),
       /**
        * Publishes an edit and wraps it in a DAO-space proposal action.
        *
@@ -323,7 +586,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      proposeEdit: (params: DaoSpaces.ProposeEditParams) => DaoSpaces.proposeEdit(context, params),
+      proposeEdit: (params: GeoProposeEditParams) => DaoSpaces.proposeEdit(context, params),
       /**
        * Builds calldata for a DAO proposal that adds a member.
        *
@@ -337,7 +600,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      proposeAddMember: (params: DaoSpaces.ProposeAddMemberParams) => DaoSpaces.proposeAddMember(context, params),
+      proposeAddMember: (params: GeoProposeAddMemberParams) => DaoSpaces.proposeAddMember(context, params),
       /**
        * Builds calldata for a DAO proposal that removes a member.
        *
@@ -351,8 +614,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      proposeRemoveMember: (params: DaoSpaces.ProposeRemoveMemberParams) =>
-        DaoSpaces.proposeRemoveMember(context, params),
+      proposeRemoveMember: (params: GeoProposeRemoveMemberParams) => DaoSpaces.proposeRemoveMember(context, params),
       /**
        * Builds calldata for a DAO proposal that adds an editor.
        *
@@ -366,7 +628,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      proposeAddEditor: (params: DaoSpaces.ProposeAddEditorParams) => DaoSpaces.proposeAddEditor(context, params),
+      proposeAddEditor: (params: GeoProposeAddEditorParams) => DaoSpaces.proposeAddEditor(context, params),
       /**
        * Builds calldata for a DAO proposal that removes an editor.
        *
@@ -380,8 +642,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      proposeRemoveEditor: (params: DaoSpaces.ProposeRemoveEditorParams) =>
-        DaoSpaces.proposeRemoveEditor(context, params),
+      proposeRemoveEditor: (params: GeoProposeRemoveEditorParams) => DaoSpaces.proposeRemoveEditor(context, params),
       /**
        * Builds calldata for requesting membership in a DAO space.
        *
@@ -393,7 +654,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      proposeRequestMembership: (params: DaoSpaces.ProposeRequestMembershipParams) =>
+      proposeRequestMembership: (params: GeoProposeRequestMembershipParams) =>
         DaoSpaces.proposeRequestMembership(context, params),
       /** DAO-scoped low-level proposal helpers. */
       proposals: {
@@ -410,7 +671,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
          * });
          * ```
          */
-        create: (params: DaoSpaces.CreateProposalParams) => DaoSpaces.createProposal(context, params),
+        create: (params: GeoCreateProposalParams) => DaoSpaces.createProposal(context, params),
         /**
          * Builds calldata for voting on a DAO proposal.
          *
@@ -424,7 +685,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
          * });
          * ```
          */
-        vote: (params: DaoSpaces.VoteProposalParams) => DaoSpaces.voteProposal(context, params),
+        vote: (params: GeoVoteProposalParams) => DaoSpaces.voteProposal(context, params),
         /**
          * Builds calldata for executing a passed DAO proposal.
          *
@@ -437,7 +698,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
          * });
          * ```
          */
-        execute: (params: DaoSpaces.ExecuteProposalParams) => DaoSpaces.executeProposal(context, params),
+        execute: (params: GeoExecuteProposalParams) => DaoSpaces.executeProposal(context, params),
         /**
          * Helpers for constructing DAO proposal actions.
          *
@@ -466,7 +727,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * });
        * ```
        */
-      upvote: (params: EntityVotes.ClientEntityVoteParams) => EntityVotes.upvote(context, params),
+      upvote: (params: GeoEntityVoteParams) => EntityVotes.upvote(context, params),
       /**
        * Builds calldata for downvoting an entity.
        *
@@ -475,7 +736,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * const tx = geo.entityVotes.downvote({ authorSpaceId, spaceId, entityId });
        * ```
        */
-      downvote: (params: EntityVotes.ClientEntityVoteParams) => EntityVotes.downvote(context, params),
+      downvote: (params: GeoEntityVoteParams) => EntityVotes.downvote(context, params),
       /**
        * Builds calldata for withdrawing an entity vote.
        *
@@ -484,7 +745,7 @@ export function createGeoClient(params: CreateGeoClientParams) {
        * const tx = geo.entityVotes.withdraw({ authorSpaceId, spaceId, entityId });
        * ```
        */
-      withdraw: (params: EntityVotes.ClientEntityVoteParams) => EntityVotes.withdraw(context, params),
+      withdraw: (params: GeoEntityVoteParams) => EntityVotes.withdraw(context, params),
     },
   };
 }

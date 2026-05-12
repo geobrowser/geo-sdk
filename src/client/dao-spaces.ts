@@ -83,7 +83,7 @@ export type ExecuteProposalParams = {
 type DaoSpaceRoleProposalBaseParams = {
   authorSpaceId: string;
   spaceId: string;
-  daoSpaceAddress?: `0x${string}`;
+  daoSpaceAddress: `0x${string}`;
   votingMode?: VotingMode;
   proposalId?: string;
 };
@@ -123,10 +123,6 @@ function bytes16Id(value: string, name: string): `0x${string}` {
   return normalized;
 }
 
-function proposalActionTarget(context: GeoClientContext, daoSpaceAddress?: `0x${string}`) {
-  return daoSpaceAddress ?? requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS');
-}
-
 function createRoleProposal(context: GeoClientContext, params: DaoSpaceRoleProposalBaseParams, action: ProposalAction) {
   return createProposal(context, {
     fromSpaceId: params.authorSpaceId,
@@ -137,6 +133,14 @@ function createRoleProposal(context: GeoClientContext, params: DaoSpaceRolePropo
   });
 }
 
+function requireDaoSpaceAddress(daoSpaceAddress: `0x${string}` | undefined): `0x${string}` {
+  if (!daoSpaceAddress) {
+    throw new Error('daoSpaceAddress is required for DAO role proposal actions');
+  }
+
+  return daoSpaceAddress;
+}
+
 function encodeCreateProposal(params: CreateProposalParams & { spaceRegistryAddress: `0x${string}` }) {
   const fromSpaceId = bytes16Id(params.fromSpaceId, 'fromSpaceId');
   const daoSpaceId = bytes16Id(params.daoSpaceId, 'daoSpaceId');
@@ -144,6 +148,9 @@ function encodeCreateProposal(params: CreateProposalParams & { spaceRegistryAddr
     ? bytes16Id(params.proposalId, 'proposalId')
     : (`0x${uuidv4().replaceAll('-', '')}` as `0x${string}`);
   const votingMode = params.votingMode ?? 'FAST';
+  if (votingMode !== 'FAST' && votingMode !== 'SLOW') {
+    throw new Error('votingMode must be "FAST" or "SLOW"');
+  }
 
   const data = encodeAbiParameters(
     [
@@ -413,9 +420,8 @@ export async function proposeEdit(context: GeoClientContext, params: ProposeEdit
 /**
  * Builds calldata for a DAO proposal that adds a member space.
  *
- * Pass `daoSpaceAddress` when the proposal action should call the DAO space
- * contract directly. If omitted, the configured space registry address is used
- * for compatibility with legacy helpers.
+ * `daoSpaceAddress` is required because the proposal action calls the DAO
+ * space contract directly.
  *
  * @example
  * ```ts
@@ -431,7 +437,7 @@ export function proposeAddMember(context: GeoClientContext, params: ProposeAddMe
   return createRoleProposal(
     context,
     params,
-    actions.addMember(proposalActionTarget(context, params.daoSpaceAddress), params.newMemberSpaceId),
+    actions.addMember(requireDaoSpaceAddress(params.daoSpaceAddress), params.newMemberSpaceId),
   );
 }
 
@@ -452,7 +458,7 @@ export function proposeRemoveMember(context: GeoClientContext, params: ProposeRe
   return createRoleProposal(
     context,
     params,
-    actions.removeMember(proposalActionTarget(context, params.daoSpaceAddress), params.memberToRemoveSpaceId),
+    actions.removeMember(requireDaoSpaceAddress(params.daoSpaceAddress), params.memberToRemoveSpaceId),
   );
 }
 
@@ -480,7 +486,7 @@ export function proposeAddEditor(context: GeoClientContext, params: ProposeAddEd
   return createRoleProposal(
     context,
     params,
-    actions.addEditor(proposalActionTarget(context, params.daoSpaceAddress), params.newEditorSpaceId),
+    actions.addEditor(requireDaoSpaceAddress(params.daoSpaceAddress), params.newEditorSpaceId),
   );
 }
 
@@ -508,7 +514,7 @@ export function proposeRemoveEditor(context: GeoClientContext, params: ProposeRe
   return createRoleProposal(
     context,
     params,
-    actions.removeEditor(proposalActionTarget(context, params.daoSpaceAddress), params.editorToRemoveSpaceId),
+    actions.removeEditor(requireDaoSpaceAddress(params.daoSpaceAddress), params.editorToRemoveSpaceId),
   );
 }
 

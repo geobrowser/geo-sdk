@@ -274,9 +274,9 @@ export type ProposeRemoveEditorParams = {
   editorToRemoveSpaceId: string;
   /**
    * Voting mode for the proposal.
-   * Only 'SLOW' is supported since removeEditor is not a fast-path action.
+   * Defaults to 'SLOW' since removeEditor is not a fast-path action.
    */
-  votingMode?: 'SLOW';
+  votingMode?: VotingMode;
   /**
    * Optional bytes16 proposalId (0x + 32 hex chars, with or without 0x prefix).
    * If omitted, a unique id is generated.
@@ -312,9 +312,9 @@ export type ProposeAddEditorParams = {
   newEditorSpaceId: string;
   /**
    * Voting mode for the proposal.
-   * Only 'SLOW' is supported since addEditor() is a governance action.
+   * Defaults to 'SLOW' since addEditor() is a governance action.
    */
-  votingMode?: 'SLOW';
+  votingMode?: VotingMode;
   /**
    * Optional bytes16 proposalId (0x + 32 hex chars).
    * If omitted, a unique id is generated.

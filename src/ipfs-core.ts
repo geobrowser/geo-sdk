@@ -31,7 +31,15 @@ export type PublishImageParams =
     };
 
 function isIpfsUri(value: unknown): value is `ipfs://${string}` {
-  return typeof value === 'string' && /^ipfs:\/\/.+/.test(value);
+  if (typeof value !== 'string' || !value.startsWith('ipfs://')) {
+    return false;
+  }
+
+  const cid = value.slice(7);
+  const isValidCidV0 = /^Qm[1-9A-HJ-NP-Za-km-z]{44}$/.test(cid);
+  const isValidCidV1 = /^b[a-z2-7]{58,}$/.test(cid);
+
+  return isValidCidV0 || isValidCidV1;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

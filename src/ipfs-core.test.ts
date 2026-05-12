@@ -25,6 +25,24 @@ describe('ipfs-core response validation', () => {
     ).rejects.toThrow('invalid IPFS CID');
   });
 
+  it('rejects upload responses with malformed IPFS URIs', async () => {
+    const { ops } = createEntity({
+      name: 'test',
+      values: [{ property: WEBSITE_PROPERTY, type: 'text', value: 'test' }],
+    });
+    const fetch = vi.fn(async () => new Response(JSON.stringify({ cid: 'ipfs://not-a-cid' }), { status: 200 }));
+
+    await expect(
+      publishEditCore({
+        name: 'test',
+        ops,
+        author: TEST_AUTHOR_SPACE_ID,
+        apiOrigin: 'https://example.test',
+        fetch,
+      }),
+    ).rejects.toThrow('invalid IPFS CID');
+  });
+
   it('rejects failed upload responses before parsing a CID', async () => {
     const { ops } = createEntity({ name: 'test' });
     const fetch = vi.fn(async () => new Response(JSON.stringify({ error: 'nope' }), { status: 500 }));

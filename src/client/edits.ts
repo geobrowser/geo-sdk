@@ -137,6 +137,7 @@ export function publish(context: GeoClientContext, params: PublishEditParams) {
  */
 export async function publishToSpace(context: GeoClientContext, params: PublishEditToSpaceParams) {
   const spaceRegistryAddress = requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS');
+  spaceIdToBytes16(String(params.spaceId));
   const { cid, editId } = await publish(context, params);
   const { to, calldata } = encodePublishEditToSpaceCalldata({
     spaceId: params.spaceId,

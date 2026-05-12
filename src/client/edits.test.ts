@@ -109,4 +109,20 @@ describe('client edit helpers', () => {
     expect(result.cid).toBe(CID);
     expect(decodePublishEditCalldata(result.calldata).cid).toBe(CID);
   });
+
+  it('validates the personal space ID before uploading', async () => {
+    const fetch = mockUploadFetch();
+    const { ops } = createEntity({ name: 'Test Entity' });
+
+    await expect(
+      publishToSpace(testContext(fetch), {
+        name: 'Publish to space',
+        spaceId: 'not-a-space-id',
+        ops,
+        author: AUTHOR_ID,
+      }),
+    ).rejects.toThrow('Invalid spaceId');
+
+    expect(fetch).not.toHaveBeenCalled();
+  });
 });

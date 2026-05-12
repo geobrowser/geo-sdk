@@ -74,15 +74,15 @@ describe('proposeAddEditor', () => {
     expect(result.calldata).toBeTruthy();
   });
 
-  it('should reject FAST voting mode', () => {
-    expect(() =>
-      proposeAddEditor({
-        authorSpaceId: validAuthorSpaceId,
-        spaceId: validSpaceId,
-        newEditorSpaceId: validNewEditorSpaceId,
-        votingMode: 'FAST' as never,
-      }),
-    ).toThrow('proposeAddEditor only supports SLOW voting mode');
+  it('should preserve legacy FAST voting mode support', () => {
+    const result = proposeAddEditor({
+      authorSpaceId: validAuthorSpaceId,
+      spaceId: validSpaceId,
+      newEditorSpaceId: validNewEditorSpaceId,
+      votingMode: 'FAST',
+    });
+
+    expect(result.calldata).toBeTruthy();
   });
 
   it('should generate unique proposalIds for the same input', () => {
