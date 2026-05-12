@@ -5,8 +5,7 @@ import type { CreateImageParams, CreateImageResult } from '../types.js';
 /**
  * Creates an image entity by uploading an image to IPFS and generating the corresponding ops.
  *
- * @deprecated Use `createGeoClient({ network }).images.create(...)` for upload + ops, or
- * `Ops.images.create(...)` when the image has already been uploaded.
+ * @deprecated Use `createGeoClient({ network }).images.create(...)` for upload + ops.
  */
 export const createImage = async ({ network, ...params }: CreateImageParams): Promise<CreateImageResult> => {
   return createImageWithContext(

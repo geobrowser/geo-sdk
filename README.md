@@ -50,12 +50,11 @@ The preferred API has two parts:
 - `createGeoClient(...)` handles configured workflows such as API calls, uploads, RPC reads, and transaction calldata.
 
 ```ts
-import { GeoTestnetConfig, createGeoClient } from "@geoprotocol/geo-sdk";
-import { entities } from "@geoprotocol/geo-sdk/ops";
+import { GeoTestnetConfig, Ops, createGeoClient } from "@geoprotocol/geo-sdk";
 
 const geo = createGeoClient({ network: GeoTestnetConfig });
 
-const { id: entityId, ops } = entities.create({
+const { id: entityId, ops } = Ops.entities.create({
   name: "Test Entity",
   description: "Created with the new API",
 });
@@ -78,15 +77,18 @@ Use the root package when convenience matters:
 import { GeoTestnetConfig, Ops, createGeoClient } from "@geoprotocol/geo-sdk";
 ```
 
-Use subpaths when you want a smaller import graph:
+Subpath exports are available for bundle-sensitive code
 
 ```ts
 import { entities, relations } from "@geoprotocol/geo-sdk/ops";
 import { createGeoClient } from "@geoprotocol/geo-sdk/client";
-import { GeoTestnetConfig, defineGeoNetworkConfig } from "@geoprotocol/geo-sdk/networks";
+import {
+  GeoTestnetConfig,
+  defineGeoNetworkConfig,
+} from "@geoprotocol/geo-sdk/networks";
 ```
 
-The `@geoprotocol/geo-sdk/ops` subpath is the lightweight path for op builders. Configured workflows live behind `createGeoClient`.
+Use `Ops` from `@geoprotocol/geo-sdk` for op builders. Configured workflows live behind `createGeoClient`.
 
 ### Network Configuration
 
@@ -151,19 +153,19 @@ ops.push(...relationOps);
 Create a property, a type, and an entity:
 
 ```ts
-import { entities, properties, types } from "@geoprotocol/geo-sdk/ops";
+import { Ops } from "@geoprotocol/geo-sdk";
 
-const { id: websitePropertyId, ops: propertyOps } = properties.create({
+const { id: websitePropertyId, ops: propertyOps } = Ops.properties.create({
   name: "Website",
   dataType: "TEXT",
 });
 
-const { id: restaurantTypeId, ops: typeOps } = types.create({
+const { id: restaurantTypeId, ops: typeOps } = Ops.types.create({
   name: "Restaurant",
   properties: [websitePropertyId],
 });
 
-const { id: restaurantId, ops: entityOps } = entities.create({
+const { id: restaurantId, ops: entityOps } = Ops.entities.create({
   name: "Yum Yum",
   description: "A restaurant serving fusion cuisine",
   types: [restaurantTypeId],
@@ -182,7 +184,7 @@ const ops = [...propertyOps, ...typeOps, ...entityOps];
 Update an entity:
 
 ```ts
-const { ops } = entities.update({
+const { ops } = Ops.entities.update({
   id: restaurantId,
   name: "Yum Yum Kitchen",
   values: [
@@ -198,7 +200,7 @@ const { ops } = entities.update({
 Unset property values:
 
 ```ts
-const { ops } = entities.update({
+const { ops } = Ops.entities.update({
   id: restaurantId,
   unset: [
     { property: websitePropertyId },
@@ -210,7 +212,7 @@ const { ops } = entities.update({
 Create relation properties:
 
 ```ts
-const { id: likesPropertyId, ops } = properties.create({
+const { id: likesPropertyId, ops } = Ops.properties.create({
   name: "Likes",
   dataType: "RELATION",
   relationValueTypes: [restaurantTypeId],
@@ -222,9 +224,9 @@ const { id: likesPropertyId, ops } = properties.create({
 Entity values are typed objects. The `type` field determines the value shape:
 
 ```ts
-import { entities } from "@geoprotocol/geo-sdk/ops";
+import { Ops } from "@geoprotocol/geo-sdk";
 
-const { ops } = entities.create({
+const { ops } = Ops.entities.create({
   name: "Cafe visit",
   values: [
     { property: namePropertyId, type: "text", value: "Morning Coffee" },
@@ -233,10 +235,27 @@ const { ops } = entities.create({
     { property: ratingPropertyId, type: "float", value: 4.8 },
     { property: openedDatePropertyId, type: "date", value: "2024-01-15" },
     { property: opensAtPropertyId, type: "time", value: "08:30:00Z" },
-    { property: reviewedAtPropertyId, type: "datetime", value: "2024-01-15T14:30:00Z" },
-    { property: schedulePropertyId, type: "schedule", value: "FREQ=WEEKLY;BYDAY=MO,WE,FR" },
-    { property: locationPropertyId, type: "point", lon: -122.4194, lat: 37.7749 },
-    { property: bytesPropertyId, type: "bytes", value: new Uint8Array([1, 2, 3]) },
+    {
+      property: reviewedAtPropertyId,
+      type: "datetime",
+      value: "2024-01-15T14:30:00Z",
+    },
+    {
+      property: schedulePropertyId,
+      type: "schedule",
+      value: "FREQ=WEEKLY;BYDAY=MO,WE,FR",
+    },
+    {
+      property: locationPropertyId,
+      type: "point",
+      lon: -122.4194,
+      lat: 37.7749,
+    },
+    {
+      property: bytesPropertyId,
+      type: "bytes",
+      value: new Uint8Array([1, 2, 3]),
+    },
   ],
 });
 ```
@@ -246,22 +265,21 @@ const { ops } = entities.create({
 Create, update, and delete relation entities:
 
 ```ts
-import { Position } from "@geoprotocol/geo-sdk";
-import { relations } from "@geoprotocol/geo-sdk/ops";
+import { Ops, Position } from "@geoprotocol/geo-sdk";
 
-const { id: relationId, ops: createRelationOps } = relations.create({
+const { id: relationId, ops: createRelationOps } = Ops.relations.create({
   fromEntity: personId,
   toEntity: restaurantId,
   type: likesPropertyId,
   position: Position.generate(),
 });
 
-const { ops: updateRelationOps } = relations.update({
+const { ops: updateRelationOps } = Ops.relations.update({
   id: relationId,
   position: Position.generateBetween(previousPosition, nextPosition),
 });
 
-const { ops: deleteRelationOps } = relations.delete({
+const { ops: deleteRelationOps } = Ops.relations.delete({
   id: relationId,
 });
 ```
@@ -269,7 +287,7 @@ const { ops: deleteRelationOps } = relations.delete({
 Relations can also carry their own entity values:
 
 ```ts
-const { ops } = relations.create({
+const { ops } = Ops.relations.create({
   fromEntity: personId,
   toEntity: companyId,
   type: teamMemberPropertyId,
@@ -286,29 +304,16 @@ const { ops } = relations.create({
 
 ### Images
 
-Use `images.create(...)` when the image already has a CID:
-
-```ts
-import { images } from "@geoprotocol/geo-sdk/ops";
-
-const { id: imageId, ops } = images.create({
-  cid: "ipfs://bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
-  name: "Cover image",
-  description: "Restaurant cover image",
-  dimensions: { width: 1200, height: 630 },
-});
-```
-
-Use `geo.images.create(...)` when the SDK should upload the image first.
+Image creation goes through `geo.images.create(...)`. The configured client uploads the image, detects dimensions when possible, and returns the image entity ops.
 
 ### Comments
 
 Create a comment on an entity:
 
 ```ts
-import { comments } from "@geoprotocol/geo-sdk/ops";
+import { Ops } from "@geoprotocol/geo-sdk";
 
-const { id: commentId, ops } = comments.create({
+const { id: commentId, ops } = Ops.comments.create({
   content: "Looks good to me.",
   replyTo: {
     entityId,
@@ -320,7 +325,7 @@ const { id: commentId, ops } = comments.create({
 Create a nested comment when you already have reply-chain context:
 
 ```ts
-const { ops } = comments.create({
+const { ops } = Ops.comments.create({
   content: "Replying to the parent comment.",
   replyTo: {
     entityId: parentCommentId,
@@ -339,7 +344,7 @@ const { ops } = comments.create({
 Update a comment:
 
 ```ts
-const { ops } = comments.update({
+const { ops } = Ops.comments.update({
   id: commentId,
   content: "Updated comment text.",
   resolved: true,
@@ -353,9 +358,9 @@ Use `geo.comments.create(...)` when reply-chain context should be fetched from t
 Create and update proposal review ops:
 
 ```ts
-import { proposalReviews } from "@geoprotocol/geo-sdk/ops";
+import { Ops } from "@geoprotocol/geo-sdk";
 
-const { id: reviewId, ops: createReviewOps } = proposalReviews.create({
+const { id: reviewId, ops: createReviewOps } = Ops.proposalReviews.create({
   proposal: {
     id: proposalId,
     name: "Improve restaurant data",
@@ -368,7 +373,7 @@ const { id: reviewId, ops: createReviewOps } = proposalReviews.create({
   effort: 0.6,
 });
 
-const { ops: updateReviewOps } = proposalReviews.update({
+const { ops: updateReviewOps } = Ops.proposalReviews.update({
   proposalReviewId: reviewId,
   pass: false,
   content: "Needs more sources.",
@@ -380,7 +385,7 @@ const { ops: updateReviewOps } = proposalReviews.update({
 Create a configured client once and use it for workflows that need API origins, uploads, RPC URLs, or contract addresses.
 
 ```ts
-import { GeoTestnetConfig, createGeoClient } from "@geoprotocol/geo-sdk";
+import { GeoTestnetConfig, Ops, createGeoClient } from "@geoprotocol/geo-sdk";
 
 const geo = createGeoClient({ network: GeoTestnetConfig });
 ```
@@ -421,7 +426,7 @@ For personal-space edits, prefer `geo.personalSpaces.publishEdit(...)`.
 
 ### `geo.storage`
 
-Upload an image and get its CID and detected dimensions:
+Use `geo.images.create(...)` when you want to upload an image and create image entity ops in one call. Use `geo.storage.uploadImage(...)` only when you need the raw uploaded CID and detected dimensions without graph ops:
 
 ```ts
 const uploaded = await geo.storage.uploadImage({
@@ -445,15 +450,28 @@ Bob,8`);
 Upload an image and build image entity ops in one call:
 
 ```ts
-const image = await geo.images.create({
+const imageFromUrl = await geo.images.create({
   url: "https://example.com/cover.png",
   name: "Cover image",
   description: "Image used as the space cover.",
 });
 
-console.log(image.id);
-console.log(image.cid);
-console.log(image.ops);
+console.log(imageFromUrl.id);
+console.log(imageFromUrl.cid);
+console.log(imageFromUrl.ops);
+```
+
+You can also pass a `Blob` directly:
+
+```ts
+const file = new Blob([imageBytes], { type: "image/png" });
+
+const imageFromBlob = await geo.images.create({
+  blob: file,
+  name: "Cover image",
+});
+
+console.log(imageFromBlob.cid);
 ```
 
 ### `geo.entities`
@@ -548,7 +566,7 @@ await walletClient.sendTransaction({
 Publish any edit to a personal space:
 
 ```ts
-const { ops } = entities.create({
+const { ops } = Ops.entities.create({
   name: "Test Entity",
 });
 
@@ -594,7 +612,7 @@ await walletClient.sendTransaction({
 Include extra initial ops in the DAO creation edit:
 
 ```ts
-const { ops } = entities.create({
+const { ops } = Ops.entities.create({
   name: "DAO Welcome Page",
 });
 
@@ -610,7 +628,7 @@ const tx = await geo.daoSpaces.create({
 Propose an edit to a DAO space:
 
 ```ts
-const { ops } = entities.update({
+const { ops } = Ops.entities.update({
   id: entityId,
   name: "Updated entity name",
 });
@@ -713,7 +731,10 @@ geo.daoSpaces.proposals.actions.addMember(daoSpaceAddress, memberSpaceId);
 geo.daoSpaces.proposals.actions.removeMember(daoSpaceAddress, memberSpaceId);
 geo.daoSpaces.proposals.actions.addEditor(daoSpaceAddress, editorSpaceId);
 geo.daoSpaces.proposals.actions.removeEditor(daoSpaceAddress, editorSpaceId);
-geo.daoSpaces.proposals.actions.updateVotingSettings(daoSpaceAddress, votingSettings);
+geo.daoSpaces.proposals.actions.updateVotingSettings(
+  daoSpaceAddress,
+  votingSettings,
+);
 ```
 
 Vote on a proposal:
@@ -788,11 +809,11 @@ This example publishes an edit to an existing personal space using a Geo smart a
 import { createPublicClient, http, type Hex } from "viem";
 import {
   GeoTestnetConfig,
+  Ops,
   createGeoClient,
   getSmartAccountWalletClient,
 } from "@geoprotocol/geo-sdk";
 import { SpaceRegistryAbi } from "@geoprotocol/geo-sdk/abis";
-import { entities } from "@geoprotocol/geo-sdk/ops";
 
 const privateKey = `0x${privateKeyFromGeoWallet}` as `0x${string}`;
 const geo = createGeoClient({ network: GeoTestnetConfig });
@@ -826,7 +847,7 @@ const spaceIdHex = (await publicClient.readContract({
 
 const spaceId = spaceIdHex.slice(2, 34).toLowerCase();
 
-const { id: entityId, ops } = entities.create({
+const { id: entityId, ops } = Ops.entities.create({
   name: "Test Entity",
   description: "Created via Geo SDK",
 });
@@ -963,7 +984,10 @@ const sorted = Position.sort([between, null, first]);
 The Geo Genesis browser uses a smart account associated with your account. You can use the same account from code by exporting your private key from https://www.geobrowser.io/export-wallet.
 
 ```ts
-import { getSmartAccountWalletClient, getWalletClient } from "@geoprotocol/geo-sdk";
+import {
+  getSmartAccountWalletClient,
+  getWalletClient,
+} from "@geoprotocol/geo-sdk";
 
 const smartAccountWalletClient = await getSmartAccountWalletClient({
   privateKey,
@@ -980,19 +1004,19 @@ Be careful with private keys. Do not commit them to version control.
 
 The legacy namespaces remain exported for compatibility, but new code should prefer `Ops` and `createGeoClient`.
 
-| Legacy API | Preferred API |
-| --- | --- |
-| `Graph.createEntity(...)` | `Ops.entities.create(...)` or `entities.create(...)` from `@geoprotocol/geo-sdk/ops` |
-| `Graph.updateEntity(...)` | `Ops.entities.update(...)` |
-| `Graph.deleteEntity(...)` | `geo.entities.delete(...)` |
-| `Graph.createImage(...)` | `geo.images.create(...)` for upload plus ops, or `Ops.images.create(...)` with an existing CID |
+| Legacy API                 | Preferred API                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `Graph.createEntity(...)`  | `Ops.entities.create(...)`                                                           |
+| `Graph.updateEntity(...)`  | `Ops.entities.update(...)`                                                           |
+| `Graph.deleteEntity(...)`  | `geo.entities.delete(...)`                                                           |
+| `Graph.createImage(...)`   | `geo.images.create(...)`                                                             |
 | `Graph.createComment(...)` | `geo.comments.create(...)` or `Ops.comments.create(...)` with supplied reply context |
-| `Ipfs.publishEdit(...)` | `geo.personalSpaces.publishEdit(...)` or `geo.daoSpaces.proposeEdit(...)` |
-| `Ipfs.uploadImage(...)` | `geo.storage.uploadImage(...)` |
-| `Ipfs.uploadCSV(...)` | `geo.storage.uploadCSV(...)` |
-| `personalSpace.*` | `geo.personalSpaces.*` |
-| `daoSpace.*` | `geo.daoSpaces.*` |
-| root encoding helpers | configured client transaction helpers where available |
+| `Ipfs.publishEdit(...)`    | `geo.personalSpaces.publishEdit(...)` or `geo.daoSpaces.proposeEdit(...)`            |
+| `Ipfs.uploadImage(...)`    | `geo.storage.uploadImage(...)`                                                       |
+| `Ipfs.uploadCSV(...)`      | `geo.storage.uploadCSV(...)`                                                         |
+| `personalSpace.*`          | `geo.personalSpaces.*`                                                               |
+| `daoSpace.*`               | `geo.daoSpaces.*`                                                                    |
+| root encoding helpers      | configured client transaction helpers where available                                |
 
 ### Legacy `Graph`
 
@@ -1202,7 +1226,8 @@ const daoSpaceCalldata = getCreateDaoSpaceCalldata({
   votingSettings,
   initialEditorSpaceIds: [authorSpaceId],
   initialMemberSpaceIds: [],
-  initialEditsContentUri: "ipfs://bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
+  initialEditsContentUri:
+    "ipfs://bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku",
 });
 
 const proposalArgs = getProcessGeoProposalArguments(

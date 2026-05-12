@@ -59,17 +59,6 @@ describe('Ops', () => {
     expect(Ops.relations.delete({ id: relationId })).toEqual(deleteRelation({ id: relationId }));
   });
 
-  it('creates image ops without uploading', () => {
-    const result = Ops.images.create({
-      id: generate(),
-      cid: 'ipfs://QmP6aJhM3SgoRSPUccBQK9VMHNqqezixG1Qvjy2xPWvPh5',
-      dimensions: { width: 100, height: 50 },
-    });
-
-    expect(result.cid).toBe('ipfs://QmP6aJhM3SgoRSPUccBQK9VMHNqqezixG1Qvjy2xPWvPh5');
-    expect(result.ops.length).toBeGreaterThan(0);
-  });
-
   it('creates and updates comment ops', () => {
     const id = generate();
     const root = generate();
