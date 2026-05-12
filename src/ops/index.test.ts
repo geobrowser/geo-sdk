@@ -1,17 +1,23 @@
+import type { CreateRelation, Op, UpdateEntity } from '@geoprotocol/grc-20';
 import { describe, expect, it } from 'vitest';
-import { DESCRIPTION_PROPERTY, MARKDOWN_CONTENT, NAME_PROPERTY } from '../core/ids/system.js';
+import { DESCRIPTION_PROPERTY, MARKDOWN_CONTENT, NAME_PROPERTY, REPLY_TO_PROPERTY } from '../core/ids/system.js';
 import { createEntity } from '../graph/create-entity.js';
 import { createProperty } from '../graph/create-property.js';
+import { createProposalReview } from '../graph/create-proposal-review.js';
 import { createRelation } from '../graph/create-relation.js';
 import { createType } from '../graph/create-type.js';
 import { deleteRelation } from '../graph/delete-relation.js';
 import { updateComment } from '../graph/update-comment.js';
 import { updateEntity } from '../graph/update-entity.js';
+import { updateProposalReview } from '../graph/update-proposal-review.js';
 import { updateRelation } from '../graph/update-relation.js';
-import { generate } from '../id-utils.js';
+import { generate, toGrcId } from '../id-utils.js';
 import * as Ops from './index.js';
 
 describe('Ops', () => {
+  const normalizeGeneratedRelationIds = (ops: Op[]) =>
+    ops.map(op => (op.type === 'createRelation' ? { ...op, entity: 'generated', id: 'generated' } : op));
+
   it('matches Graph entity builders', () => {
     const id = generate();
     const property = generate();
@@ -79,5 +85,94 @@ describe('Ops', () => {
     expect(Ops.comments.update({ id, content: 'Updated' })).toEqual(updateComment({ id, content: 'Updated' }));
     expect(Ops.comments.update({ id, content: 'Updated' }).ops[0]).toMatchObject({ type: 'updateEntity' });
     expect(MARKDOWN_CONTENT).toBeTruthy();
+  });
+
+  it('creates comment reply chains from supplied context without fetching', () => {
+    const id = generate();
+    const parent = generate();
+    const commentA = generate();
+    const root = generate();
+    const space = generate();
+    const rootSpace = generate();
+
+    const result = Ops.comments.create({
+      id,
+      content: 'Deep reply',
+      replyTo: { entityId: parent, spaceId: space },
+      replyToRelations: [
+        { entityId: root, spaceId: rootSpace, position: 'a1' },
+        { entityId: commentA, spaceId: space, position: 'a0' },
+      ],
+    });
+    const replyRels = result.ops.filter(
+      (op): op is CreateRelation =>
+        op.type === 'createRelation' &&
+        (op as CreateRelation).relationType.every((byte, index) => byte === toGrcId(REPLY_TO_PROPERTY)[index]),
+    );
+
+    expect(replyRels).toHaveLength(3);
+    expect(replyRels[0]?.to).toEqual(toGrcId(parent));
+    expect(replyRels[1]?.to).toEqual(toGrcId(commentA));
+    expect(replyRels[2]?.to).toEqual(toGrcId(root));
+    expect(replyRels[0]?.position?.localeCompare(replyRels[1]?.position ?? '')).toBeLessThan(0);
+    expect(replyRels[1]?.position?.localeCompare(replyRels[2]?.position ?? '')).toBeLessThan(0);
+  });
+
+  it('deletes fetched entity values and relations without fetching', () => {
+    const id = generate();
+    const space = generate();
+    const otherSpace = generate();
+    const propertyA = generate();
+    const propertyB = generate();
+    const relation = generate();
+
+    const result = Ops.entities.delete({
+      id,
+      spaceId: space,
+      values: [
+        { propertyId: propertyA, spaceId: space },
+        { propertyId: propertyA, spaceId: space },
+        { propertyId: propertyB, spaceId: otherSpace },
+      ],
+      relations: [
+        { id: relation, spaceId: space },
+        { id: generate(), spaceId: otherSpace },
+      ],
+    });
+
+    expect(result.id).toBe(id);
+    expect(result.ops.map(op => op.type)).toEqual(['updateEntity', 'deleteRelation']);
+    expect((result.ops[0] as UpdateEntity).unset).toHaveLength(1);
+  });
+
+  it('matches Graph proposal review builders', () => {
+    const createParams = {
+      id: generate(),
+      proposal: { id: generate(), name: 'Test proposal' },
+      pass: false,
+      content: 'Detailed notes',
+      completeness: 0.8 as const,
+      accuracy: 1 as const,
+      skill: 0.6 as const,
+      effort: 0.4 as const,
+    };
+    const updateParams = {
+      proposalReviewId: createParams.id,
+      pass: true,
+      content: 'Updated notes',
+      completeness: 1 as const,
+      accuracy: 0.8 as const,
+      skill: 0.6 as const,
+      effort: 0.4 as const,
+    };
+
+    const createdWithOps = Ops.proposalReviews.create(createParams);
+    const createdWithGraph = createProposalReview(createParams);
+
+    expect(createdWithOps.id).toBe(createdWithGraph.id);
+    expect(normalizeGeneratedRelationIds(createdWithOps.ops)).toEqual(
+      normalizeGeneratedRelationIds(createdWithGraph.ops),
+    );
+    expect(Ops.proposalReviews.update(updateParams)).toEqual(updateProposalReview(updateParams));
   });
 });

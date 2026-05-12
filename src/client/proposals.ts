@@ -175,102 +175,98 @@ function encodeUpdateVotingSettingsAction(
   };
 }
 
-export function createProposalsClient(context: GeoClientContext) {
+export function create(context: GeoClientContext, params: CreateProposalParams) {
+  return encodeCreateProposal({
+    ...params,
+    spaceRegistryAddress: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
+  });
+}
+
+export async function proposeEdit(context: GeoClientContext, params: ProposeEditParams) {
+  assertValid(String(params.author), '`author` in `proposeEdit`');
+  const spaceRegistryAddress = requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS');
+  const validated = encodeCreateProposal({
+    fromSpaceId: params.callerSpaceId,
+    daoSpaceId: params.daoSpaceId,
+    proposalId: params.proposalId,
+    votingMode: params.votingMode ?? 'FAST',
+    actions: [encodePublishEditProposalAction(params.daoSpaceAddress, VALIDATION_CID)],
+    spaceRegistryAddress,
+  });
+
+  const { publish } = await import('./edits.js');
+  const { cid, editId } = await publish(context, {
+    name: params.name,
+    ops: params.ops,
+    author: params.author,
+  });
+  const result = encodeCreateProposal({
+    fromSpaceId: params.callerSpaceId,
+    daoSpaceId: params.daoSpaceId,
+    proposalId: validated.proposalId,
+    votingMode: params.votingMode ?? 'FAST',
+    actions: [encodePublishEditProposalAction(params.daoSpaceAddress, cid)],
+    spaceRegistryAddress,
+  });
+
   return {
-    create(params: CreateProposalParams) {
-      return encodeCreateProposal({
-        ...params,
-        spaceRegistryAddress: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
-      });
-    },
-
-    async proposeEdit(params: ProposeEditParams) {
-      assertValid(String(params.author), '`author` in `proposeEdit`');
-      const spaceRegistryAddress = requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS');
-      const validated = encodeCreateProposal({
-        fromSpaceId: params.callerSpaceId,
-        daoSpaceId: params.daoSpaceId,
-        proposalId: params.proposalId,
-        votingMode: params.votingMode ?? 'FAST',
-        actions: [encodePublishEditProposalAction(params.daoSpaceAddress, VALIDATION_CID)],
-        spaceRegistryAddress,
-      });
-
-      const { publish } = await import('./edits.js');
-      const { cid, editId } = await publish(context, {
-        name: params.name,
-        ops: params.ops,
-        author: params.author,
-      });
-      const result = encodeCreateProposal({
-        fromSpaceId: params.callerSpaceId,
-        daoSpaceId: params.daoSpaceId,
-        proposalId: validated.proposalId,
-        votingMode: params.votingMode ?? 'FAST',
-        actions: [encodePublishEditProposalAction(params.daoSpaceAddress, cid)],
-        spaceRegistryAddress,
-      });
-
-      return {
-        editId,
-        cid,
-        ...result,
-      };
-    },
-
-    vote(params: VoteProposalParams) {
-      const authorSpaceId = bytes16Id(params.authorSpaceId, 'authorSpaceId');
-      const spaceId = bytes16Id(params.spaceId, 'spaceId');
-      const proposalId = bytes16Id(params.proposalId, 'proposalId');
-      const topic = bytes16ToBytes32LeftAligned(proposalId);
-      const data = encodeAbiParameters(
-        [
-          { type: 'bytes16', name: 'proposalId' },
-          { type: 'uint8', name: 'voteOption' },
-        ],
-        [proposalId, VOTE_OPTION_VALUES[params.vote]],
-      );
-      const calldata = encodeFunctionData({
-        abi: SpaceRegistryAbi,
-        functionName: 'enter',
-        args: [authorSpaceId, spaceId, PROPOSAL_VOTED_ACTION, topic, data, EMPTY_SIGNATURE],
-      });
-
-      return {
-        to: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
-        calldata,
-      };
-    },
-
-    execute(params: ExecuteProposalParams) {
-      const authorSpaceId = bytes16Id(params.authorSpaceId, 'authorSpaceId');
-      const spaceId = bytes16Id(params.spaceId, 'spaceId');
-      const proposalId = bytes16Id(params.proposalId, 'proposalId');
-      const topic = bytes16ToBytes32LeftAligned(proposalId);
-      const data = encodeAbiParameters([{ type: 'bytes16', name: 'proposalId' }], [proposalId]);
-      const calldata = encodeFunctionData({
-        abi: SpaceRegistryAbi,
-        functionName: 'enter',
-        args: [authorSpaceId, spaceId, PROPOSAL_EXECUTED_ACTION, topic, data, EMPTY_SIGNATURE],
-      });
-
-      return {
-        to: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
-        calldata,
-      };
-    },
-
-    actions: {
-      publishEdit: encodePublishEditProposalAction,
-      addEditor: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
-        encodeDaoRoleAction(daoSpaceAddress, 'addEditor', spaceId),
-      removeEditor: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
-        encodeDaoRoleAction(daoSpaceAddress, 'removeEditor', spaceId),
-      addMember: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
-        encodeDaoRoleAction(daoSpaceAddress, 'addMember', spaceId),
-      removeMember: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
-        encodeDaoRoleAction(daoSpaceAddress, 'removeMember', spaceId),
-      updateVotingSettings: encodeUpdateVotingSettingsAction,
-    },
+    editId,
+    cid,
+    ...result,
   };
 }
+
+export function vote(context: GeoClientContext, params: VoteProposalParams) {
+  const authorSpaceId = bytes16Id(params.authorSpaceId, 'authorSpaceId');
+  const spaceId = bytes16Id(params.spaceId, 'spaceId');
+  const proposalId = bytes16Id(params.proposalId, 'proposalId');
+  const topic = bytes16ToBytes32LeftAligned(proposalId);
+  const data = encodeAbiParameters(
+    [
+      { type: 'bytes16', name: 'proposalId' },
+      { type: 'uint8', name: 'voteOption' },
+    ],
+    [proposalId, VOTE_OPTION_VALUES[params.vote]],
+  );
+  const calldata = encodeFunctionData({
+    abi: SpaceRegistryAbi,
+    functionName: 'enter',
+    args: [authorSpaceId, spaceId, PROPOSAL_VOTED_ACTION, topic, data, EMPTY_SIGNATURE],
+  });
+
+  return {
+    to: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
+    calldata,
+  };
+}
+
+export function execute(context: GeoClientContext, params: ExecuteProposalParams) {
+  const authorSpaceId = bytes16Id(params.authorSpaceId, 'authorSpaceId');
+  const spaceId = bytes16Id(params.spaceId, 'spaceId');
+  const proposalId = bytes16Id(params.proposalId, 'proposalId');
+  const topic = bytes16ToBytes32LeftAligned(proposalId);
+  const data = encodeAbiParameters([{ type: 'bytes16', name: 'proposalId' }], [proposalId]);
+  const calldata = encodeFunctionData({
+    abi: SpaceRegistryAbi,
+    functionName: 'enter',
+    args: [authorSpaceId, spaceId, PROPOSAL_EXECUTED_ACTION, topic, data, EMPTY_SIGNATURE],
+  });
+
+  return {
+    to: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
+    calldata,
+  };
+}
+
+export const actions = {
+  publishEdit: encodePublishEditProposalAction,
+  addEditor: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
+    encodeDaoRoleAction(daoSpaceAddress, 'addEditor', spaceId),
+  removeEditor: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
+    encodeDaoRoleAction(daoSpaceAddress, 'removeEditor', spaceId),
+  addMember: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
+    encodeDaoRoleAction(daoSpaceAddress, 'addMember', spaceId),
+  removeMember: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
+    encodeDaoRoleAction(daoSpaceAddress, 'removeMember', spaceId),
+  updateVotingSettings: encodeUpdateVotingSettingsAction,
+};

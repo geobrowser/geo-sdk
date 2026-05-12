@@ -16,17 +16,15 @@ type EntityGraphQLResponse = {
   } | null;
 };
 
-export function createEntitiesClient(context: GeoClientContext) {
-  return {
-    create: Ops.entities.create,
-    update: Ops.entities.update,
+export const create = Ops.entities.create;
+export const update = Ops.entities.update;
 
-    async delete({ id, spaceId }: Omit<DeleteEntityParams, 'network'>) {
-      assertValid(id, '`id` in `deleteEntity`');
-      assertValid(spaceId, '`spaceId` in `deleteEntity`');
+export async function deleteEntity(context: GeoClientContext, { id, spaceId }: Omit<DeleteEntityParams, 'network'>) {
+  assertValid(id, '`id` in `deleteEntity`');
+  assertValid(spaceId, '`spaceId` in `deleteEntity`');
 
-      const normalizedSpaceId = String(spaceId).replaceAll('-', '');
-      const query = `query entity {
+  const normalizedSpaceId = String(spaceId).replaceAll('-', '');
+  const query = `query entity {
     entity(id: "${id}") {
       valuesList(filter: { spaceId: { in: [${JSON.stringify(normalizedSpaceId)}] } }) {
         propertyId
@@ -39,27 +37,25 @@ export function createEntitiesClient(context: GeoClientContext) {
     }
   }`;
 
-      let response: EntityGraphQLResponse;
-      try {
-        response = await graphqlData<EntityGraphQLResponse>(context, query);
-      } catch (error) {
-        const message = String(error);
-        if (message.includes('Could not parse GraphQL response')) {
-          throw new DeleteEntityError(`Could not parse GraphQL response for entity ${id}: ${error}`);
-        }
-        throw new DeleteEntityError(`Could not fetch entity data for ${id}: ${error}`);
-      }
+  let response: EntityGraphQLResponse;
+  try {
+    response = await graphqlData<EntityGraphQLResponse>(context, query);
+  } catch (error) {
+    const message = String(error);
+    if (message.includes('Could not parse GraphQL response')) {
+      throw new DeleteEntityError(`Could not parse GraphQL response for entity ${id}: ${error}`);
+    }
+    throw new DeleteEntityError(`Could not fetch entity data for ${id}: ${error}`);
+  }
 
-      if (!response.entity) {
-        return { id: Id(id), ops: [] };
-      }
+  if (!response.entity) {
+    return { id: Id(id), ops: [] };
+  }
 
-      return Ops.entities.delete({
-        id,
-        spaceId,
-        values: response.entity.valuesList,
-        relations: response.entity.relationsList,
-      });
-    },
-  };
+  return Ops.entities.delete({
+    id,
+    spaceId,
+    values: response.entity.valuesList,
+    relations: response.entity.relationsList,
+  });
 }

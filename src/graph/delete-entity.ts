@@ -1,4 +1,4 @@
-import { createEntitiesClient } from '../client/entities.js';
+import { deleteEntity as deleteEntityWithContext } from '../client/entities.js';
 import { resolveGeoNetwork } from '../networks.js';
 import type { CreateResult, DeleteEntityParams } from '../types.js';
 
@@ -9,5 +9,5 @@ import type { CreateResult, DeleteEntityParams } from '../types.js';
  * @deprecated Use `createGeoClient({ network }).entities.delete(...)`.
  */
 export const deleteEntity = async ({ network = 'TESTNET', ...params }: DeleteEntityParams): Promise<CreateResult> => {
-  return createEntitiesClient({ network: resolveGeoNetwork(network), fetch: globalThis.fetch }).delete(params);
+  return deleteEntityWithContext({ network: resolveGeoNetwork(network), fetch: globalThis.fetch }, params);
 };

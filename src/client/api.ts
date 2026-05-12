@@ -81,47 +81,39 @@ export async function graphqlData<T>(context: GeoClientContext, query: string): 
   return response.data;
 }
 
-export function createApiClient(context: GeoClientContext) {
+export async function getEditCalldata(context: GeoClientContext, params: { spaceId: string; cid: string }) {
+  const fetchFn = requireFetch(context, 'Edit calldata requests');
+  let result: Response;
+  try {
+    result = await fetchFn(`${context.network.apiOrigin}/space/${params.spaceId}/edit/calldata`, {
+      method: 'POST',
+      body: JSON.stringify({ cid: params.cid }),
+    });
+  } catch (error) {
+    throw new GeoApiError(`Could not get edit calldata from space ${params.spaceId}: ${error}`);
+  }
+
+  if (!responseOk(result)) {
+    throw new GeoApiError(
+      `Could not get edit calldata from space ${params.spaceId}: ${await responseErrorMessage(result)}`,
+    );
+  }
+
+  let response: unknown;
+  try {
+    response = await result.json();
+  } catch (error) {
+    throw new GeoApiError(
+      `Could not parse response from API when getting calldata for space ${params.spaceId}: ${error}`,
+    );
+  }
+
+  if (!isRecord(response) || !isAddress(response.to) || !isHex(response.data)) {
+    throw new GeoApiError(`Malformed edit calldata response for space ${params.spaceId}`);
+  }
+
   return {
-    async graphql<T>(query: string): Promise<GraphQlResponse<T>> {
-      return graphqlRequest<T>(context, query);
-    },
-
-    async getEditCalldata(params: { spaceId: string; cid: string }) {
-      const fetchFn = requireFetch(context, 'Edit calldata requests');
-      let result: Response;
-      try {
-        result = await fetchFn(`${context.network.apiOrigin}/space/${params.spaceId}/edit/calldata`, {
-          method: 'POST',
-          body: JSON.stringify({ cid: params.cid }),
-        });
-      } catch (error) {
-        throw new GeoApiError(`Could not get edit calldata from space ${params.spaceId}: ${error}`);
-      }
-
-      if (!responseOk(result)) {
-        throw new GeoApiError(
-          `Could not get edit calldata from space ${params.spaceId}: ${await responseErrorMessage(result)}`,
-        );
-      }
-
-      let response: unknown;
-      try {
-        response = await result.json();
-      } catch (error) {
-        throw new GeoApiError(
-          `Could not parse response from API when getting calldata for space ${params.spaceId}: ${error}`,
-        );
-      }
-
-      if (!isRecord(response) || !isAddress(response.to) || !isHex(response.data)) {
-        throw new GeoApiError(`Malformed edit calldata response for space ${params.spaceId}`);
-      }
-
-      return {
-        to: response.to,
-        data: response.data,
-      };
-    },
+    to: response.to,
+    data: response.data,
   };
 }

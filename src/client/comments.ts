@@ -42,22 +42,22 @@ async function fetchReplyToRelations(context: GeoClientContext, entityId: Id | s
     }));
 }
 
-export function createCommentsClient(context: GeoClientContext) {
-  return {
-    async create({ id, content, replyTo, resolved = false }: Omit<CreateCommentParams, 'network'>) {
-      if (id) assertValid(id, '`id` in `createComment`');
-      assertValid(replyTo.entityId, '`replyTo.entityId` in `createComment`');
-      assertValid(replyTo.spaceId, '`replyTo.spaceId` in `createComment`');
+export async function create(
+  context: GeoClientContext,
+  { id, content, replyTo, resolved = false }: Omit<CreateCommentParams, 'network'>,
+) {
+  if (id) assertValid(id, '`id` in `createComment`');
+  assertValid(replyTo.entityId, '`replyTo.entityId` in `createComment`');
+  assertValid(replyTo.spaceId, '`replyTo.spaceId` in `createComment`');
 
-      const replyToRelations = await fetchReplyToRelations(context, replyTo.entityId);
-      return Ops.comments.create({
-        id,
-        content,
-        replyTo,
-        resolved,
-        replyToRelations,
-      });
-    },
-    update: Ops.comments.update,
-  };
+  const replyToRelations = await fetchReplyToRelations(context, replyTo.entityId);
+  return Ops.comments.create({
+    id,
+    content,
+    replyTo,
+    resolved,
+    replyToRelations,
+  });
 }
+
+export const update = Ops.comments.update;

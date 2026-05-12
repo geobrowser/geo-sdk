@@ -12,24 +12,20 @@ export type CreateImageParams = PublishImageParams & {
   alternativeGateway?: boolean;
 };
 
-export function createImagesClient(context: GeoClientContext) {
-  return {
-    async create(params: CreateImageParams) {
-      if (params.id) assertValid(params.id, '`id` in `createImage`');
+export async function create(context: GeoClientContext, params: CreateImageParams) {
+  if (params.id) assertValid(params.id, '`id` in `createImage`');
 
-      const { cid, dimensions } = await uploadImageCore({
-        ...params,
-        apiOrigin: context.network.apiOrigin,
-        fetch: requireFetch(context, 'Image creation'),
-      });
+  const { cid, dimensions } = await uploadImageCore({
+    ...params,
+    apiOrigin: context.network.apiOrigin,
+    fetch: requireFetch(context, 'Image creation'),
+  });
 
-      return Ops.images.create({
-        id: params.id,
-        name: params.name,
-        description: params.description,
-        cid,
-        dimensions,
-      });
-    },
-  };
+  return Ops.images.create({
+    id: params.id,
+    name: params.name,
+    description: params.description,
+    cid,
+    dimensions,
+  });
 }

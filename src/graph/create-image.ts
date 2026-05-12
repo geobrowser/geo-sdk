@@ -1,4 +1,4 @@
-import { createImagesClient } from '../client/images.js';
+import { create as createImageWithContext } from '../client/images.js';
 import { resolveGeoNetwork } from '../networks.js';
 import type { CreateImageParams, CreateImageResult } from '../types.js';
 
@@ -9,8 +9,11 @@ import type { CreateImageParams, CreateImageResult } from '../types.js';
  * `Ops.images.create(...)` when the image has already been uploaded.
  */
 export const createImage = async ({ network, ...params }: CreateImageParams): Promise<CreateImageResult> => {
-  return createImagesClient({ network: resolveGeoNetwork(network ?? 'TESTNET'), fetch: globalThis.fetch }).create({
-    ...params,
-    alternativeGateway: network === 'TESTNET',
-  });
+  return createImageWithContext(
+    { network: resolveGeoNetwork(network ?? 'TESTNET'), fetch: globalThis.fetch },
+    {
+      ...params,
+      alternativeGateway: network === 'TESTNET',
+    },
+  );
 };

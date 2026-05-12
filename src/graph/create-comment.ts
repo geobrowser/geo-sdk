@@ -1,4 +1,4 @@
-import { createCommentsClient } from '../client/comments.js';
+import { create as createCommentWithContext } from '../client/comments.js';
 import { resolveGeoNetwork } from '../networks.js';
 import type { CreateCommentParams, CreateResult } from '../types.js';
 
@@ -9,5 +9,5 @@ import type { CreateCommentParams, CreateResult } from '../types.js';
  * `Ops.comments.create(...)` when reply context is already available.
  */
 export const createComment = async ({ network = 'TESTNET', ...params }: CreateCommentParams): Promise<CreateResult> => {
-  return createCommentsClient({ network: resolveGeoNetwork(network), fetch: globalThis.fetch }).create(params);
+  return createCommentWithContext({ network: resolveGeoNetwork(network), fetch: globalThis.fetch }, params);
 };

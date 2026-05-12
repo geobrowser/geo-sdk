@@ -20,49 +20,45 @@ export type CreateDaoSpaceParams = Omit<
   ops?: Op[];
 };
 
-export function createDaoSpacesClient(context: GeoClientContext) {
+export async function create(context: GeoClientContext, params: CreateDaoSpaceParams) {
+  const daoSpaceFactoryAddress = requireGeoContract(context.network, 'DAO_SPACE_FACTORY_ADDRESS');
+  getCreateDaoSpaceCalldata({
+    votingSettings: params.votingSettings,
+    initialEditorSpaceIds: params.initialEditorSpaceIds,
+    initialMemberSpaceIds: params.initialMemberSpaceIds ?? [],
+    initialEditsContentUri: 'ipfs://QmP6aJhM3SgoRSPUccBQK9VMHNqqezixG1Qvjy2xPWvPh5',
+    initialTopicId: params.initialTopicId,
+  });
+
+  const spaceEntityId = IdUtils.generate();
+  const ops: Op[] = [];
+  const { ops: createSpaceEntityOps } = Ops.entities.create({
+    id: spaceEntityId,
+    name: params.name,
+    types: [SPACE_TYPE],
+  });
+  ops.push(...createSpaceEntityOps);
+  ops.push(...(params.ops ?? []));
+
+  const { publish } = await import('./edits.js');
+  const { cid } = await publish(context, {
+    name: `Create DAO Space: ${params.name}`,
+    ops,
+    author: params.author,
+  });
+
+  const calldata = getCreateDaoSpaceCalldata({
+    votingSettings: params.votingSettings,
+    initialEditorSpaceIds: params.initialEditorSpaceIds,
+    initialMemberSpaceIds: params.initialMemberSpaceIds ?? [],
+    initialEditsContentUri: cid,
+    initialTopicId: params.initialTopicId,
+  });
+
   return {
-    async create(params: CreateDaoSpaceParams) {
-      const daoSpaceFactoryAddress = requireGeoContract(context.network, 'DAO_SPACE_FACTORY_ADDRESS');
-      getCreateDaoSpaceCalldata({
-        votingSettings: params.votingSettings,
-        initialEditorSpaceIds: params.initialEditorSpaceIds,
-        initialMemberSpaceIds: params.initialMemberSpaceIds ?? [],
-        initialEditsContentUri: 'ipfs://QmP6aJhM3SgoRSPUccBQK9VMHNqqezixG1Qvjy2xPWvPh5',
-        initialTopicId: params.initialTopicId,
-      });
-
-      const spaceEntityId = IdUtils.generate();
-      const ops: Op[] = [];
-      const { ops: createSpaceEntityOps } = Ops.entities.create({
-        id: spaceEntityId,
-        name: params.name,
-        types: [SPACE_TYPE],
-      });
-      ops.push(...createSpaceEntityOps);
-      ops.push(...(params.ops ?? []));
-
-      const { publish } = await import('./edits.js');
-      const { cid } = await publish(context, {
-        name: `Create DAO Space: ${params.name}`,
-        ops,
-        author: params.author,
-      });
-
-      const calldata = getCreateDaoSpaceCalldata({
-        votingSettings: params.votingSettings,
-        initialEditorSpaceIds: params.initialEditorSpaceIds,
-        initialMemberSpaceIds: params.initialMemberSpaceIds ?? [],
-        initialEditsContentUri: cid,
-        initialTopicId: params.initialTopicId,
-      });
-
-      return {
-        to: daoSpaceFactoryAddress,
-        calldata,
-        spaceEntityId,
-        cid,
-      };
-    },
+    to: daoSpaceFactoryAddress,
+    calldata,
+    spaceEntityId,
+    cid,
   };
 }
