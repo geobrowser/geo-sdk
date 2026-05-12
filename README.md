@@ -424,27 +424,6 @@ await walletClient.sendTransaction({ to, data });
 
 For personal-space edits, prefer `geo.personalSpaces.publishEdit(...)`.
 
-### `geo.storage`
-
-Use `geo.images.create(...)` when you want to upload an image and create image entity ops in one call. Use `geo.storage.uploadImage(...)` only when you need the raw uploaded CID and detected dimensions without graph ops:
-
-```ts
-const uploaded = await geo.storage.uploadImage({
-  url: "https://example.com/photo.png",
-});
-
-console.log(uploaded.cid);
-console.log(uploaded.dimensions);
-```
-
-Upload CSV content:
-
-```ts
-const cid = await geo.storage.uploadCSV(`name,score
-Alice,10
-Bob,8`);
-```
-
 ### `geo.images`
 
 Upload an image and build image entity ops in one call:
@@ -472,6 +451,27 @@ const imageFromBlob = await geo.images.create({
 });
 
 console.log(imageFromBlob.cid);
+```
+
+### `geo.storage`
+
+Use `geo.images.create(...)` when you want to upload an image and create image entity ops in one call. Use `geo.storage.uploadImage(...)` only when you need the raw uploaded CID and detected dimensions without graph ops:
+
+```ts
+const uploaded = await geo.storage.uploadImage({
+  url: "https://example.com/photo.png",
+});
+
+console.log(uploaded.cid);
+console.log(uploaded.dimensions);
+```
+
+Upload CSV content:
+
+```ts
+const cid = await geo.storage.uploadCSV(`name,score
+Alice,10
+Bob,8`);
 ```
 
 ### `geo.entities`
