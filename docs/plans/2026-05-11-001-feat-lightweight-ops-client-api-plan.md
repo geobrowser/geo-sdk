@@ -56,7 +56,7 @@ This release intentionally defers contract upgrades. TESTNET/custom-network conf
 
 ### U1. Network Configuration
 
-- Add `Networks.TESTNET`, `defineGeoNetwork`, and `resolveGeoNetwork`.
+- Add `GeoTestnetConfig`, `defineGeoNetworkConfig`, and `resolveGeoNetwork`.
 - Keep legacy `Network` typed to the legacy-supported network set while adding a separate `Networkish` shape for new client configuration.
 - Allow custom configs to provide API origins and contract addresses.
 
@@ -69,7 +69,7 @@ This release intentionally defers contract upgrades. TESTNET/custom-network conf
 ### U3. Configured Client
 
 - Add `createGeoClient({ network, fetch })`.
-- Expose `geo.ops`, `geo.api`, `geo.storage`, `geo.images`, `geo.comments`, `geo.entities`, `geo.edits`, `geo.personalSpaces`, `geo.daoSpaces`, `geo.proposals`, and `geo.entityVotes`.
+- Expose `geo.api`, `geo.storage`, `geo.images`, `geo.comments`, `geo.entities`, `geo.edits`, `geo.personalSpaces`, `geo.daoSpaces`, and `geo.entityVotes`. DAO proposal workflows live under `geo.daoSpaces` because proposals are DAO-space-specific. Pure ops are imported directly from `@geoprotocol/geo-sdk/ops` to avoid duplicating the API surface on the client.
 - Lazy-load heavy upload/storage helpers where the public shape allows it.
 - Validate required contracts before upload-backed workflows create IPFS side effects.
 
@@ -91,7 +91,7 @@ This release intentionally defers contract upgrades. TESTNET/custom-network conf
 ## Success Criteria
 
 - Consumers can use `import { entities } from '@geoprotocol/geo-sdk/ops'` for lightweight pure op construction.
-- Consumers can use `createGeoClient({ network: Networks.TESTNET })` or a custom network config for networked workflows.
+- Consumers can use `createGeoClient({ network: GeoTestnetConfig })` or a custom network config for networked workflows.
 - Legacy APIs remain available and deprecated.
 - Synchronous calldata helpers still work without a global `fetch`.
 - Contract-facing outputs remain on the existing legacy contract semantics.

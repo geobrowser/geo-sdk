@@ -40,10 +40,13 @@ export function proposeAddEditor(params: ProposeAddEditorParams): ProposeAddEdit
     authorSpaceId: rawAuthorSpaceId,
     spaceId: rawSpaceId,
     newEditorSpaceId: rawNewEditorSpaceId,
-    votingMode = 'SLOW',
     proposalId: rawProposalId,
     network = 'TESTNET',
   } = params;
+  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
+  if (votingMode !== 'SLOW') {
+    throw new Error('proposeAddEditor only supports SLOW voting mode');
+  }
 
   // Validate inputs
   const authorSpaceId = ensure0xPrefix(rawAuthorSpaceId);
@@ -99,7 +102,7 @@ export function proposeAddEditor(params: ProposeAddEditorParams): ProposeAddEdit
         ],
       },
     ],
-    [proposalId, votingMode === 'FAST' ? 1 : 0, proposalActions],
+    [proposalId, 0, proposalActions],
   );
 
   // Convert proposalId to bytes32 for the topic (left-aligned)

@@ -5,7 +5,7 @@ import type { VoteProposalParams, VoteProposalResult } from './types.js';
 /**
  * Creates a vote transaction for a DAO space proposal.
  *
- * @deprecated Use `createGeoClient({ network }).proposals.vote(...)`.
+ * @deprecated Use `createGeoClient({ network }).daoSpaces.proposals.vote(...)`.
  */
 export function voteProposal(params: VoteProposalParams): VoteProposalResult {
   const { network = 'TESTNET', ...args } = params;
@@ -19,5 +19,5 @@ export function voteProposal(params: VoteProposalParams): VoteProposalResult {
     throw new Error(`proposalId must be bytes16 hex (32 hex chars). Received: ${args.proposalId}`);
   }
 
-  return createGeoClient({ network }).proposals.vote(args);
+  return createGeoClient({ network }).daoSpaces.proposals.vote(args);
 }

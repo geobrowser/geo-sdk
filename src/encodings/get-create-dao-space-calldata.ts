@@ -122,7 +122,7 @@ export type CreateDaoSpaceCalldataParams = {
 /**
  * Get the calldata for creating a DAO space proxy.
  *
- * @deprecated Use `createGeoClient({ network: Networks.TESTNET }).daoSpaces.create(...)` for the workflow, or keep
+ * @deprecated Use `createGeoClient({ network: GeoTestnetConfig }).daoSpaces.create(...)` for the workflow, or keep
  * this helper temporarily for legacy calldata compatibility.
  */
 export function getCreateDaoSpaceCalldata(args: CreateDaoSpaceCalldataParams): `0x${string}` {

@@ -69,26 +69,132 @@ function withSpaceRegistry(context: GeoClientContext, params: ClientEntityVotePa
   };
 }
 
+/**
+ * Encodes upvote calldata without reading network config or fetching.
+ *
+ * Use this pure helper when you already have the target space registry address.
+ * Use `geo.entityVotes.upvote(...)` when the address should come from the
+ * configured network.
+ *
+ * @example
+ * ```ts
+ * const tx = encodeUpvoteEntityCalldata({
+ *   authorSpaceId,
+ *   spaceId,
+ *   entityId,
+ *   spaceRegistryAddress,
+ * });
+ * ```
+ *
+ * @param params Author space, target space, entity ID, and space registry address.
+ * @returns Target registry address and encoded calldata.
+ * @throws When any supplied ID is invalid.
+ */
 export function encodeUpvoteEntityCalldata(params: EntityVoteCalldataParams) {
   return encodeEntityVoteCalldata(params, UPVOTED_ACTION);
 }
 
+/**
+ * Encodes downvote calldata without reading network config or fetching.
+ *
+ * @example
+ * ```ts
+ * const tx = encodeDownvoteEntityCalldata({
+ *   authorSpaceId,
+ *   spaceId,
+ *   entityId,
+ *   spaceRegistryAddress,
+ * });
+ * ```
+ *
+ * @param params Author space, target space, entity ID, and space registry address.
+ * @returns Target registry address and encoded calldata.
+ * @throws When any supplied ID is invalid.
+ */
 export function encodeDownvoteEntityCalldata(params: EntityVoteCalldataParams) {
   return encodeEntityVoteCalldata(params, DOWNVOTED_ACTION);
 }
 
+/**
+ * Encodes vote-withdrawal calldata without reading network config or fetching.
+ *
+ * @example
+ * ```ts
+ * const tx = encodeWithdrawEntityVoteCalldata({
+ *   authorSpaceId,
+ *   spaceId,
+ *   entityId,
+ *   spaceRegistryAddress,
+ * });
+ * ```
+ *
+ * @param params Author space, target space, entity ID, and space registry address.
+ * @returns Target registry address and encoded calldata.
+ * @throws When any supplied ID is invalid.
+ */
 export function encodeWithdrawEntityVoteCalldata(params: EntityVoteCalldataParams) {
   return encodeEntityVoteCalldata(params, UNVOTED_ACTION);
 }
 
+/**
+ * Builds calldata for upvoting an entity using the configured space registry.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.entityVotes.upvote({
+ *   authorSpaceId,
+ *   spaceId,
+ *   entityId,
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @param params Author space, target space, and entity ID.
+ * @returns Target registry address and encoded calldata.
+ * @throws When IDs are invalid or the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
 export function upvote(context: GeoClientContext, params: ClientEntityVoteParams) {
   return encodeUpvoteEntityCalldata(withSpaceRegistry(context, params));
 }
 
+/**
+ * Builds calldata for downvoting an entity using the configured space registry.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.entityVotes.downvote({
+ *   authorSpaceId,
+ *   spaceId,
+ *   entityId,
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @param params Author space, target space, and entity ID.
+ * @returns Target registry address and encoded calldata.
+ * @throws When IDs are invalid or the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
 export function downvote(context: GeoClientContext, params: ClientEntityVoteParams) {
   return encodeDownvoteEntityCalldata(withSpaceRegistry(context, params));
 }
 
+/**
+ * Builds calldata for withdrawing an entity vote using the configured space registry.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.entityVotes.withdraw({
+ *   authorSpaceId,
+ *   spaceId,
+ *   entityId,
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @param params Author space, target space, and entity ID.
+ * @returns Target registry address and encoded calldata.
+ * @throws When IDs are invalid or the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
 export function withdraw(context: GeoClientContext, params: ClientEntityVoteParams) {
   return encodeWithdrawEntityVoteCalldata(withSpaceRegistry(context, params));
 }

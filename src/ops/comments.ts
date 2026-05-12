@@ -9,8 +9,11 @@ import type { CreateResult, PropertiesParam, UpdateCommentParams } from '../type
 import { create as createEntity, update as updateEntity } from './entities.js';
 
 export type ReplyToContext = {
+  /** Ancestor entity ID from an existing reply-to relation. */
   entityId: string;
+  /** Space ID associated with the ancestor reply target. */
   spaceId: string;
+  /** Existing reply-to relation position used for parent-to-root ordering. */
   position: string | null;
 };
 
@@ -25,6 +28,45 @@ export type CreateCommentOpsParams = {
   replyToRelations?: ReplyToContext[];
 };
 
+/**
+ * Builds create-comment ops without network access.
+ *
+ * The direct `replyTo` target is always included. If `replyToRelations` are
+ * provided, they are sorted by position and appended after the direct parent so
+ * nested comments preserve a parent-to-root reply chain.
+ *
+ * Use `geo.comments.create(...)` when reply-chain context should be fetched
+ * from the configured Geo API.
+ *
+ * @example
+ * Create a comment on an entity.
+ *
+ * ```ts
+ * import { comments } from '@geoprotocol/geo-sdk/ops';
+ *
+ * const { id, ops } = comments.create({
+ *   content: 'Looks good to me',
+ *   replyTo: { entityId, spaceId },
+ * });
+ * ```
+ *
+ * @example
+ * Create a nested comment when reply context is already available.
+ *
+ * ```ts
+ * const { ops } = comments.create({
+ *   content: 'Replying to the parent comment',
+ *   replyTo: { entityId: parentCommentId, spaceId },
+ *   replyToRelations: [
+ *     { entityId: rootEntityId, spaceId, position: 'a0' },
+ *   ],
+ * });
+ * ```
+ *
+ * @param params Comment content, reply target, optional ID, resolved state, and optional ancestor reply context.
+ * @returns Comment entity ID and create ops.
+ * @throws When the comment ID or reply target IDs are invalid.
+ */
 export const create = ({
   id: providedId,
   content,
@@ -86,6 +128,27 @@ export const create = ({
   return { id: Id(id), ops: result.ops };
 };
 
+/**
+ * Builds update-comment ops without network access.
+ *
+ * If `content` is supplied, both markdown content and the derived comment name
+ * are updated. If `resolved` is supplied, the resolved property is updated.
+ *
+ * @example
+ * ```ts
+ * import { comments } from '@geoprotocol/geo-sdk/ops';
+ *
+ * const { ops } = comments.update({
+ *   id: commentId,
+ *   content: 'Updated comment text',
+ *   resolved: true,
+ * });
+ * ```
+ *
+ * @param params Comment ID plus content and/or resolved state to update.
+ * @returns Comment entity ID and update ops.
+ * @throws When the comment ID is invalid.
+ */
 export const update = ({ id, content, resolved }: UpdateCommentParams): CreateResult => {
   assertValid(id, '`id` in `Ops.comments.update`');
 

@@ -42,10 +42,13 @@ export function proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposeR
     authorSpaceId: rawAuthorSpaceId,
     spaceId: rawSpaceId,
     editorToRemoveSpaceId: rawEditorToRemoveSpaceId,
-    votingMode = 'SLOW',
     proposalId: rawProposalId,
     network = 'TESTNET',
   } = params;
+  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
+  if (votingMode !== 'SLOW') {
+    throw new Error('proposeRemoveEditor only supports SLOW voting mode');
+  }
 
   // Ensure 0x prefix on all IDs
   const authorSpaceId = ensure0xPrefix(rawAuthorSpaceId);
@@ -104,7 +107,7 @@ export function proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposeR
         ],
       },
     ],
-    [proposalId, votingMode === 'FAST' ? 1 : 0, proposalActions],
+    [proposalId, 0, proposalActions],
   );
 
   // Convert proposalId to bytes32 for the topic (left-aligned)

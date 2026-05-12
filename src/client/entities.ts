@@ -16,9 +16,26 @@ type EntityGraphQLResponse = {
   } | null;
 };
 
-export const create = Ops.entities.create;
-export const update = Ops.entities.update;
-
+/**
+ * Fetches the current entity values and relations for a space, then builds delete ops.
+ *
+ * Entity deletion requires current graph context so the SDK can unset existing
+ * values and delete existing relations in the target space. For a pure version
+ * that accepts pre-fetched context, use `Ops.entities.delete(...)`.
+ *
+ * @example
+ * ```ts
+ * const { ops } = await geo.entities.delete({
+ *   id: entityId,
+ *   spaceId,
+ * });
+ * ```
+ *
+ * @param context Client context containing API origin and fetch configuration.
+ * @param params Entity ID and space ID to delete within.
+ * @returns Entity ID and deletion ops, or no ops when the entity is not found.
+ * @throws When IDs are invalid, fetch is unavailable, GraphQL fails, or the response is malformed.
+ */
 export async function deleteEntity(context: GeoClientContext, { id, spaceId }: Omit<DeleteEntityParams, 'network'>) {
   assertValid(id, '`id` in `deleteEntity`');
   assertValid(spaceId, '`spaceId` in `deleteEntity`');

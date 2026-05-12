@@ -49,12 +49,12 @@ The preferred API splits pure op construction from networked workflows:
 
 - `Ops.*` creates GRC-20 ops and never uploads, fetches, or reads network config.
 - `createGeoClient({ network })` owns API/IPFS calls and contract calldata.
-- `Networks.TESTNET` and `defineGeoNetwork(...)` describe built-in or custom deployments.
+- `GeoTestnetConfig` and `defineGeoNetworkConfig(...)` describe built-in or custom deployments.
 
 ```ts
-import { Ops, Networks, createGeoClient } from "@geoprotocol/geo-sdk";
+import { GeoTestnetConfig, Ops, createGeoClient } from "@geoprotocol/geo-sdk";
 
-const geo = createGeoClient({ network: Networks.TESTNET });
+const geo = createGeoClient({ network: GeoTestnetConfig });
 
 const { id: entityId, ops } = Ops.entities.create({
   name: "Test Entity",
@@ -95,15 +95,16 @@ Networked conveniences live on the configured client:
 const image = await geo.images.create({ url: "https://example.com/image.png" });
 const comment = await geo.comments.create({ content, replyTo: { entityId, spaceId } });
 const deleteOps = await geo.entities.delete({ id: entityId, spaceId });
+const hasExistingSpace = await geo.personalSpaces.hasSpace({ address: account.address });
 const daoCreateTx = await geo.daoSpaces.create({ name, votingSettings, initialEditorSpaceIds, author });
 ```
 
 Custom deployments can be passed directly:
 
 ```ts
-import { defineGeoNetwork, createGeoClient } from "@geoprotocol/geo-sdk";
+import { createGeoClient, defineGeoNetworkConfig } from "@geoprotocol/geo-sdk";
 
-const local = defineGeoNetwork({
+const local = defineGeoNetworkConfig({
   id: "LOCAL",
   name: "Local Geo",
   apiOrigin: "http://localhost:3000",

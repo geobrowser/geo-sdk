@@ -175,6 +175,38 @@ function encodeUpdateVotingSettingsAction(
   };
 }
 
+/**
+ * Builds calldata for creating a DAO proposal from prebuilt proposal actions.
+ *
+ * This helper is synchronous and does not publish or fetch. It uses the
+ * configured `SPACE_REGISTRY_ADDRESS` and encodes a
+ * `GOVERNANCE.PROPOSAL_CREATED` `SpaceRegistry.enter(...)` call.
+ *
+ * @example
+ * ```ts
+ * const actions = [
+ *   geo.daoSpaces.proposals.actions.addMember(daoSpaceAddress, memberSpaceId),
+ *   geo.daoSpaces.proposals.actions.updateVotingSettings(daoSpaceAddress, {
+ *     slowPathPercentageThreshold: 60,
+ *     fastPathFlatThreshold: 2,
+ *     quorum: 3,
+ *     durationInDays: 5,
+ *   }),
+ * ];
+ *
+ * const tx = geo.daoSpaces.proposals.create({
+ *   fromSpaceId: authorSpaceId,
+ *   daoSpaceId,
+ *   votingMode: 'SLOW',
+ *   actions,
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @param params Caller space, DAO space, voting mode, optional proposal ID, and actions.
+ * @returns Target registry address, calldata, and proposal ID.
+ * @throws When IDs are invalid or the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
 export function create(context: GeoClientContext, params: CreateProposalParams) {
   return encodeCreateProposal({
     ...params,
@@ -182,6 +214,37 @@ export function create(context: GeoClientContext, params: CreateProposalParams) 
   });
 }
 
+/**
+ * Publishes an edit and wraps it in a DAO proposal.
+ *
+ * This helper validates the proposal shape before upload, publishes the edit
+ * through the configured API, creates a DAO `publish(...)` action with the
+ * resulting CID, and returns calldata for proposal creation.
+ *
+ * @example
+ * ```ts
+ * import * as Ops from '@geoprotocol/geo-sdk/ops';
+ *
+ * const { ops } = Ops.entities.update({
+ *   id: entityId,
+ *   name: 'Updated name',
+ * });
+ *
+ * const proposal = await geo.daoSpaces.proposeEdit({
+ *   name: 'Update entity',
+ *   ops,
+ *   author: authorSpaceId,
+ *   daoSpaceAddress,
+ *   callerSpaceId: authorSpaceId,
+ *   daoSpaceId,
+ * });
+ * ```
+ *
+ * @param context Client context containing network, contract, API, and fetch configuration.
+ * @param params Edit publication params plus DAO proposal target details.
+ * @returns Edit ID, CID, target registry address, calldata, and proposal ID.
+ * @throws When IDs are invalid, required contracts are missing, or edit publishing fails.
+ */
 export async function proposeEdit(context: GeoClientContext, params: ProposeEditParams) {
   assertValid(String(params.author), '`author` in `proposeEdit`');
   const spaceRegistryAddress = requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS');
@@ -216,6 +279,24 @@ export async function proposeEdit(context: GeoClientContext, params: ProposeEdit
   };
 }
 
+/**
+ * Builds calldata for voting on a DAO proposal.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.daoSpaces.proposals.vote({
+ *   authorSpaceId,
+ *   spaceId: daoSpaceId,
+ *   proposalId,
+ *   vote: 'YES',
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @param params Author space, DAO space, proposal ID, and vote option.
+ * @returns Target registry address and calldata for `GOVERNANCE.PROPOSAL_VOTED`.
+ * @throws When IDs are invalid or the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
 export function vote(context: GeoClientContext, params: VoteProposalParams) {
   const authorSpaceId = bytes16Id(params.authorSpaceId, 'authorSpaceId');
   const spaceId = bytes16Id(params.spaceId, 'spaceId');
@@ -240,6 +321,23 @@ export function vote(context: GeoClientContext, params: VoteProposalParams) {
   };
 }
 
+/**
+ * Builds calldata for executing a passed DAO proposal.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.daoSpaces.proposals.execute({
+ *   authorSpaceId,
+ *   spaceId: daoSpaceId,
+ *   proposalId,
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @param params Author space, DAO space, and proposal ID.
+ * @returns Target registry address and calldata for `GOVERNANCE.PROPOSAL_EXECUTED`.
+ * @throws When IDs are invalid or the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
 export function execute(context: GeoClientContext, params: ExecuteProposalParams) {
   const authorSpaceId = bytes16Id(params.authorSpaceId, 'authorSpaceId');
   const spaceId = bytes16Id(params.spaceId, 'spaceId');
@@ -258,6 +356,23 @@ export function execute(context: GeoClientContext, params: ExecuteProposalParams
   };
 }
 
+/**
+ * Helpers for constructing DAO proposal actions.
+ *
+ * These helpers only encode DAO-space action payloads. Pass their results to
+ * `geo.daoSpaces.proposals.create(...)` when building a proposal from explicit actions.
+ *
+ * @example
+ * ```ts
+ * const action = geo.daoSpaces.proposals.actions.addEditor(daoSpaceAddress, editorSpaceId);
+ * const proposal = geo.daoSpaces.proposals.create({
+ *   fromSpaceId: authorSpaceId,
+ *   daoSpaceId,
+ *   votingMode: 'SLOW',
+ *   actions: [action],
+ * });
+ * ```
+ */
 export const actions = {
   publishEdit: encodePublishEditProposalAction,
   addEditor: (daoSpaceAddress: `0x${string}`, spaceId: string) =>

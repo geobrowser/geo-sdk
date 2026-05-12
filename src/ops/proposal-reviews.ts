@@ -18,6 +18,27 @@ import type {
 } from '../types.js';
 import { create as createEntity, update as updateEntity } from './entities.js';
 
+/**
+ * Builds create-proposal-review ops without network access.
+ *
+ * The review is linked to the proposal through the proposals relation and can
+ * include pass/fail, optional markdown content, and optional rating values.
+ *
+ * @example
+ * ```ts
+ * import { proposalReviews } from '@geoprotocol/geo-sdk/ops';
+ *
+ * const { id, ops } = proposalReviews.create({
+ *   proposal: { id: proposalId, name: 'Improve restaurant data' },
+ *   pass: true,
+ *   content: 'The edit is complete and accurate.',
+ * });
+ * ```
+ *
+ * @param params Proposal reference, pass/fail value, optional content, optional ratings, and optional review ID.
+ * @returns Generated or supplied review entity ID and create ops.
+ * @throws When the review ID or proposal ID is invalid.
+ */
 export const create = (params: CreateProposalReviewParams): CreateResult => {
   if (params.id) assertValid(params.id, '`id` in `Ops.proposalReviews.create`');
   assertValid(params.proposal.id, '`proposal.id` in `Ops.proposalReviews.create`');
@@ -63,6 +84,24 @@ export const create = (params: CreateProposalReviewParams): CreateResult => {
   return { id: Id(id), ops };
 };
 
+/**
+ * Builds update-proposal-review ops without network access.
+ *
+ * @example
+ * ```ts
+ * import { proposalReviews } from '@geoprotocol/geo-sdk/ops';
+ *
+ * const { ops } = proposalReviews.update({
+ *   proposalReviewId: reviewId,
+ *   pass: false,
+ *   content: 'Needs more sources.',
+ * });
+ * ```
+ *
+ * @param params Review ID, pass/fail value, optional content, and optional rating values.
+ * @returns Review entity ID and update ops.
+ * @throws When the review ID is invalid.
+ */
 export const update = (params: UpdateProposalReviewParams): CreateResult => {
   assertValid(params.proposalReviewId, '`proposalReviewId` in `Ops.proposalReviews.update`');
 

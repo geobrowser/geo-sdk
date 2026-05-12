@@ -1,7 +1,7 @@
 import { decodeAbiParameters, decodeFunctionData } from 'viem';
 import { describe, expect, it } from 'vitest';
 import { SpaceRegistryAbi } from '../abis/index.js';
-import { defineGeoNetwork } from '../networks.js';
+import { defineGeoNetworkConfig } from '../networks.js';
 import type { GeoClientContext } from './context.js';
 import {
   downvote,
@@ -22,7 +22,7 @@ const UNVOTED_ACTION = '0x3bd4c337382f79aa5007a91169bb57723b5dd59e6b4bb60d20362b
 
 function testContext(): GeoClientContext {
   return {
-    network: defineGeoNetwork({
+    network: defineGeoNetworkConfig({
       id: 'LOCAL',
       name: 'Local Geo',
       apiOrigin: 'http://localhost:3000',

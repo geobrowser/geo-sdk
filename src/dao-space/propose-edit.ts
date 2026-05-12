@@ -5,7 +5,7 @@ import type { ProposeEditParams, ProposeEditResult } from './types.js';
 /**
  * Creates a proposal to publish an edit to a DAO space.
  *
- * @deprecated Use `createGeoClient({ network }).proposals.proposeEdit(...)`.
+ * @deprecated Use `createGeoClient({ network }).daoSpaces.proposeEdit(...)`.
  */
 export async function proposeEdit(params: ProposeEditParams): Promise<ProposeEditResult> {
   const { network = 'TESTNET', ...args } = params;
@@ -19,5 +19,5 @@ export async function proposeEdit(params: ProposeEditParams): Promise<ProposeEdi
     throw new Error(`proposalId must be bytes16 hex (0x followed by 32 hex chars). Received: ${args.proposalId}`);
   }
 
-  return createGeoClient({ network }).proposals.proposeEdit(args);
+  return createGeoClient({ network }).daoSpaces.proposeEdit(args);
 }

@@ -20,7 +20,7 @@ export * as Graph from './src/graph/index.js';
 export { Id } from './src/id.js';
 export * as IdUtils from './src/id-utils.js';
 export * as Ipfs from './src/ipfs.js';
-export { defineGeoNetwork, Networks } from './src/networks.js';
+export { defineGeoNetworkConfig, GeoTestnetConfig } from './src/networks.js';
 export * as Ops from './src/ops/index.js';
 export { Position } from './src/position.js';
 export * as Rank from './src/ranks/index.js';

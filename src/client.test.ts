@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createGeoClient } from './client.js';
-import { defineGeoNetwork, Networks } from './networks.js';
+import { defineGeoNetworkConfig, GeoTestnetConfig } from './networks.js';
+import * as Ops from './ops/index.js';
 
 describe('createGeoClient', () => {
   const customNetwork = () =>
-    defineGeoNetwork({
+    defineGeoNetworkConfig({
       id: 'LOCAL',
       name: 'Local Geo',
       apiOrigin: 'http://localhost:3000',
@@ -15,9 +16,9 @@ describe('createGeoClient', () => {
     });
 
   it('accepts the built-in TESTNET config', () => {
-    const geo = createGeoClient({ network: Networks.TESTNET });
+    const geo = createGeoClient({ network: GeoTestnetConfig });
     expect(geo.network.id).toBe('TESTNET');
-    expect(geo.network.apiOrigin).toBe(Networks.TESTNET.apiOrigin);
+    expect(geo.network.apiOrigin).toBe(GeoTestnetConfig.apiOrigin);
   });
 
   it('accepts custom network configs', () => {
@@ -29,6 +30,28 @@ describe('createGeoClient', () => {
     expect(geo.network.contracts?.SPACE_REGISTRY_ADDRESS).toBe('0x0000000000000000000000000000000000000001');
   });
 
+  it('only exposes graph-context entity helpers on the client', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    expect(Object.keys(geo.entities)).toEqual(['delete']);
+  });
+
+  it('scopes proposal helpers under daoSpaces', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    expect('proposals' in geo).toBe(false);
+    expect(Object.keys(geo.daoSpaces)).toEqual([
+      'create',
+      'proposeEdit',
+      'proposeAddMember',
+      'proposeRemoveMember',
+      'proposeAddEditor',
+      'proposeRemoveEditor',
+      'proposeRequestMembership',
+      'proposals',
+    ]);
+  });
+
   it('throws for unknown network strings', () => {
     expect(() => createGeoClient({ network: 'LOCAL' as never })).toThrow('Unknown Geo network "LOCAL"');
   });
@@ -38,8 +61,11 @@ describe('createGeoClient', () => {
     vi.stubGlobal('fetch', undefined);
 
     try {
-      const geo = createGeoClient({ network: Networks.TESTNET });
-      const result = geo.personalSpaces.create();
+      const geo = createGeoClient({ network: GeoTestnetConfig });
+      const result = geo.personalSpaces.create({
+        name: 'Test Space',
+        accountAddress: '0x1234567890123456789012345678901234567890',
+      });
 
       expect(result.calldata).toMatch(/^0x/);
     } finally {
@@ -50,7 +76,7 @@ describe('createGeoClient', () => {
   it('validates required contracts before upload-backed workflows', async () => {
     const fetch = vi.fn<typeof globalThis.fetch>();
     const geo = createGeoClient({
-      network: defineGeoNetwork({
+      network: defineGeoNetworkConfig({
         id: 'LOCAL',
         name: 'Local Geo',
         apiOrigin: 'http://localhost:3000',
@@ -84,7 +110,7 @@ describe('createGeoClient', () => {
         new Response(JSON.stringify({ cid: 'ipfs://bafkreigwfjixq5cm3s4youhshorkpqh3ykpviyv76c2ei6gaalujtlqz5i' })),
       );
     const geo = createGeoClient({ network: customNetwork(), fetch });
-    const { ops } = geo.ops.entities.create({ name: 'Test Entity' });
+    const { ops } = Ops.entities.create({ name: 'Test Entity' });
 
     const result = await geo.personalSpaces.publishEdit({
       name: 'Test Edit',

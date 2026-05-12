@@ -3,13 +3,13 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGeoClient } from '../client.js';
 import { IMAGE_URL_PROPERTY } from '../core/ids/system.js';
 import { toGrcId } from '../id-utils.js';
-import { defineGeoNetwork } from '../networks.js';
+import { defineGeoNetworkConfig } from '../networks.js';
 
 const CID = 'ipfs://bafkreigwfjixq5cm3s4youhshorkpqh3ykpviyv76c2ei6gaalujtlqz5i' as const;
 const IMAGE_ID = '3af3e22d21694a078681516710b7ecf1';
 
 function customNetwork() {
-  return defineGeoNetwork({
+  return defineGeoNetworkConfig({
     id: 'LOCAL',
     name: 'Local Geo',
     apiOrigin: 'http://localhost:3000',

@@ -2,7 +2,7 @@ import { decodeAbiParameters, decodeFunctionData } from 'viem';
 import { describe, expect, it, vi } from 'vitest';
 import { SpaceRegistryAbi } from '../abis/index.js';
 import { createEntity } from '../graph/create-entity.js';
-import { defineGeoNetwork } from '../networks.js';
+import { defineGeoNetworkConfig } from '../networks.js';
 import { EDITS_PUBLISHED, EMPTY_SIGNATURE, EMPTY_TOPIC } from '../personal-space/constants.js';
 import type { GeoClientContext } from './context.js';
 import { encodePublishEditToSpaceCalldata, publish, publishToSpace } from './edits.js';
@@ -18,7 +18,7 @@ function mockUploadFetch() {
 
 function testContext(fetch: typeof globalThis.fetch = mockUploadFetch()): GeoClientContext {
   return {
-    network: defineGeoNetwork({
+    network: defineGeoNetworkConfig({
       id: 'LOCAL',
       name: 'Local Geo',
       apiOrigin: 'http://localhost:3000',

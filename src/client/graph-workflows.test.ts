@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createGeoClient } from '../client.js';
 import { REPLY_TO_PROPERTY } from '../core/ids/system.js';
 import { toGrcId } from '../id-utils.js';
-import { defineGeoNetwork } from '../networks.js';
+import { defineGeoNetworkConfig } from '../networks.js';
 
 const ENTITY_ID = '3af3e22d21694a078681516710b7ecf1';
 const SPACE_ID = 'd4bc2f205e2d415e971eb0b9fbf6b6fc';
@@ -14,7 +14,7 @@ const PROPERTY_ID = 'dddddddddddddddddddddddddddddddd';
 const RELATION_ID = 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
 function customNetwork() {
-  return defineGeoNetwork({
+  return defineGeoNetworkConfig({
     id: 'LOCAL',
     name: 'Local Geo',
     apiOrigin: 'http://localhost:3000',

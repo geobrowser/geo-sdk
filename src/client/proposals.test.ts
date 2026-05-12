@@ -5,12 +5,15 @@ import { createGeoClient } from '../client.js';
 import {
   bytes16ToBytes32LeftAligned,
   EMPTY_SIGNATURE,
+  EMPTY_TOPIC,
+  MEMBERSHIP_REQUESTED_ACTION,
   PROPOSAL_CREATED_ACTION,
   PROPOSAL_EXECUTED_ACTION,
   PROPOSAL_VOTED_ACTION,
   VOTE_OPTION_VALUES,
 } from '../dao-space/constants.js';
-import { defineGeoNetwork } from '../networks.js';
+import { defineGeoNetworkConfig } from '../networks.js';
+import * as Ops from '../ops/index.js';
 
 const CID = 'ipfs://bafkreigwfjixq5cm3s4youhshorkpqh3ykpviyv76c2ei6gaalujtlqz5i' as const;
 const AUTHOR_ID = '5cade5757ecd41ae83481b22ffc2f94e';
@@ -22,7 +25,7 @@ const DAO_SPACE_ADDRESS = '0x1234567890123456789012345678901234567890' as const;
 const SPACE_REGISTRY_ADDRESS = '0x0000000000000000000000000000000000000001' as const;
 
 function customNetwork() {
-  return defineGeoNetwork({
+  return defineGeoNetworkConfig({
     id: 'LOCAL',
     name: 'Local Geo',
     apiOrigin: 'http://localhost:3000',
@@ -62,12 +65,12 @@ function decodeEnter(calldata: `0x${string}`) {
   };
 }
 
-describe('geo proposal client', () => {
+describe('geo DAO proposal client', () => {
   it('creates proposal calldata for supplied actions without uploading', () => {
     const geo = createGeoClient({ network: customNetwork() });
-    const action = geo.proposals.actions.addMember(DAO_SPACE_ADDRESS, MEMBER_SPACE_ID);
+    const action = geo.daoSpaces.proposals.actions.addMember(DAO_SPACE_ADDRESS, MEMBER_SPACE_ID);
 
-    const result = geo.proposals.create({
+    const result = geo.daoSpaces.proposals.create({
       fromSpaceId: CALLER_SPACE_ID,
       daoSpaceId: DAO_SPACE_ID,
       proposalId: PROPOSAL_ID,
@@ -108,13 +111,13 @@ describe('geo proposal client', () => {
 
   it('encodes proposal vote and execute calldata for the configured registry', () => {
     const geo = createGeoClient({ network: customNetwork() });
-    const vote = geo.proposals.vote({
+    const vote = geo.daoSpaces.proposals.vote({
       authorSpaceId: CALLER_SPACE_ID,
       spaceId: DAO_SPACE_ID,
       proposalId: PROPOSAL_ID,
       vote: 'NO',
     });
-    const execute = geo.proposals.execute({
+    const execute = geo.daoSpaces.proposals.execute({
       authorSpaceId: CALLER_SPACE_ID,
       spaceId: DAO_SPACE_ID,
       proposalId: PROPOSAL_ID,
@@ -141,9 +144,9 @@ describe('geo proposal client', () => {
   it('publishes an edit and wraps it as a DAO proposal action', async () => {
     const fetch = mockUploadFetch();
     const geo = createGeoClient({ network: customNetwork(), fetch });
-    const { ops } = geo.ops.entities.create({ name: 'Test Entity' });
+    const { ops } = Ops.entities.create({ name: 'Test Entity' });
 
-    const result = await geo.proposals.proposeEdit({
+    const result = await geo.daoSpaces.proposeEdit({
       name: 'Test Edit',
       ops,
       author: AUTHOR_ID,
@@ -189,5 +192,113 @@ describe('geo proposal client', () => {
       'http://localhost:3000/ipfs/upload-edit',
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+
+  it('creates member and editor role proposals from daoSpaces', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    const addMember = geo.daoSpaces.proposeAddMember({
+      authorSpaceId: CALLER_SPACE_ID,
+      spaceId: DAO_SPACE_ID,
+      daoSpaceAddress: DAO_SPACE_ADDRESS,
+      newMemberSpaceId: MEMBER_SPACE_ID,
+      proposalId: PROPOSAL_ID,
+    });
+    const addEditor = geo.daoSpaces.proposeAddEditor({
+      authorSpaceId: CALLER_SPACE_ID,
+      spaceId: DAO_SPACE_ID,
+      daoSpaceAddress: DAO_SPACE_ADDRESS,
+      newEditorSpaceId: MEMBER_SPACE_ID,
+      proposalId: PROPOSAL_ID,
+    });
+
+    const decodedAddMember = decodeEnter(addMember.calldata);
+    const [, memberVotingMode, memberActions] = decodeAbiParameters(
+      [
+        { type: 'bytes16', name: 'proposalId' },
+        { type: 'uint8', name: 'votingMode' },
+        {
+          type: 'tuple[]',
+          name: 'actions',
+          components: [
+            { type: 'address', name: 'to' },
+            { type: 'uint256', name: 'value' },
+            { type: 'bytes', name: 'data' },
+          ],
+        },
+      ],
+      decodedAddMember.data,
+    );
+    const [, editorVotingMode] = decodeAbiParameters(
+      [
+        { type: 'bytes16', name: 'proposalId' },
+        { type: 'uint8', name: 'votingMode' },
+        {
+          type: 'tuple[]',
+          name: 'actions',
+          components: [
+            { type: 'address', name: 'to' },
+            { type: 'uint256', name: 'value' },
+            { type: 'bytes', name: 'data' },
+          ],
+        },
+      ],
+      decodeEnter(addEditor.calldata).data,
+    );
+    const addMemberAction = memberActions[0];
+    expect(addMemberAction).toBeDefined();
+    if (!addMemberAction) {
+      throw new Error('Expected addMember action');
+    }
+    const addMemberCall = decodeFunctionData({
+      abi: DaoSpaceAbi,
+      data: addMemberAction.data,
+    });
+
+    expect(addMember.to).toBe(SPACE_REGISTRY_ADDRESS);
+    expect(addMemberAction.to).toBe(DAO_SPACE_ADDRESS);
+    expect(addMemberCall.functionName).toBe('addMember');
+    expect(addMemberCall.args?.[0]).toBe(MEMBER_SPACE_ID);
+    expect(memberVotingMode).toBe(0);
+    expect(editorVotingMode).toBe(0);
+  });
+
+  it('restricts editor role proposals to SLOW voting', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    expect(() =>
+      geo.daoSpaces.proposeAddEditor({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        daoSpaceAddress: DAO_SPACE_ADDRESS,
+        newEditorSpaceId: MEMBER_SPACE_ID,
+        votingMode: 'FAST' as never,
+      }),
+    ).toThrow('proposeAddEditor only supports SLOW voting mode');
+  });
+
+  it('creates membership request calldata from daoSpaces', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    const result = geo.daoSpaces.proposeRequestMembership({
+      authorSpaceId: CALLER_SPACE_ID,
+      spaceId: DAO_SPACE_ID,
+      proposalId: PROPOSAL_ID,
+    });
+    const decoded = decodeEnter(result.calldata);
+    const [proposalId, newMemberSpaceId] = decodeAbiParameters(
+      [
+        { type: 'bytes16', name: 'proposalId' },
+        { type: 'bytes16', name: 'newMemberSpaceId' },
+      ],
+      decoded.data,
+    );
+
+    expect(result.to).toBe(SPACE_REGISTRY_ADDRESS);
+    expect(result.proposalId).toBe(PROPOSAL_ID);
+    expect(decoded.action).toBe(MEMBERSHIP_REQUESTED_ACTION);
+    expect(decoded.topic).toBe(EMPTY_TOPIC);
+    expect(proposalId).toBe(PROPOSAL_ID);
+    expect(newMemberSpaceId).toBe(CALLER_SPACE_ID);
   });
 });

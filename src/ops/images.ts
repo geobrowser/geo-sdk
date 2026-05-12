@@ -12,13 +12,39 @@ import type { CreateImageResult, PropertiesParam } from '../types.js';
 import { create as createEntity } from './entities.js';
 
 export type CreateImageOpsParams = {
+  /** Uploaded IPFS URI for the image file. */
   cid: string;
+  /** Optional dimensions detected during upload. */
   dimensions?: { width: number; height: number };
+  /** Optional name value for the image entity. */
   name?: string;
+  /** Optional description value for the image entity. */
   description?: string;
+  /** Optional image entity ID. Generated when omitted. */
   id?: Id | string;
 };
 
+/**
+ * Builds image entity ops from an already-uploaded image CID.
+ *
+ * This pure helper does not upload files or fetch image dimensions. Use
+ * `geo.images.create(...)` when the SDK should upload the image first.
+ *
+ * @example
+ * ```ts
+ * import { images } from '@geoprotocol/geo-sdk/ops';
+ *
+ * const { id, ops } = images.create({
+ *   cid: 'ipfs://baf...',
+ *   name: 'Cover image',
+ *   dimensions: { width: 1200, height: 630 },
+ * });
+ * ```
+ *
+ * @param params Uploaded CID, optional dimensions, optional metadata, and optional entity ID.
+ * @returns Image entity ID, CID, dimensions, and create ops.
+ * @throws When the optional image entity ID is invalid.
+ */
 export const create = ({
   cid,
   dimensions,

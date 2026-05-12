@@ -42,6 +42,45 @@ async function fetchReplyToRelations(context: GeoClientContext, entityId: Id | s
     }));
 }
 
+/**
+ * Creates comment ops using reply-chain context fetched from the configured Geo API.
+ *
+ * The direct `replyTo` target is always included first. If the target is itself
+ * a comment, existing reply-to relations are fetched and appended so reply
+ * chains preserve parent-to-root ordering.
+ *
+ * Use `Ops.comments.create(...)` when reply-chain context is already available
+ * locally and no fetch should happen.
+ *
+ * @example
+ * ```ts
+ * const comment = await geo.comments.create({
+ *   content: 'This should be easier to find.',
+ *   replyTo: {
+ *     entityId,
+ *     spaceId,
+ *   },
+ * });
+ * ```
+ *
+ * @example
+ * Replying to another comment preserves the full reply-to chain automatically.
+ *
+ * ```ts
+ * const reply = await geo.comments.create({
+ *   content: 'Following up here.',
+ *   replyTo: {
+ *     entityId: comment.id,
+ *     spaceId,
+ *   },
+ * });
+ * ```
+ *
+ * @param context Client context containing API origin and fetch configuration.
+ * @param params Comment content, reply target, optional ID, and resolved state.
+ * @returns Comment entity ID and ops.
+ * @throws When IDs are invalid, fetch is unavailable, GraphQL fails, or the response is malformed.
+ */
 export async function create(
   context: GeoClientContext,
   { id, content, replyTo, resolved = false }: Omit<CreateCommentParams, 'network'>,
@@ -60,4 +99,20 @@ export async function create(
   });
 }
 
+/**
+ * Builds update-comment ops without reading network config or fetching graph data.
+ *
+ * @example
+ * ```ts
+ * const { ops } = geo.comments.update({
+ *   id: commentId,
+ *   content: 'Updated comment text.',
+ *   resolved: true,
+ * });
+ * ```
+ *
+ * @param params Comment ID plus content and/or resolved state to update.
+ * @returns Comment entity ID and update ops.
+ * @throws When the comment ID is invalid.
+ */
 export const update = Ops.comments.update;

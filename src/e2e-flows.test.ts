@@ -7,36 +7,37 @@ import { SpaceRegistryAbi } from './abis/index.js';
 import { createGeoClient } from './client.js';
 import { DESCRIPTION_PROPERTY, RELATION_TYPE, REPLY_TO_PROPERTY } from './core/ids/system.js';
 import { toGrcId } from './id-utils.js';
-import { Networks } from './networks.js';
+import { GeoTestnetConfig } from './networks.js';
+import * as Ops from './ops/index.js';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Hex;
 const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
 const replyToGrcId = toGrcId(REPLY_TO_PROPERTY);
 
-const geo = createGeoClient({ network: Networks.TESTNET });
+const geo = createGeoClient({ network: GeoTestnetConfig });
 
 function requireTestnetContract(name: 'SPACE_REGISTRY_ADDRESS' | 'DAO_SPACE_FACTORY_ADDRESS'): `0x${string}` {
-  const address = Networks.TESTNET.contracts?.[name];
+  const address = GeoTestnetConfig.contracts?.[name];
   if (!address) {
-    throw new Error(`Networks.TESTNET is missing ${name}`);
+    throw new Error(`GeoTestnetConfig is missing ${name}`);
   }
 
   return address;
 }
 
 function requireTestnetRpcUrl(): string {
-  const rpcUrl = Networks.TESTNET.chain?.rpcUrl;
+  const rpcUrl = GeoTestnetConfig.chain?.rpcUrl;
   if (!rpcUrl) {
-    throw new Error('Networks.TESTNET is missing an RPC URL');
+    throw new Error('GeoTestnetConfig is missing an RPC URL');
   }
 
   return rpcUrl;
 }
 
 function createTestnetChain(rpcUrl: string): Chain {
-  const chainConfig = Networks.TESTNET.chain;
+  const chainConfig = GeoTestnetConfig.chain;
   if (!chainConfig) {
-    throw new Error('Networks.TESTNET is missing chain config');
+    throw new Error('GeoTestnetConfig is missing chain config');
   }
 
   return {
@@ -99,19 +100,41 @@ async function ensurePersonalSpace({
   if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
     console.log('Creating personal space...');
 
-    const { to, calldata } = geo.personalSpaces.create();
+    const createSpace = geo.personalSpaces.create({
+      name: 'E2E Personal Space',
+      accountAddress,
+    });
 
     const createSpaceTxHash = await walletClient.sendTransaction({
       account,
       chain: walletClient.chain ?? null,
-      to,
+      to: createSpace.to,
       value: 0n,
-      data: calldata,
+      data: createSpace.calldata,
     });
 
     console.log('createSpaceTxHash', createSpaceTxHash);
     await publicClient.waitForTransactionReceipt({ hash: createSpaceTxHash });
     spaceIdHex = await getSpaceIdHex(publicClient, accountAddress);
+
+    if (spaceIdHex.toLowerCase() !== EMPTY_SPACE_ID.toLowerCase()) {
+      const spaceId = hexToUuid(spaceIdHex);
+      const publishProfile = await geo.personalSpaces.publishEdit({
+        name: 'Create personal space profile',
+        spaceId,
+        author: spaceId,
+        ops: createSpace.ops,
+      });
+      const publishProfileTxHash = await walletClient.sendTransaction({
+        account,
+        chain: walletClient.chain ?? null,
+        to: publishProfile.to,
+        value: 0n,
+        data: publishProfile.calldata,
+      });
+      console.log('publishProfileTxHash', publishProfileTxHash);
+      await publicClient.waitForTransactionReceipt({ hash: publishProfileTxHash });
+    }
   }
 
   if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
@@ -181,13 +204,13 @@ it.skip('should create a space and publish an edit with the new APIs', async () 
 
   console.log('spaceAddress', spaceAddress);
 
-  const { ops, id: entityId } = geo.ops.entities.create({
+  const { ops, id: entityId } = Ops.entities.create({
     name: 'Test Entity',
     description: 'Created via new API e2e flow test',
   });
   console.log('entityId', entityId);
 
-  const { ops: unsetDescriptionOps } = geo.ops.entities.update({
+  const { ops: unsetDescriptionOps } = Ops.entities.update({
     id: entityId,
     unset: [{ property: DESCRIPTION_PROPERTY }],
   });
@@ -290,7 +313,7 @@ it.skip('should create a DAO space and propose an edit with the new APIs', async
 
   console.log('Proposing edit to DAO space...');
 
-  const { ops, id: entityId } = geo.ops.entities.create({
+  const { ops, id: entityId } = Ops.entities.create({
     name: 'DAO Entity',
     description: 'Created via DAO space proposal',
   });
@@ -305,7 +328,7 @@ it.skip('should create a DAO space and propose an edit with the new APIs', async
     to: proposalTo,
     calldata: proposalCalldata,
     proposalId,
-  } = await geo.proposals.proposeEdit({
+  } = await geo.daoSpaces.proposeEdit({
     name: 'Add new entity to DAO space',
     ops,
     author: personalSpaceId,
@@ -353,12 +376,12 @@ it.skip('should create an entity and then delete it with the new APIs', async ()
 
   console.log('spaceId (UUID)', spaceId);
 
-  const { ops: createOps, id: entityId } = geo.ops.entities.create({
+  const { ops: createOps, id: entityId } = Ops.entities.create({
     name: 'Entity to Delete',
     description: 'This entity will be deleted',
   });
 
-  const { ops: relationOps, id: relationId } = geo.ops.relations.create({
+  const { ops: relationOps, id: relationId } = Ops.relations.create({
     fromEntity: entityId,
     toEntity: '3dd25afe17ff40f290bd9f63799cd299',
     type: RELATION_TYPE,
@@ -463,7 +486,7 @@ it.skip('should create an entity, comment on it, and comment on the comment with
 
   console.log('spaceId (UUID)', spaceId);
 
-  const { ops: entityOps, id: entityId } = geo.ops.entities.create({
+  const { ops: entityOps, id: entityId } = Ops.entities.create({
     name: 'Entity with Comments',
     description: 'This entity will have comments',
   });

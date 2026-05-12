@@ -43,7 +43,7 @@ export * as IdUtils from './src/id-utils.js';
  * @since 0.1.1
  */
 export * as Ipfs from './src/ipfs.js';
-export { defineGeoNetwork, Networks } from './src/networks.js';
+export { defineGeoNetworkConfig, GeoTestnetConfig } from './src/networks.js';
 export * as Ops from './src/ops/index.js';
 /**
  * This module provides functions for creating and managing personal spaces.
