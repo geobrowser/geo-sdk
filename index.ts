@@ -19,6 +19,8 @@ export { getChecksumAddress } from './src/core/get-checksum-address.js';
 export * as daoSpace from './src/dao-space/index.js';
 export * as Encoding from './src/encoding.js';
 export {
+  DEFAULT_VOTING_SETTINGS,
+  daysToSeconds,
   getAcceptEditorArguments,
   getAcceptSubspaceArguments,
   getCalldataForSpaceGovernanceType,
@@ -27,7 +29,14 @@ export {
   getProcessGeoProposalArguments,
   getRemoveEditorArguments,
   getRemoveSubspaceArguments,
+  MINIMUM_EXECUTION_GRACE_PERIOD,
+  MINIMUM_EXECUTION_GRACE_PERIOD_DAYS,
+  MINIMUM_VOTING_DURATION,
+  MINIMUM_VOTING_DURATION_DAYS,
+  percentageToRatio,
+  toContractVotingSettings,
   validateIpfsUri,
+  validateVotingSettingsInput,
 } from './src/encodings/index.js';
 /**
  * @deprecated Use `Ops` for pure operation builders and `createGeoClient({ network })`

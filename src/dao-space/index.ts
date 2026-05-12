@@ -6,6 +6,7 @@ export { proposeEdit } from './propose-edit.js';
 export { proposeRemoveEditor } from './propose-remove-editor.js';
 export { proposeRemoveMember } from './propose-remove-member.js';
 export { proposeRequestMembership } from './propose-request-membership.js';
+export { proposeUpdateVotingSettings } from './propose-update-voting-settings.js';
 export type {
   CreateSpaceParams,
   CreateSpaceResult,
@@ -23,6 +24,8 @@ export type {
   ProposeRemoveMemberResult,
   ProposeRequestMembershipParams,
   ProposeRequestMembershipResult,
+  ProposeUpdateVotingSettingsParams,
+  ProposeUpdateVotingSettingsResult,
   VoteOption,
   VoteProposalParams,
   VoteProposalResult,

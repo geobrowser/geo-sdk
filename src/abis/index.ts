@@ -1,6 +1,6 @@
 export { abi as DaoAbi } from './dao.js';
-export { abi as DaoSpaceAbi } from './dao-space.js';
-export { abi as DaoSpaceFactoryAbi } from './dao-space-factory.js';
+export { abi as DaoSpaceAbi, ProposalParametersV2Components } from './dao-space.js';
+export { abi as DaoSpaceFactoryAbi, VotingSettingsV2Components } from './dao-space-factory.js';
 export { abi as GovernanceSetupAbi } from './governance-setup.js';
 export { abi as MainVotingAbi } from './main-voting.js';
 export { abi as MemberAccessAbi } from './member-access.js';

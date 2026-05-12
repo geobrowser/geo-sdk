@@ -9,6 +9,12 @@ import type { Networkish } from '../types.js';
 export const PROPOSAL_CREATED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_CREATED'));
 
 /**
+ * Action hash for GOVERNANCE.PROPOSAL_UPDATED
+ * Used when publishing a new version of an existing proposal.
+ */
+export const PROPOSAL_UPDATED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_UPDATED'));
+
+/**
  * Action hash for GOVERNANCE.PROPOSAL_VOTED
  * Used when voting on proposals via SpaceRegistry.enter()
  */
@@ -25,6 +31,12 @@ export const MEMBERSHIP_REQUESTED_ACTION = keccak256(toHex('GOVERNANCE.MEMBERSHI
  * Used when executing a passed proposal via SpaceRegistry.enter()
  */
 export const PROPOSAL_EXECUTED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_EXECUTED'));
+
+/**
+ * Action hash for GOVERNANCE.EDITS_PUBLISHED
+ * Used by DAO edit proposals through DAOSpace.ping().
+ */
+export const EDITS_PUBLISHED_ACTION = keccak256(toHex('GOVERNANCE.EDITS_PUBLISHED'));
 
 /**
  * Maps VoteOption strings to their on-chain uint8 values (IDAOSpace.VoteOption enum).

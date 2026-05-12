@@ -240,10 +240,13 @@ it.skip('should create a DAO space and propose an edit', async () => {
   const { to, calldata, spaceEntityId, cid } = await daoSpace.createSpace({
     name: 'Test DAO Space',
     votingSettings: {
-      slowPathPercentageThreshold: 50, // 50% approval needed
-      fastPathFlatThreshold: 1, // 1 editor for fast path
+      partialPercentageSupportThreshold: 50, // 50% partial approval needed
+      universalPercentageSupportThreshold: 90, // 90% universal approval needed
+      flatSupportThreshold: 1, // 1 editor for flat support
       quorum: 1, // minimum 1 editor must vote
       durationInDays: 2, // 2 day voting period (minimum)
+      disableFastPathAccessForNewMembers: true,
+      executionGracePeriodInDays: 14,
     },
     initialEditorSpaceIds: [spaceIdHex],
     author: hexToUuid(spaceIdHex),

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TESTNET } from '../../contracts.js';
 import { createEntity } from '../graph/create-entity.js';
 import { generate } from '../id-utils.js';
+import { defineGeoNetworkConfig } from '../networks.js';
 import { proposeEdit } from './propose-edit.js';
 
 describe('proposeEdit', () => {
@@ -12,6 +13,14 @@ describe('proposeEdit', () => {
   const validDaoSpaceId = '0xabcdef12345678901234567890abcdef' as const;
   const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
   const validAuthor = generate();
+  const localNetwork = defineGeoNetworkConfig({
+    id: 'LOCAL',
+    name: 'Local Geo',
+    apiOrigin: 'http://localhost:3000',
+    contracts: {
+      SPACE_REGISTRY_ADDRESS: TESTNET.SPACE_REGISTRY_ADDRESS,
+    },
+  });
 
   beforeEach(() => {
     vi.stubGlobal(
@@ -41,6 +50,7 @@ describe('proposeEdit', () => {
     expect(result).toHaveProperty('to');
     expect(result).toHaveProperty('calldata');
     expect(result).toHaveProperty('proposalId');
+    expect(result).toHaveProperty('versionId', 1);
   });
 
   it('should return the correct contract address (Space Registry)', async () => {
@@ -135,6 +145,48 @@ describe('proposeEdit', () => {
     });
 
     expect(proposalId).toBe(customProposalId);
+  });
+
+  it('should return an explicit version for proposal updates', async () => {
+    const { ops } = createEntity({ name: 'Test Entity' });
+    const customProposalId = '0x11111111111111111111111111111111' as const;
+
+    const result = await proposeEdit({
+      name: 'Test Edit',
+      ops,
+      author: validAuthor,
+      daoSpaceAddress: validDaoSpaceAddress,
+      callerSpaceId: validCallerSpaceId,
+      daoSpaceId: validDaoSpaceId,
+      proposalId: customProposalId,
+      updateProposal: true,
+      versionId: 2,
+      network: localNetwork as never,
+    });
+
+    expect(result.proposalId).toBe(customProposalId);
+    expect(result.versionId).toBe(2);
+  });
+
+  it('should require versionId before upload for proposal updates without RPC config', async () => {
+    const { ops } = createEntity({ name: 'Test Entity' });
+    const customProposalId = '0x11111111111111111111111111111111' as const;
+    const fetch = vi.mocked(globalThis.fetch);
+
+    await expect(
+      proposeEdit({
+        name: 'Test Edit',
+        ops,
+        author: validAuthor,
+        daoSpaceAddress: validDaoSpaceAddress,
+        callerSpaceId: validCallerSpaceId,
+        daoSpaceId: validDaoSpaceId,
+        proposalId: customProposalId,
+        updateProposal: true,
+        network: localNetwork as never,
+      }),
+    ).rejects.toThrow('versionId is required when updateProposal is true and the network has no RPC URL');
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it('should default to FAST voting mode', async () => {
