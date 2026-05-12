@@ -1,10 +1,8 @@
-import type { Network } from '../types.js';
+import { getApiOrigin as getNetworkApiOrigin, TESTNET_API_ORIGIN } from '../networks.js';
+import type { Networkish } from '../types.js';
 
-export const TESTNET_API_ORIGIN = 'https://testnet-api.geobrowser.io';
+export { TESTNET_API_ORIGIN };
 
-export function getApiOrigin(network: Network): string {
-  if (network === 'TESTNET') {
-    return TESTNET_API_ORIGIN;
-  }
-  throw new Error(`Network ${network} not supported`);
+export function getApiOrigin(network: Networkish): string {
+  return getNetworkApiOrigin(network);
 }

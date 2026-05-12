@@ -7,6 +7,37 @@ import type { Id } from './id.js';
 
 export type Network = 'TESTNET';
 
+export type BuiltInGeoNetworkId = 'TESTNET' | 'MAINNET';
+
+export type GeoNetworkId = BuiltInGeoNetworkId | (string & {});
+
+export type GeoContractAddresses = {
+  SPACE_REGISTRY_ADDRESS?: `0x${string}`;
+  DAO_SPACE_FACTORY_ADDRESS?: `0x${string}`;
+  DAO_FACTORY_ADDRESS?: `0x${string}`;
+  SPACE_PLUGIN_REPO_ADDRESS?: `0x${string}`;
+  PERSONAL_SPACE_ADMIN_PLUGIN_REPO_ADDRESS?: `0x${string}`;
+  GOVERNANCE_PLUGIN_REPO_ADDRESS?: `0x${string}`;
+  ENS_REGISTRY_ADDRESS?: `0x${string}`;
+  PLUGIN_SETUP_PROCESSOR_ADDRESS?: `0x${string}`;
+};
+
+export type GeoChainConfig = {
+  id: number;
+  name: string;
+  rpcUrl?: string;
+};
+
+export type GeoNetworkConfig = {
+  id: GeoNetworkId;
+  name: string;
+  apiOrigin: string;
+  chain?: GeoChainConfig;
+  contracts?: GeoContractAddresses;
+};
+
+export type Networkish = BuiltInGeoNetworkId | GeoNetworkConfig;
+
 export { EmbeddingSubType };
 export type { Op };
 

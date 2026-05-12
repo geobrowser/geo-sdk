@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
 import { encodeAbiParameters, encodeFunctionData } from 'viem';
-import { TESTNET } from '../../contracts.js';
 import { SpaceRegistryAbi } from '../abis/index.js';
 import {
   EMPTY_SIGNATURE,
   EMPTY_TOPIC,
   ensure0xPrefix,
+  getContractAddressesBasedOnNetwork,
   isBytes16Hex,
   MEMBERSHIP_REQUESTED_ACTION,
 } from './constants.js';
@@ -39,7 +39,12 @@ import type { ProposeRequestMembershipParams, ProposeRequestMembershipResult } f
  * ```
  */
 export function proposeRequestMembership(params: ProposeRequestMembershipParams): ProposeRequestMembershipResult {
-  const { authorSpaceId: rawAuthorSpaceId, spaceId: rawSpaceId, proposalId: rawProposalId } = params;
+  const {
+    authorSpaceId: rawAuthorSpaceId,
+    spaceId: rawSpaceId,
+    proposalId: rawProposalId,
+    network = 'TESTNET',
+  } = params;
 
   // Ensure 0x prefix on all IDs
   const authorSpaceId = ensure0xPrefix(rawAuthorSpaceId);
@@ -61,6 +66,7 @@ export function proposeRequestMembership(params: ProposeRequestMembershipParams)
   if (!isBytes16Hex(proposalId)) {
     throw new Error(`proposalId must be bytes16 hex (32 hex chars). Received: ${rawProposalId}`);
   }
+  const contracts = getContractAddressesBasedOnNetwork(network);
 
   // Encode the membership request data: (bytes16 proposalId, bytes16 newMemberSpaceId)
   const data = encodeAbiParameters(
@@ -86,7 +92,7 @@ export function proposeRequestMembership(params: ProposeRequestMembershipParams)
   });
 
   return {
-    to: TESTNET.SPACE_REGISTRY_ADDRESS,
+    to: contracts.SPACE_REGISTRY_ADDRESS,
     calldata,
     proposalId,
   };

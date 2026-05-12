@@ -7,6 +7,7 @@
   "main": "./dist/index.js",
   "ascMain": "./dist/index.js",
   "type": "module",
+  "sideEffects": false,
   "files": [
     "dist"
   ],
@@ -14,6 +15,9 @@
     "./package.json": "./package.json",
     ".": "./dist/index.js",
     "./lite": "./dist/lite.js",
+    "./ops": "./dist/src/ops/index.js",
+    "./client": "./dist/src/client.js",
+    "./networks": "./dist/src/networks.js",
     "./contracts": "./dist/contracts.js",
     "./abis": "./dist/abis.js"
   },

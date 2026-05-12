@@ -1,11 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
 import { encodeAbiParameters, encodeFunctionData } from 'viem';
-import { TESTNET } from '../../contracts.js';
 import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
 import {
   bytes16ToBytes32LeftAligned,
   EMPTY_SIGNATURE,
   ensure0xPrefix,
+  getContractAddressesBasedOnNetwork,
   isBytes16Hex,
   PROPOSAL_CREATED_ACTION,
 } from './constants.js';
@@ -44,6 +44,7 @@ export function proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposeR
     editorToRemoveSpaceId: rawEditorToRemoveSpaceId,
     votingMode = 'SLOW',
     proposalId: rawProposalId,
+    network = 'TESTNET',
   } = params;
 
   // Ensure 0x prefix on all IDs
@@ -77,11 +78,12 @@ export function proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposeR
     functionName: 'removeEditor',
     args: [editorToRemoveSpaceId],
   });
+  const contracts = getContractAddressesBasedOnNetwork(network);
 
   // Create the proposal action (calling removeEditor on the Space Registry)
   const proposalActions = [
     {
-      to: TESTNET.SPACE_REGISTRY_ADDRESS,
+      to: contracts.SPACE_REGISTRY_ADDRESS,
       value: 0n,
       data: proposalActionCalldata,
     },
@@ -123,7 +125,7 @@ export function proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposeR
   });
 
   return {
-    to: TESTNET.SPACE_REGISTRY_ADDRESS,
+    to: contracts.SPACE_REGISTRY_ADDRESS,
     calldata,
     proposalId,
   };

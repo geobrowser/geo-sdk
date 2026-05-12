@@ -132,11 +132,16 @@ describe('createComment', () => {
     expect(rootReply).toBeDefined();
     expect(parentReply?.toSpace).toEqual(toGrcId(spaceId));
     expect(rootReply?.toSpace).toEqual(toGrcId(rootSpaceId));
-    expect(parentReply?.position).toBeDefined();
-    expect(rootReply?.position).toBeDefined();
+    const parentPosition = parentReply?.position;
+    const rootPosition = rootReply?.position;
+    expect(parentPosition).toBeDefined();
+    expect(rootPosition).toBeDefined();
+    if (!parentPosition || !rootPosition) {
+      throw new Error('Expected reply positions to be defined');
+    }
 
     // Direct parent should have lower position than root entity
-    expect(parentReply!.position!.localeCompare(rootReply!.position!)).toBeLessThan(0);
+    expect(parentPosition.localeCompare(rootPosition)).toBeLessThan(0);
 
     // Emission order must also be parent → root
     expect(replyRels[0]?.to).toEqual(toGrcId(entityId));
@@ -176,13 +181,19 @@ describe('createComment', () => {
     expect(parentReply?.toSpace).toEqual(toGrcId(spaceId));
     expect(commentAReply?.toSpace).toEqual(toGrcId(commentASpaceId));
     expect(rootReply?.toSpace).toEqual(toGrcId(rootSpaceId));
-    expect(parentReply?.position).toBeDefined();
-    expect(commentAReply?.position).toBeDefined();
-    expect(rootReply?.position).toBeDefined();
+    const parentPosition = parentReply?.position;
+    const commentAPosition = commentAReply?.position;
+    const rootPosition = rootReply?.position;
+    expect(parentPosition).toBeDefined();
+    expect(commentAPosition).toBeDefined();
+    expect(rootPosition).toBeDefined();
+    if (!parentPosition || !commentAPosition || !rootPosition) {
+      throw new Error('Expected reply positions to be defined');
+    }
 
     // Order: direct parent < commentA < root entity
-    expect(parentReply!.position!.localeCompare(commentAReply!.position!)).toBeLessThan(0);
-    expect(commentAReply!.position!.localeCompare(rootReply!.position!)).toBeLessThan(0);
+    expect(parentPosition.localeCompare(commentAPosition)).toBeLessThan(0);
+    expect(commentAPosition.localeCompare(rootPosition)).toBeLessThan(0);
 
     // Emission order must also be parent → commentA → root
     expect(replyRels[0]?.to).toEqual(toGrcId(entityId));

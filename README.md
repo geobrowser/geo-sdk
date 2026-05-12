@@ -43,6 +43,82 @@ When writing data, these ops are grouped into a logical set called an "Edit." An
 
 ## Using
 
+## Preferred API
+
+The preferred API splits pure op construction from networked workflows:
+
+- `Ops.*` creates GRC-20 ops and never uploads, fetches, or reads network config.
+- `createGeoClient({ network })` owns API/IPFS calls and contract calldata.
+- `Networks.TESTNET`, `Networks.MAINNET`, and `defineGeoNetwork(...)` describe built-in or custom deployments.
+
+```ts
+import { Ops, Networks, createGeoClient } from "@geoprotocol/geo-sdk";
+
+const geo = createGeoClient({ network: Networks.TESTNET });
+
+const { id: entityId, ops } = Ops.entities.create({
+  name: "Test Entity",
+});
+
+const { cid, editId, to, calldata } = await geo.personalSpaces.publishEdit({
+  name: "Create entity",
+  spaceId,
+  ops,
+  author: spaceId,
+});
+```
+
+Pure builders are grouped by domain:
+
+```ts
+Ops.entities.create(...)
+Ops.entities.update(...)
+Ops.entities.delete({ id, spaceId, values, relations }) // pass fetched delete context
+Ops.types.create(...)
+Ops.properties.create(...)
+Ops.relations.create(...)
+Ops.relations.update(...)
+Ops.relations.delete(...)
+Ops.images.create(...) // accepts an existing IPFS CID
+Ops.comments.create(...) // accepts existing reply context
+```
+
+For the smallest op-builder import, use the dedicated subpath:
+
+```ts
+import { entities, types } from "@geoprotocol/geo-sdk/ops";
+```
+
+Networked conveniences live on the configured client:
+
+```ts
+const image = await geo.images.create({ url: "https://example.com/image.png" });
+const comment = await geo.comments.create({ content, replyTo: { entityId, spaceId } });
+const deleteOps = await geo.entities.delete({ id: entityId, spaceId });
+const daoCreateTx = await geo.daoSpaces.create({ name, votingSettings, initialEditorSpaceIds, author });
+```
+
+Custom deployments can be passed directly:
+
+```ts
+import { defineGeoNetwork, createGeoClient } from "@geoprotocol/geo-sdk";
+
+const local = defineGeoNetwork({
+  id: "LOCAL",
+  name: "Local Geo",
+  apiOrigin: "http://localhost:3000",
+  chain: { id: 31337, name: "Anvil", rpcUrl: "http://localhost:8545" },
+  contracts: {
+    SPACE_REGISTRY_ADDRESS: "0x...",
+    DAO_SPACE_FACTORY_ADDRESS: "0x...",
+  },
+});
+
+const geo = createGeoClient({ network: local });
+```
+
+Legacy namespaces (`Graph`, `Ipfs`, `personalSpace`, `daoSpace`, and root encoding helpers) remain exported for compatibility, but are deprecated in favor of `Ops` and `createGeoClient`.
+
 ### Unique IDs
 
 Entities throughout The Graph are referenced via globally unique identifiers. The SDK exposes APIs for creating these IDs.

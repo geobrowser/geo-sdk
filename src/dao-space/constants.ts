@@ -1,5 +1,6 @@
 import { keccak256, toHex } from 'viem';
-import { TESTNET } from '../../contracts.js';
+import { requireGeoContract, resolveGeoNetwork } from '../networks.js';
+import type { Networkish } from '../types.js';
 
 /**
  * Action hash for GOVERNANCE.PROPOSAL_CREATED
@@ -86,10 +87,16 @@ export function bytes16ToBytes32LeftAligned(bytes16Hex: `0x${string}`): `0x${str
   return `0x${s.slice(2)}${'0'.repeat(32)}` as `0x${string}`;
 }
 
+export type DaoSpaceContractAddresses = {
+  SPACE_REGISTRY_ADDRESS: `0x${string}`;
+};
+
 /**
- * Get Contract Addresses based on Network
+ * Get contract addresses based on network.
  */
-export function getContractAddressesBasedOnNetwork(network: 'TESTNET' | 'MAINNET'): typeof TESTNET {
-  if (network === 'MAINNET') throw Error('MAINNET not supported yet');
-  return TESTNET;
+export function getContractAddressesBasedOnNetwork(network: Networkish): DaoSpaceContractAddresses {
+  const config = resolveGeoNetwork(network);
+  return {
+    SPACE_REGISTRY_ADDRESS: requireGeoContract(config, 'SPACE_REGISTRY_ADDRESS'),
+  };
 }
