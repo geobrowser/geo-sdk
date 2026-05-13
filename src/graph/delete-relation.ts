@@ -6,6 +6,8 @@ import type { CreateResult, DeleteRelationParams } from '../types.js';
 /**
  * Deletes a relation.
  *
+ * @deprecated Use `Ops.relations.delete(...)`.
+ *
  * @example
  * ```ts
  * const { ops } = await deleteRelation({ id: relationId });

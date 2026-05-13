@@ -29,6 +29,10 @@ export {
   getRemoveSubspaceArguments,
   validateIpfsUri,
 } from './src/encodings/index.js';
+/**
+ * @deprecated Use `Ops` for pure operation builders and `createGeoClient({ network })`
+ * for API, storage, image, comment, entity-delete, and transaction workflows.
+ */
 export * as Graph from './src/graph/index.js';
 export { Id } from './src/id.js';
 /**

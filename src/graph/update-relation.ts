@@ -6,6 +6,8 @@ import type { CreateResult, UpdateRelationParams } from '../types.js';
 /**
  * Updates a relation.
  *
+ * @deprecated Use `Ops.relations.update(...)`.
+ *
  * @example
  * ```ts
  * const { id, ops } = updateRelation({

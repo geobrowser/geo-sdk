@@ -1,5 +1,9 @@
 /**
  * Strips markdown syntax and returns the first 20 characters for use as the comment name.
+ *
+ * @deprecated Use `Ops.comments.create(...)`, `Ops.comments.update(...)`, or
+ * `createGeoClient({ network }).comments.*(...)`; comment names are derived
+ * internally by the new comment helpers.
  */
 export function deriveCommentName(content: string): string {
   const stripped = content

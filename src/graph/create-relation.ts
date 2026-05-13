@@ -7,6 +7,8 @@ import { createEntity } from './create-entity.js';
 /**
  * Creates a relation.
  *
+ * @deprecated Use `Ops.relations.create(...)`.
+ *
  * @example
  * ```ts
  * const { id, ops } = createRelation({
