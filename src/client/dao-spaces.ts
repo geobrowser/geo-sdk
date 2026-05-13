@@ -251,7 +251,9 @@ function encodeUpdateVotingSettingsAction(
  *
  * The helper first validates DAO voting settings and required contract
  * addresses, then creates the space entity ops, publishes the initial edit, and
- * encodes `createDAOSpaceProxy` calldata using the resulting CID.
+ * encodes `createDAOSpaceProxy` calldata using the resulting CID. Unless
+ * `initialTopicId` is provided, the DAO topic is set to the generated space
+ * entity ID.
  *
  * @example
  * ```ts
@@ -280,15 +282,17 @@ function encodeUpdateVotingSettingsAction(
  */
 export async function create(context: GeoClientContext, params: CreateDaoSpaceParams) {
   const daoSpaceFactoryAddress = requireGeoContract(context.network, 'DAO_SPACE_FACTORY_ADDRESS');
+  const spaceEntityId = IdUtils.generate();
+  const initialTopicId = params.initialTopicId ?? spaceEntityId;
+
   getCreateDaoSpaceCalldata({
     votingSettings: params.votingSettings,
     initialEditorSpaceIds: params.initialEditorSpaceIds,
     initialMemberSpaceIds: params.initialMemberSpaceIds ?? [],
     initialEditsContentUri: 'ipfs://QmP6aJhM3SgoRSPUccBQK9VMHNqqezixG1Qvjy2xPWvPh5',
-    initialTopicId: params.initialTopicId,
+    initialTopicId,
   });
 
-  const spaceEntityId = IdUtils.generate();
   const ops: Op[] = [];
   const { ops: createSpaceEntityOps } = Ops.entities.create({
     id: spaceEntityId,
@@ -310,7 +314,7 @@ export async function create(context: GeoClientContext, params: CreateDaoSpacePa
     initialEditorSpaceIds: params.initialEditorSpaceIds,
     initialMemberSpaceIds: params.initialMemberSpaceIds ?? [],
     initialEditsContentUri: cid,
-    initialTopicId: params.initialTopicId,
+    initialTopicId,
   });
 
   return {

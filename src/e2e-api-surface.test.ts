@@ -7,7 +7,7 @@ import { createGeoClient, defineGeoNetworkConfig, GeoTestnetConfig, Ops } from '
 import { SpaceRegistryAbi } from './abis/index.js';
 import { DESCRIPTION_PROPERTY, RELATION_TYPE, REPLY_TO_PROPERTY } from './core/ids/system.js';
 import { deriveCommentName } from './graph/comment-utils.js';
-import { toGrcId } from './id-utils.js';
+import { generate, toGrcId } from './id-utils.js';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Hex;
 const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
@@ -91,6 +91,12 @@ type VoteQueryResponse = {
   }>;
 };
 
+type SpaceTopicQueryResponse = {
+  spaces: Array<{
+    topicId: string | null;
+  }>;
+};
+
 type TestContext = WalletSetup & {
   spaceId: string;
   spaceIdHex: Hex;
@@ -101,6 +107,7 @@ type DaoContext = TestContext & {
   daoSpaceAddress: Hex;
   daoSpaceId: string;
   daoSpaceIdHex: Hex;
+  daoSpaceEntityId: string;
 };
 
 function sleep(ms: number) {
@@ -270,6 +277,16 @@ function entityVoteQuery(entityId: string, voterId: string, spaceId: string) {
   }`;
 }
 
+function spaceTopicQuery(spaceId: string) {
+  const normalizedSpaceId = spaceId.replaceAll('-', '').toLowerCase();
+
+  return `query spaces {
+    spaces(filter: { id: { is: ${JSON.stringify(normalizedSpaceId)} } }) {
+      topicId
+    }
+  }`;
+}
+
 async function queryGraph<T>(query: string): Promise<T> {
   const response = await geo.api.graphql<T>(query);
   if (response.errors) {
@@ -416,6 +433,24 @@ async function waitForEntityVote(
   return data.votes;
 }
 
+async function waitForSpaceTopicId(spaceId: string, topicId: string) {
+  const normalizedTopicId = topicId.replaceAll('-', '').toLowerCase();
+  const data = await waitFor(
+    `space ${spaceId} topic ${normalizedTopicId}`,
+    () => queryGraph<SpaceTopicQueryResponse>(spaceTopicQuery(spaceId)),
+    value => value.spaces[0]?.topicId === normalizedTopicId,
+  );
+
+  expect(data.spaces[0]?.topicId).toBe(normalizedTopicId);
+  return data.spaces[0];
+}
+
+async function readSpaceTopicId(spaceId: string) {
+  const data = await queryGraph<SpaceTopicQueryResponse>(spaceTopicQuery(spaceId));
+
+  return data.spaces[0]?.topicId ?? null;
+}
+
 async function getSpaceIdHex(publicClient: ReturnType<typeof createPublicClient>, address: Hex): Promise<Hex> {
   return (await publicClient.readContract({
     address: requireTestnetContract('SPACE_REGISTRY_ADDRESS'),
@@ -473,6 +508,21 @@ async function ensurePersonalSpace({
       );
 
       await waitForEntityName(createSpace.spaceEntityId, spaceId, 'E2E API Surface Personal Space');
+
+      const setTopic = geo.personalSpaces.setTopic({
+        spaceId,
+        topicId: createSpace.spaceEntityId,
+      });
+      await sendTransactionAndWait(
+        { account, publicClient, walletClient },
+        {
+          label: 'set personal space topic',
+          to: setTopic.to,
+          calldata: setTopic.calldata,
+        },
+      );
+
+      await waitForSpaceTopicId(spaceId, createSpace.spaceEntityId);
     }
   }
 
@@ -525,13 +575,43 @@ async function sendTransactionAndWait(
     value?: bigint;
   },
 ) {
-  const hash = await walletClient.sendTransaction({
-    account,
-    chain: walletClient.chain ?? null,
-    to,
-    value,
-    data: calldata,
-  });
+  const [latestNonce, pendingNonce] = await Promise.all([
+    publicClient.getTransactionCount({
+      address: account.address,
+      blockTag: 'latest',
+    }),
+    publicClient.getTransactionCount({
+      address: account.address,
+      blockTag: 'pending',
+    }),
+  ]);
+  let nonce = Math.max(latestNonce, pendingNonce, nextNonceByAddress.get(account.address) ?? 0);
+  let hash: Hex | undefined;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      hash = await walletClient.sendTransaction({
+        account,
+        chain: walletClient.chain ?? null,
+        to,
+        value,
+        data: calldata,
+        nonce,
+      });
+      nextNonceByAddress.set(account.address, nonce + 1);
+      break;
+    } catch (error) {
+      if (!String(error).toLowerCase().includes('nonce too low') || attempt === 2) {
+        throw error;
+      }
+      nonce += 1;
+      nextNonceByAddress.set(account.address, nonce);
+    }
+  }
+
+  if (!hash) {
+    throw new Error(`Failed to send ${label} transaction`);
+  }
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   expect(receipt.status, `${label} transaction ${hash}`).toBe('success');
@@ -541,6 +621,7 @@ async function sendTransactionAndWait(
 
 let contextPromise: Promise<TestContext> | undefined;
 let daoContextPromise: Promise<DaoContext> | undefined;
+const nextNonceByAddress = new Map<Hex, number>();
 
 async function getTestContext(): Promise<TestContext> {
   contextPromise ??= (async () => {
@@ -618,12 +699,14 @@ async function getDaoContext(): Promise<DaoContext> {
     expect(daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
     const daoSpaceId = hexToUuid(daoSpaceIdHex);
     await waitForEntityName(daoSpace.spaceEntityId, daoSpaceId, daoName);
+    await waitForSpaceTopicId(daoSpaceId, daoSpace.spaceEntityId);
 
     return {
       ...context,
       daoSpaceAddress,
       daoSpaceId,
       daoSpaceIdHex,
+      daoSpaceEntityId: daoSpace.spaceEntityId,
     };
   })();
 
@@ -654,7 +737,7 @@ async function createAddMemberProposal(context: DaoContext, label: string) {
 }
 
 describe.skip('new API e2e surface', () => {
-  // describe.sequential('new API e2e surface', () => {
+  // describe.sequential("new API e2e surface", () => {
   it(
     'geo.personalSpaces.hasSpace validates the account space onchain',
     async () => {
@@ -672,6 +755,46 @@ describe.skip('new API e2e surface', () => {
         args: [context.spaceIdHex],
       })) as Hex;
       expect(spaceAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'geo.personalSpaces.setTopic updates the indexed space topic and restores the previous topic',
+    async () => {
+      const context = await getTestContext();
+      const previousTopicId = await readSpaceTopicId(context.spaceId);
+      let randomTopicId = generate();
+      if (previousTopicId && randomTopicId === previousTopicId) {
+        randomTopicId = generate();
+      }
+
+      const setRandomTopic = geo.personalSpaces.setTopic({
+        spaceId: context.spaceId,
+        topicId: randomTopicId,
+      });
+
+      try {
+        await sendTransactionAndWait(context, {
+          label: 'set random personal space topic',
+          to: setRandomTopic.to,
+          calldata: setRandomTopic.calldata,
+        });
+        await waitForSpaceTopicId(context.spaceId, randomTopicId);
+      } finally {
+        if (previousTopicId) {
+          const restoreTopic = geo.personalSpaces.setTopic({
+            spaceId: context.spaceId,
+            topicId: previousTopicId,
+          });
+          await sendTransactionAndWait(context, {
+            label: 'restore personal space topic',
+            to: restoreTopic.to,
+            calldata: restoreTopic.calldata,
+          });
+          await waitForSpaceTopicId(context.spaceId, previousTopicId);
+        }
+      }
     },
     TEST_TIMEOUT_MS,
   );
@@ -1109,6 +1232,7 @@ describe.skip('new API e2e surface', () => {
 
       expect(dao.daoSpaceAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
       expect(dao.daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
+      expect(await readSpaceTopicId(dao.daoSpaceId)).toBe(dao.daoSpaceEntityId);
     },
     TEST_TIMEOUT_MS,
   );
