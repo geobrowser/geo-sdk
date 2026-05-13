@@ -35,6 +35,8 @@ const PERSONAL_SPACE_VERSION = '1.0.0';
  *   data: calldata,
  * });
  * ```
+ *
+ * @deprecated Use `createGeoClient({ network: GeoTestnetConfig }).personalSpaces.create(...)`.
  */
 export function getCreatePersonalSpaceCalldata(): `0x${string}` {
   return encodeFunctionData({

@@ -7,6 +7,9 @@ import { updateEntity } from './update-entity.js';
 /**
  * Updates a comment entity. Only the provided fields are updated.
  *
+ * @deprecated Use `createGeoClient({ network }).comments.update(...)`, or
+ * `Ops.comments.update(...)` when you only need pure ops.
+ *
  * @example
  * ```ts
  * import { Graph } from '@geoprotocol/geo-sdk';

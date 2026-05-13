@@ -187,4 +187,13 @@ describe('deleteEntity', () => {
 
     await expect(deleteEntity({ id: entityId, spaceId })).rejects.toThrow(/Could not parse GraphQL response/);
   });
+
+  it('should throw when GraphQL returns errors without data', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ errors: [{ message: 'Resolver failed' }] }),
+    });
+
+    await expect(deleteEntity({ id: entityId, spaceId })).rejects.toThrow(/GraphQL request returned errors/);
+  });
 });

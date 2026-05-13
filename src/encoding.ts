@@ -12,6 +12,9 @@ type GetEditCalldataParams = {
   network?: Network;
 };
 
+/**
+ * @deprecated Use `createGeoClient({ network }).api.getEditCalldata(...)`.
+ */
 export async function getEditCalldata(params: GetEditCalldataParams) {
   const network = params.network ?? 'TESTNET';
   const getCalldata = Micro.gen(function* () {

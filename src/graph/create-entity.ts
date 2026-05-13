@@ -16,6 +16,8 @@ import { createRelation } from './create-relation.js';
  * All IDs passed to this function (cover, types, property IDs, relation IDs, etc.) are validated.
  * If any invalid ID is provided, the function will throw an error.
  *
+ * @deprecated Use `Ops.entities.create(...)`.
+ *
  * @example
  * ```ts
  * const { id, ops } = createEntity({

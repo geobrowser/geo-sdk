@@ -10,6 +10,8 @@ import { createEntity } from './create-entity.js';
  * All IDs passed to this function (cover, property IDs) are validated.
  * If any invalid ID is provided, the function will throw an error.
  *
+ * @deprecated Use `Ops.types.create(...)`.
+ *
  * @example
  * ```ts
  * const { id, ops } = createType({

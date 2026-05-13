@@ -44,6 +44,8 @@ const VALUE_DATA_TYPE_TO_ID: Record<ValueDataType, Id> = {
  * All IDs passed to this function (cover, relation value types, properties) are validated.
  * If any invalid ID is provided, the function will throw an error.
  *
+ * @deprecated Use `Ops.properties.create(...)`.
+ *
  * @example
  * ```ts
  * const { id, ops } = createProperty({

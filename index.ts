@@ -6,6 +6,7 @@
  */
 export { Account } from './src/account.js';
 export { DataBlock, TextBlock } from './src/blocks.js';
+export { createGeoClient } from './src/client.js';
 /**
  * This module provides utility functions for working with base58 ids
  * in TypeScript.
@@ -28,6 +29,10 @@ export {
   getRemoveSubspaceArguments,
   validateIpfsUri,
 } from './src/encodings/index.js';
+/**
+ * @deprecated Use `Ops` for pure operation builders and `createGeoClient({ network })`
+ * for API, storage, image, comment, entity-delete, and transaction workflows.
+ */
 export * as Graph from './src/graph/index.js';
 export { Id } from './src/id.js';
 /**
@@ -42,6 +47,8 @@ export * as IdUtils from './src/id-utils.js';
  * @since 0.1.1
  */
 export * as Ipfs from './src/ipfs.js';
+export { defineGeoNetworkConfig, GeoTestnetConfig } from './src/networks.js';
+export * as Ops from './src/ops/index.js';
 /**
  * This module provides functions for creating and managing personal spaces.
  *

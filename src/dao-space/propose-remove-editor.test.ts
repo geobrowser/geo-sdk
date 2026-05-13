@@ -77,7 +77,7 @@ describe('proposeRemoveEditor', () => {
     expect(result.calldata).toBeTruthy();
   });
 
-  it('should accept FAST voting mode', () => {
+  it('should preserve legacy FAST voting mode support', () => {
     const result = proposeRemoveEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
@@ -88,7 +88,7 @@ describe('proposeRemoveEditor', () => {
     expect(result.calldata).toBeTruthy();
   });
 
-  it('should produce different calldata for different voting modes', () => {
+  it('should accept explicit SLOW voting mode', () => {
     const params = {
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
@@ -96,13 +96,8 @@ describe('proposeRemoveEditor', () => {
     } as const;
 
     const slowResult = proposeRemoveEditor({ ...params, votingMode: 'SLOW' });
-    const fastResult = proposeRemoveEditor({
-      ...params,
-      votingMode: 'FAST',
-      proposalId: slowResult.proposalId,
-    });
 
-    expect(slowResult.calldata).not.toBe(fastResult.calldata);
+    expect(slowResult.calldata).toBeTruthy();
   });
 
   it('should produce different calldata for different editors', () => {

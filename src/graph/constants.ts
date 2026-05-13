@@ -1,10 +1,16 @@
-import type { Network } from '../types.js';
+import { getApiOrigin as getNetworkApiOrigin, TESTNET_API_ORIGIN } from '../networks.js';
+import type { Networkish } from '../types.js';
 
-export const TESTNET_API_ORIGIN = 'https://testnet-api.geobrowser.io';
+/**
+ * @deprecated Use `GeoTestnetConfig.apiOrigin`.
+ */
+export { TESTNET_API_ORIGIN };
 
-export function getApiOrigin(network: Network): string {
-  if (network === 'TESTNET') {
-    return TESTNET_API_ORIGIN;
-  }
-  throw new Error(`Network ${network} not supported`);
+/**
+ * @deprecated Use `GeoTestnetConfig.apiOrigin` for the built-in testnet API
+ * origin, or `defineGeoNetworkConfig(...).apiOrigin` for custom network
+ * configs.
+ */
+export function getApiOrigin(network: Networkish): string {
+  return getNetworkApiOrigin(network);
 }

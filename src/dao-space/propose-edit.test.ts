@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TESTNET } from '../../contracts.js';
 import { createEntity } from '../graph/create-entity.js';
@@ -6,11 +6,23 @@ import { generate } from '../id-utils.js';
 import { proposeEdit } from './propose-edit.js';
 
 describe('proposeEdit', () => {
+  const cid = 'ipfs://bafkreigwfjixq5cm3s4youhshorkpqh3ykpviyv76c2ei6gaalujtlqz5i' as const;
   // Valid test values
   const validCallerSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validDaoSpaceId = '0xabcdef12345678901234567890abcdef' as const;
   const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
   const validAuthor = generate();
+
+  beforeEach(() => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn<typeof globalThis.fetch>().mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ cid })))),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
 
   it('should return correct structure', async () => {
     const { ops } = createEntity({ name: 'Test Entity' });

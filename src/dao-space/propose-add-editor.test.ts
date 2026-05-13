@@ -74,7 +74,7 @@ describe('proposeAddEditor', () => {
     expect(result.calldata).toBeTruthy();
   });
 
-  it('should accept FAST voting mode', () => {
+  it('should preserve legacy FAST voting mode support', () => {
     const result = proposeAddEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,

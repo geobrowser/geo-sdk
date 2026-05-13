@@ -7,6 +7,7 @@
   "main": "./dist/index.js",
   "ascMain": "./dist/index.js",
   "type": "module",
+  "sideEffects": false,
   "files": [
     "dist"
   ],
@@ -14,6 +15,18 @@
     "./package.json": "./package.json",
     ".": "./dist/index.js",
     "./lite": "./dist/lite.js",
+    "./ops": {
+      "types": "./dist/src/ops/index.d.ts",
+      "import": "./dist/src/ops/index.js"
+    },
+    "./client": {
+      "types": "./dist/src/client.d.ts",
+      "import": "./dist/src/client.js"
+    },
+    "./networks": {
+      "types": "./dist/src/networks.d.ts",
+      "import": "./dist/src/networks.js"
+    },
     "./contracts": "./dist/contracts.js",
     "./abis": "./dist/abis.js"
   },

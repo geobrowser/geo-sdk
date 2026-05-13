@@ -7,7 +7,6 @@ import { entryPoint07Address } from 'viem/account-abstraction';
 import { privateKeyToAccount } from 'viem/accounts';
 import type { GeoSmartAccount } from './types.js';
 
-const _MAINNET_DEFAULT_RPC_URL = 'https://rpc-geo-genesis-h0q2s21xx8.t.conduit.xyz';
 export const TESTNET_RPC_URL = 'https://rpc-geo-test-zc16z3tcvf.t.conduit.xyz';
 
 /**
@@ -19,10 +18,8 @@ const DEFAULT_API_KEY = 'pim_KqHm63txxhbCYjdDaWaHqH';
 /**
  * Custom Safe contract addresses for Geo Testnet.
  *
- * Safe uses deterministic deployment so the canonical addresses are the same on
- * every chain. On Geo Mainnet (80451) those canonical addresses exist, so the
- * permissionless library's defaults work. On Geo Testnet (19411) the canonical
- * deployer was never run — the Safe contracts were deployed separately and
+ * Safe uses deterministic deployment, but the canonical deployer was never run
+ * on Geo Testnet (19411). The Safe contracts were deployed separately and
  * landed at different addresses. We pass them explicitly to toSafeSmartAccount.
  *
  * Source of truth: curator-app packages/curator-utils/src/utils/smart-account-constants.ts
@@ -41,9 +38,9 @@ type GetSmartAccountWalletClientParams = {
   rpcUrl?: string;
 };
 
-const createChain = (network: 'TESTNET' | 'MAINNET', rpcUrl: string) => {
+const createChain = (rpcUrl: string) => {
   const chain: Chain = {
-    id: network === 'TESTNET' ? Number('19411') : Number('80451'),
+    id: 19411,
     name: 'Geo Genesis',
     nativeCurrency: {
       name: 'Ethereum',
@@ -84,7 +81,7 @@ export const getSmartAccountWalletClient = async ({
   privateKey,
   rpcUrl = TESTNET_RPC_URL,
 }: GetSmartAccountWalletClientParams): Promise<GeoSmartAccount> => {
-  const chain = createChain('TESTNET', rpcUrl);
+  const chain = createChain(rpcUrl);
   const transport = http(rpcUrl);
 
   const publicClient = createPublicClient({
@@ -133,7 +130,7 @@ export const getWalletClient = async ({
   privateKey,
   rpcUrl = TESTNET_RPC_URL,
 }: GetSmartAccountWalletClientParams): Promise<WalletClient> => {
-  const chain = createChain('TESTNET', rpcUrl);
+  const chain = createChain(rpcUrl);
   const transport = http(rpcUrl);
   const wallet = createWalletClient({
     account: privateKeyToAccount(privateKey),
