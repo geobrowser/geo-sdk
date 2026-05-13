@@ -5,6 +5,7 @@
 ### Minor Changes
 
 - 18dd87e: Introduce the lightweight `Ops` namespace, configured `createGeoClient` workflows, first-class network configs, typed subpath exports, and deprecated compatibility adapters for legacy Graph/IPFS/space APIs.
+- d0c6ae4: Add `geo.personalSpaces.setTopic` for setting a personal space topic after creation and default DAO space topic to the generated space entity ID.
 
 ## 0.18.3
 
