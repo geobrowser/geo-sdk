@@ -122,6 +122,7 @@ type DaoContext = TestContext & {
   daoSpaceAddress: Hex;
   daoSpaceId: string;
   daoSpaceIdHex: Hex;
+  daoSpaceEntityId: string;
 };
 
 function sleep(ms: number) {
@@ -494,10 +495,6 @@ async function waitForSpaceTopicId(spaceId: string, topicId: string) {
     (value) => value.spaces[0]?.topicId === normalizedTopicId,
   );
 
-  console.log("data", data);
-  console.log("normalizedTopicId", normalizedTopicId);
-  console.log("data.spaces[0]?.topicId", data.spaces[0]?.topicId);
-
   expect(data.spaces[0]?.topicId).toBe(normalizedTopicId);
   return data.spaces[0];
 }
@@ -528,12 +525,10 @@ async function ensurePersonalSpace({
   publicClient,
   walletClient,
 }: WalletSetup & { accountAddress: Hex }) {
-  console.log("ensurePersonalSpace");
   let spaceIdHex = await getSpaceIdHex(publicClient, accountAddress);
   const hasExistingSpace = await geo.personalSpaces.hasSpace({
     address: accountAddress,
   });
-  console.log("hasExistingSpace", hasExistingSpace);
   expect(hasExistingSpace).toBe(
     spaceIdHex.toLowerCase() !== EMPTY_SPACE_ID.toLowerCase(),
   );
@@ -555,10 +550,7 @@ async function ensurePersonalSpace({
 
     spaceIdHex = await getSpaceIdHex(publicClient, accountAddress);
 
-    console.log("spaceIdHex", spaceIdHex);
-
     if (spaceIdHex.toLowerCase() !== EMPTY_SPACE_ID.toLowerCase()) {
-      console.log("publish personal space profile");
       const spaceId = hexToUuid(spaceIdHex);
       const publishProfile = await geo.personalSpaces.publishEdit({
         name: "Create personal space profile",
@@ -594,8 +586,6 @@ async function ensurePersonalSpace({
           calldata: setTopic.calldata,
         },
       );
-
-      console.log("spaceId", spaceId);
 
       await waitForSpaceTopicId(spaceId, createSpace.spaceEntityId);
     }
@@ -794,12 +784,14 @@ async function getDaoContext(): Promise<DaoContext> {
     expect(daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
     const daoSpaceId = hexToUuid(daoSpaceIdHex);
     await waitForEntityName(daoSpace.spaceEntityId, daoSpaceId, daoName);
+    await waitForSpaceTopicId(daoSpaceId, daoSpace.spaceEntityId);
 
     return {
       ...context,
       daoSpaceAddress,
       daoSpaceId,
       daoSpaceIdHex,
+      daoSpaceEntityId: daoSpace.spaceEntityId,
     };
   })();
 
@@ -830,12 +822,11 @@ async function createAddMemberProposal(context: DaoContext, label: string) {
 }
 
 describe.skip("new API e2e surface", () => {
-  // describe.sequential('new API e2e surface', () => {
+  // describe.sequential("new API e2e surface", () => {
   it(
     "geo.personalSpaces.hasSpace validates the account space onchain",
     async () => {
       const context = await getTestContext();
-      console.log("context", context);
       const hasSpace = await geo.personalSpaces.hasSpace({
         address: context.account.address,
       });
@@ -1443,6 +1434,7 @@ describe.skip("new API e2e surface", () => {
       expect(dao.daoSpaceIdHex.toLowerCase()).not.toBe(
         EMPTY_SPACE_ID.toLowerCase(),
       );
+      expect(await readSpaceTopicId(dao.daoSpaceId)).toBe(dao.daoSpaceEntityId);
     },
     TEST_TIMEOUT_MS,
   );

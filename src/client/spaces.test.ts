@@ -187,7 +187,7 @@ describe('geo space clients', () => {
       abi: DaoSpaceFactoryAbi,
       data: result.calldata,
     });
-    const [, initialEditors, initialMembers, initialEditsContentUri] = decoded.args as [
+    const [, initialEditors, initialMembers, initialEditsContentUri, , initialTopicId] = decoded.args as [
       unknown,
       `0x${string}`[],
       `0x${string}`[],
@@ -205,6 +205,7 @@ describe('geo space clients', () => {
     expect(initialEditors).toEqual([EDITOR_SPACE_ID]);
     expect(initialMembers).toEqual([]);
     expect(decodedCid).toBe(CID);
+    expect(initialTopicId).toBe(`0x${result.spaceEntityId}`);
     expect(fetch).toHaveBeenCalledWith(
       'http://localhost:3000/ipfs/upload-edit',
       expect.objectContaining({ method: 'POST' }),
