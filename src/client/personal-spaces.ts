@@ -1,5 +1,5 @@
 import type { Op } from '@geoprotocol/grc-20';
-import { type Address, createPublicClient, type Hex, http } from 'viem';
+import { type Address, createPublicClient, encodeFunctionData, type Hex, http } from 'viem';
 import { EMPTY_SPACE_ID } from '../../contracts.js';
 import { SpaceRegistryAbi } from '../abis/index.js';
 import * as Account from '../core/account.js';
@@ -9,8 +9,10 @@ import { createEntity } from '../graph/create-entity.js';
 import { createRelation } from '../graph/create-relation.js';
 import type { Id } from '../id.js';
 import * as IdUtils from '../id-utils.js';
+import { assertValid } from '../id-utils.js';
 import type { PublishEditParams } from '../ipfs-core.js';
 import { requireGeoContract } from '../networks.js';
+import { EMPTY_SIGNATURE, TOPIC_DECLARED } from '../personal-space/constants.js';
 import type { GeoClientContext } from './context.js';
 
 export type CreatePersonalSpaceParams = {
@@ -26,6 +28,12 @@ export type CreatePersonalSpaceResult = {
   ops: Op[];
 };
 
+export type SetPersonalSpaceTopicParams = {
+  spaceId: Id | string;
+  topicId: Id | string;
+  authorSpaceId?: Id | string;
+};
+
 export type HasSpaceParams = {
   address: Hex;
   rpcUrl?: string;
@@ -34,6 +42,17 @@ export type HasSpaceParams = {
 export type PublishPersonalSpaceEditParams = PublishEditParams & {
   spaceId: Id | string;
 };
+
+function idToBytes16(id: Id | string, sourceHint: string): `0x${string}` {
+  const normalized = id.startsWith('0x') ? id.slice(2) : id.replaceAll('-', '');
+  assertValid(normalized, sourceHint);
+
+  return `0x${normalized.toLowerCase()}` as `0x${string}`;
+}
+
+function bytes16ToBytes32LeftAligned(bytes16Hex: `0x${string}`): `0x${string}` {
+  return `0x${bytes16Hex.slice(2)}${'0'.repeat(32)}` as `0x${string}`;
+}
 
 /**
  * Builds the personal-space creation transaction and initial space content ops.
@@ -99,6 +118,55 @@ export function create(
     spaceEntityId,
     accountId,
     ops,
+  };
+}
+
+/**
+ * Builds calldata for setting a personal space topic.
+ *
+ * Call this right after creating the personal space and publishing its initial
+ * profile ops. For personal spaces, `authorSpaceId` defaults to `spaceId`.
+ *
+ * @example
+ * ```ts
+ * const topicTx = geo.personalSpaces.setTopic({
+ *   spaceId,
+ *   topicId: createSpace.spaceEntityId,
+ * });
+ *
+ * await walletClient.sendTransaction({
+ *   to: topicTx.to,
+ *   data: topicTx.calldata,
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @param params Space ID, topic entity ID, and optional author space ID.
+ * @returns Target registry address and calldata.
+ * @throws When an ID is invalid or the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
+export function setTopic(
+  context: GeoClientContext,
+  { spaceId, topicId, authorSpaceId = spaceId }: SetPersonalSpaceTopicParams,
+) {
+  const authorSpaceIdBytes = idToBytes16(authorSpaceId, '`authorSpaceId` in `setTopic`');
+  const spaceIdBytes = idToBytes16(spaceId, '`spaceId` in `setTopic`');
+  const topicIdBytes = idToBytes16(topicId, '`topicId` in `setTopic`');
+
+  return {
+    to: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
+    calldata: encodeFunctionData({
+      abi: SpaceRegistryAbi,
+      functionName: 'enter',
+      args: [
+        authorSpaceIdBytes,
+        spaceIdBytes,
+        TOPIC_DECLARED,
+        bytes16ToBytes32LeftAligned(topicIdBytes),
+        '0x',
+        EMPTY_SIGNATURE,
+      ],
+    }),
   };
 }
 

@@ -93,6 +93,12 @@ export type CreatePersonalSpaceResult = CalldataResult & {
   ops: Op[];
 };
 
+export type SetPersonalSpaceTopicParams = {
+  spaceId: Id | string;
+  topicId: Id | string;
+  authorSpaceId?: Id | string;
+};
+
 export type HasPersonalSpaceParams = {
   address: Hex;
   rpcUrl?: string;
@@ -242,6 +248,7 @@ export type Client = {
   };
   personalSpaces: {
     create(params: CreatePersonalSpaceParams): CreatePersonalSpaceResult;
+    setTopic(params: SetPersonalSpaceTopicParams): CalldataResult;
     hasSpace(params: HasPersonalSpaceParams): Promise<boolean>;
     publishEdit(params: PublishPersonalSpaceEditParams): Promise<PublishPersonalSpaceEditResult>;
   };
@@ -524,6 +531,18 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        * ```
        */
       create: (params: CreatePersonalSpaceParams) => PersonalSpaces.create(context, params),
+      /**
+       * Returns calldata for setting a personal space topic.
+       *
+       * @example
+       * ```ts
+       * const topicTx = geo.personalSpaces.setTopic({
+       *   spaceId,
+       *   topicId: createSpace.spaceEntityId,
+       * });
+       * ```
+       */
+      setTopic: (params: SetPersonalSpaceTopicParams) => PersonalSpaces.setTopic(context, params),
       /**
        * Checks whether an address already has a personal space.
        *

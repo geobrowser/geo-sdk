@@ -2,12 +2,13 @@ import type { CreateEntity, CreateRelation } from '@geoprotocol/grc-20';
 import { decodeAbiParameters, decodeFunctionData, encodeAbiParameters, type Hex } from 'viem';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_SPACE_ID } from '../../contracts.js';
-import { DaoSpaceFactoryAbi } from '../abis/index.js';
+import { DaoSpaceFactoryAbi, SpaceRegistryAbi } from '../abis/index.js';
 import { createGeoClient } from '../client.js';
 import { ACCOUNT_TYPE, PERSON_TYPE, SPACE_TYPE, TYPES_PROPERTY } from '../core/ids/system.js';
 import { getCreatePersonalSpaceCalldata } from '../encodings/get-create-personal-space-calldata.js';
 import { toGrcId } from '../id-utils.js';
 import { defineGeoNetworkConfig } from '../networks.js';
+import { EMPTY_SIGNATURE, TOPIC_DECLARED } from '../personal-space/constants.js';
 
 const CID = 'ipfs://bafkreigwfjixq5cm3s4youhshorkpqh3ykpviyv76c2ei6gaalujtlqz5i' as const;
 const AUTHOR_ID = '5cade5757ecd41ae83481b22ffc2f94e';
@@ -50,6 +51,32 @@ function mockRpcFetch(spaceId: Hex) {
       { headers: { 'Content-Type': 'application/json' } },
     );
   });
+}
+
+function decodeEnter(calldata: `0x${string}`) {
+  const decoded = decodeFunctionData({
+    abi: SpaceRegistryAbi,
+    data: calldata,
+  });
+  expect(decoded.functionName).toBe('enter');
+
+  const [fromSpaceId, toSpaceId, action, topic, data, signature] = decoded.args as [
+    `0x${string}`,
+    `0x${string}`,
+    `0x${string}`,
+    `0x${string}`,
+    `0x${string}`,
+    `0x${string}`,
+  ];
+
+  return {
+    fromSpaceId,
+    toSpaceId,
+    action,
+    topic,
+    data,
+    signature,
+  };
 }
 
 describe('geo space clients', () => {
@@ -103,6 +130,23 @@ describe('geo space clients', () => {
         op.relationType.every((b, i) => b === toGrcId(TYPES_PROPERTY)[i]),
     );
     expect(personTypeOp).toBeDefined();
+  });
+
+  it('sets a personal space topic with the configured registry', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+    const result = geo.personalSpaces.setTopic({
+      spaceId: PERSONAL_SPACE_ID,
+      topicId: '33333333333333333333333333333333',
+    });
+    const decoded = decodeEnter(result.calldata);
+
+    expect(result.to).toBe(SPACE_REGISTRY_ADDRESS);
+    expect(decoded.fromSpaceId).toBe(PERSONAL_SPACE_ID);
+    expect(decoded.toSpaceId).toBe(PERSONAL_SPACE_ID);
+    expect(decoded.action).toBe(TOPIC_DECLARED);
+    expect(decoded.topic).toBe(`0x33333333333333333333333333333333${'0'.repeat(32)}`);
+    expect(decoded.data).toBe('0x');
+    expect(decoded.signature).toBe(EMPTY_SIGNATURE);
   });
 
   it('checks whether an address has a personal space using the configured registry', async () => {

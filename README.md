@@ -547,7 +547,7 @@ await walletClient.sendTransaction({
 });
 ```
 
-`geo.personalSpaces.create(...)` also returns initial profile ops. After the create-space transaction is mined and you know the new `spaceId`, publish those ops into the space:
+`geo.personalSpaces.create(...)` also returns initial profile ops. After the create-space transaction is mined and you know the new `spaceId`, publish those ops into the space and immediately set the generated space entity as the space topic:
 
 ```ts
 const profileTx = await geo.personalSpaces.publishEdit({
@@ -560,6 +560,16 @@ const profileTx = await geo.personalSpaces.publishEdit({
 await walletClient.sendTransaction({
   to: profileTx.to,
   data: profileTx.calldata,
+});
+
+const topicTx = geo.personalSpaces.setTopic({
+  spaceId,
+  topicId: createSpace.spaceEntityId,
+});
+
+await walletClient.sendTransaction({
+  to: topicTx.to,
+  data: topicTx.calldata,
 });
 ```
 
@@ -947,6 +957,19 @@ if (!hasSpace) {
   });
 
   await publicClient.waitForTransactionReceipt({ hash: profileHash });
+
+  const topicTx = geo.personalSpaces.setTopic({
+    spaceId,
+    topicId: createSpace.spaceEntityId,
+  });
+
+  const topicHash = await walletClient.sendTransaction({
+    account: walletClient.account,
+    to: topicTx.to,
+    data: topicTx.calldata,
+  });
+
+  await publicClient.waitForTransactionReceipt({ hash: topicHash });
 }
 
 const spaceId = spaceIdHex.slice(2, 34).toLowerCase();
