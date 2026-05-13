@@ -398,7 +398,6 @@ async function ensurePersonalSpace({ account, publicClient, walletClient }: Wall
   let spaceIdHex = await getSpaceIdHex(publicClient, account.address);
   const hasExistingSpace = await personalSpace.hasSpace({
     address: account.address,
-    network: 'TESTNET',
   });
   expect(hasExistingSpace).toBe(spaceIdHex.toLowerCase() !== EMPTY_SPACE_ID.toLowerCase());
 
@@ -596,7 +595,6 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const context = await getTestContext();
       const hasSpace = await personalSpace.hasSpace({
         address: context.account.address,
-        network: 'TESTNET',
       });
 
       expect(hasSpace).toBe(true);

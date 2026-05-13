@@ -1118,7 +1118,6 @@ import { personalSpace } from "@geoprotocol/geo-sdk";
 
 const hasSpace = await personalSpace.hasSpace({
   address: account.address,
-  network: "TESTNET",
 });
 
 const createSpace = personalSpace.createSpace();
