@@ -1,3 +1,48 @@
+import { VotingSettingsV2Components } from './dao-space-factory.js';
+
+export const ProposalParametersV2Components = [
+  {
+    internalType: 'enum IDAOSpace.VotingMode',
+    name: 'votingMode',
+    type: 'uint8',
+  },
+  {
+    internalType: 'uint256',
+    name: 'partialPercentageSupportThreshold',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'universalPercentageSupportThreshold',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'flatSupportThreshold',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'quorum',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'startDate',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'lastDate',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'executeBy',
+    type: 'uint256',
+  },
+] as const;
+
 export const abi = [
   {
     inputs: [],
@@ -134,6 +179,19 @@ export const abi = [
         internalType: 'bytes32',
         name: '',
         type: 'bytes32',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'MINIMUM_EXECUTION_GRACE_PERIOD',
+    outputs: [
+      {
+        internalType: 'uint256',
+        name: '',
+        type: 'uint256',
       },
     ],
     stateMutability: 'view',
@@ -291,33 +349,7 @@ export const abi = [
         type: 'bytes16',
       },
       {
-        components: [
-          {
-            internalType: 'enum IDAOSpace.VotingMode',
-            name: 'votingMode',
-            type: 'uint8',
-          },
-          {
-            internalType: 'uint256',
-            name: 'supportThreshold',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'quorum',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'startDate',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'lastDate',
-            type: 'uint256',
-          },
-        ],
+        components: ProposalParametersV2Components,
         internalType: 'struct IDAOSpace.ProposalParameters',
         name: '_parameters',
         type: 'tuple',
@@ -420,33 +452,7 @@ export const abi = [
         type: 'bytes16',
       },
       {
-        components: [
-          {
-            internalType: 'enum IDAOSpace.VotingMode',
-            name: 'votingMode',
-            type: 'uint8',
-          },
-          {
-            internalType: 'uint256',
-            name: 'supportThreshold',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'quorum',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'startDate',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'lastDate',
-            type: 'uint256',
-          },
-        ],
+        components: ProposalParametersV2Components,
         internalType: 'struct IDAOSpace.ProposalParameters',
         name: '_parameters',
         type: 'tuple',
@@ -508,7 +514,7 @@ export const abi = [
       },
       {
         internalType: 'uint8',
-        name: '_version',
+        name: '_proposalVersion',
         type: 'uint8',
       },
       {
@@ -761,28 +767,7 @@ export const abi = [
   {
     inputs: [
       {
-        components: [
-          {
-            internalType: 'uint256',
-            name: 'slowPathPercentageThreshold',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'fastPathFlatThreshold',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'quorum',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'duration',
-            type: 'uint256',
-          },
-        ],
+        components: VotingSettingsV2Components,
         internalType: 'struct IDAOSpace.VotingSettings',
         name: '_votingSettings',
         type: 'tuple',
@@ -844,28 +829,7 @@ export const abi = [
     name: 'votingSettings',
     outputs: [
       {
-        components: [
-          {
-            internalType: 'uint256',
-            name: 'slowPathPercentageThreshold',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'fastPathFlatThreshold',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'quorum',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'duration',
-            type: 'uint256',
-          },
-        ],
+        components: VotingSettingsV2Components,
         internalType: 'struct IDAOSpace.VotingSettings',
         name: '_votingSettings',
         type: 'tuple',

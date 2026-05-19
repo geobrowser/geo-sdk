@@ -1,3 +1,41 @@
+export const VotingSettingsV2Components = [
+  {
+    internalType: 'uint256',
+    name: 'partialPercentageSupportThreshold',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'universalPercentageSupportThreshold',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'flatSupportThreshold',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'quorum',
+    type: 'uint256',
+  },
+  {
+    internalType: 'uint256',
+    name: 'duration',
+    type: 'uint256',
+  },
+  {
+    internalType: 'bool',
+    name: 'disableFastPathAccessForNewMembers',
+    type: 'bool',
+  },
+  {
+    internalType: 'uint256',
+    name: 'executionGracePeriod',
+    type: 'uint256',
+  },
+] as const;
+
 export const abi = [
   {
     inputs: [],
@@ -145,28 +183,7 @@ export const abi = [
   {
     inputs: [
       {
-        components: [
-          {
-            internalType: 'uint256',
-            name: 'slowPathPercentageThreshold',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'fastPathFlatThreshold',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'quorum',
-            type: 'uint256',
-          },
-          {
-            internalType: 'uint256',
-            name: 'duration',
-            type: 'uint256',
-          },
-        ],
+        components: VotingSettingsV2Components,
         internalType: 'struct IDAOSpace.VotingSettings',
         name: '_votingSettings',
         type: 'tuple',
@@ -195,11 +212,6 @@ export const abi = [
         internalType: 'bytes16',
         name: '_initialTopicId',
         type: 'bytes16',
-      },
-      {
-        internalType: 'bytes',
-        name: '_initialTopicData',
-        type: 'bytes',
       },
     ],
     name: 'createDAOSpaceProxy',

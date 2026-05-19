@@ -1,132 +1,26 @@
-import { v4 as uuidv4 } from 'uuid';
-import { encodeAbiParameters, encodeFunctionData } from 'viem';
-import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
-import {
-  bytes16ToBytes32LeftAligned,
-  EMPTY_SIGNATURE,
-  ensure0xPrefix,
-  getContractAddressesBasedOnNetwork,
-  isBytes16Hex,
-  PROPOSAL_CREATED_ACTION,
-} from './constants.js';
+import { createGeoClient } from '../client.js';
+import { resolveGeoNetwork } from '../networks.js';
+import { ensure0xPrefix, isBytes16Hex } from './constants.js';
 import type { ProposeRemoveEditorParams, ProposeRemoveEditorResult } from './types.js';
 
 /**
  * Creates a proposal to remove an editor from a DAO space.
  *
- * This function:
- * 1. Validates the author, DAO space, and editor IDs
- * 2. Encodes the `removeEditor()` call as the proposal action
- * 3. Encodes the SpaceRegistry's `enter()` call with the `PROPOSAL_CREATED` action
- *
- * @param params - The parameters for proposing editor removal
- * @returns Object containing `to` (Space Registry address), `calldata`, and `proposalId`
- *
- * @example
- * ```ts
- * import { daoSpace } from '@geoprotocol/geo-sdk';
- *
- * const { to, calldata, proposalId } = daoSpace.proposeRemoveEditor({
- *   authorSpaceId: '0xAuthorBytes16SpaceId...',
- *   spaceId: '0xDAOBytes16SpaceId...',
- *   editorToRemoveSpaceId: '0xEditorBytes16SpaceId...',
- *   network: 'TESTNET',
- * });
- *
- * // Submit the transaction using viem or another client
- * await walletClient.sendTransaction({ to, data: calldata });
- * ```
+ * @deprecated Use `createGeoClient({ network }).daoSpaces.proposeRemoveEditor(...)`.
  */
 export function proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposeRemoveEditorResult {
-  const {
-    authorSpaceId: rawAuthorSpaceId,
-    spaceId: rawSpaceId,
-    editorToRemoveSpaceId: rawEditorToRemoveSpaceId,
-    votingMode = 'SLOW',
-    proposalId: rawProposalId,
-    network = 'TESTNET',
-  } = params;
-
-  // Ensure 0x prefix on all IDs
-  const authorSpaceId = ensure0xPrefix(rawAuthorSpaceId);
-  const spaceId = ensure0xPrefix(rawSpaceId);
-  const editorToRemoveSpaceId = ensure0xPrefix(rawEditorToRemoveSpaceId);
-
-  // Validate inputs
-  if (!isBytes16Hex(authorSpaceId)) {
-    throw new Error(`authorSpaceId must be bytes16 hex (32 hex chars). Received: ${rawAuthorSpaceId}`);
+  const { network = 'TESTNET', ...args } = params;
+  if (!isBytes16Hex(ensure0xPrefix(args.authorSpaceId))) {
+    throw new Error(`authorSpaceId must be bytes16 hex (32 hex chars). Received: ${args.authorSpaceId}`);
   }
-  if (!isBytes16Hex(spaceId)) {
-    throw new Error(`spaceId must be bytes16 hex (32 hex chars). Received: ${rawSpaceId}`);
+  if (!isBytes16Hex(ensure0xPrefix(args.spaceId))) {
+    throw new Error(`spaceId must be bytes16 hex (32 hex chars). Received: ${args.spaceId}`);
   }
-  if (!isBytes16Hex(editorToRemoveSpaceId)) {
-    throw new Error(`editorToRemoveSpaceId must be bytes16 hex (32 hex chars). Received: ${rawEditorToRemoveSpaceId}`);
+  if (!isBytes16Hex(ensure0xPrefix(args.editorToRemoveSpaceId))) {
+    throw new Error(
+      `editorToRemoveSpaceId must be bytes16 hex (32 hex chars). Received: ${args.editorToRemoveSpaceId}`,
+    );
   }
 
-  // Generate or use provided proposal ID (UUID v4 as bytes16 hex)
-  const proposalId = rawProposalId
-    ? ensure0xPrefix(rawProposalId)
-    : (`0x${uuidv4().replaceAll('-', '')}` as `0x${string}`);
-
-  if (!isBytes16Hex(proposalId)) {
-    throw new Error(`proposalId must be bytes16 hex (32 hex chars). Received: ${rawProposalId}`);
-  }
-
-  // Encode the removeEditor function call: removeEditor(bytes16 _oldEditorSpaceId)
-  const proposalActionCalldata = encodeFunctionData({
-    abi: DaoSpaceAbi,
-    functionName: 'removeEditor',
-    args: [editorToRemoveSpaceId],
-  });
-  const contracts = getContractAddressesBasedOnNetwork(network);
-
-  // Create the proposal action (calling removeEditor on the Space Registry)
-  const proposalActions = [
-    {
-      to: contracts.SPACE_REGISTRY_ADDRESS,
-      value: 0n,
-      data: proposalActionCalldata,
-    },
-  ] as const;
-
-  // Encode the proposal data: abi.encode(bytes16 proposalId, VotingMode votingMode, Action[] actions)
-  const data = encodeAbiParameters(
-    [
-      { type: 'bytes16', name: 'proposalId' },
-      { type: 'uint8', name: 'votingMode' },
-      {
-        type: 'tuple[]',
-        name: 'actions',
-        components: [
-          { type: 'address', name: 'to' },
-          { type: 'uint256', name: 'value' },
-          { type: 'bytes', name: 'data' },
-        ],
-      },
-    ],
-    [proposalId, votingMode === 'FAST' ? 1 : 0, proposalActions],
-  );
-
-  // Convert proposalId to bytes32 for the topic (left-aligned)
-  const topic = bytes16ToBytes32LeftAligned(proposalId);
-
-  // Encode the SpaceRegistry.enter() call
-  const calldata = encodeFunctionData({
-    abi: SpaceRegistryAbi,
-    functionName: 'enter',
-    args: [
-      authorSpaceId, // fromSpaceId
-      spaceId, // toSpaceId
-      PROPOSAL_CREATED_ACTION, // action
-      topic, // topic (proposalId left-aligned to bytes32)
-      data, // data (encoded proposal)
-      EMPTY_SIGNATURE, // signature (unused when msg.sender == fromSpace)
-    ],
-  });
-
-  return {
-    to: contracts.SPACE_REGISTRY_ADDRESS,
-    calldata,
-    proposalId,
-  };
+  return createGeoClient({ network: resolveGeoNetwork(network) }).daoSpaces.proposeRemoveEditor(args);
 }

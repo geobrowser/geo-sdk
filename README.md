@@ -136,6 +136,25 @@ const geo = createGeoClient({
 });
 ```
 
+### Local Contracts V2 Validation
+
+When working against the local-geobrowser contracts checkout, deploy that stack
+first so it writes `.deployments.json`, then point the SDK opt-in test at it:
+
+```sh
+cd /path/to/local-geobrowser
+just init-infra
+just init-contract
+
+cd /path/to/geo-sdk
+GEO_LOCAL_GEOBROWSER_DEPLOYMENTS=/path/to/local-geobrowser/.deployments.json \
+  pnpm exec vitest run src/contracts-v2/local-geobrowser.e2e.test.ts
+```
+
+The test builds a custom `defineGeoNetworkConfig(...)` from the deployment file
+and decodes DAO creation, update-voting-settings proposal, and versioned vote
+calldata against the contracts v2 ABIs.
+
 ## Ops API
 
 Ops functions build operation arrays that can be combined before publishing.
@@ -597,6 +616,23 @@ The `author` field is the author's personal space ID, not a wallet address.
 
 ### `geo.daoSpaces`
 
+DAO helpers target the contracts v2 surface. Voting settings use percentages
+and days on the SDK side; the SDK maps them to ratio-base integers and seconds
+for the contract. Use a network config whose DAO contract addresses point at a
+contracts v2 deployment.
+
+```ts
+const votingSettings = {
+  partialPercentageSupportThreshold: 50,
+  universalPercentageSupportThreshold: 90,
+  flatSupportThreshold: 1,
+  quorum: 1,
+  durationInDays: 2,
+  disableFastPathAccessForNewMembers: true,
+  executionGracePeriodInDays: 14,
+};
+```
+
 Create a DAO space:
 
 ```ts
@@ -605,12 +641,7 @@ const tx = await geo.daoSpaces.create({
   author: authorSpaceId,
   initialEditorSpaceIds: [authorSpaceId],
   initialMemberSpaceIds: [authorSpaceId],
-  votingSettings: {
-    slowPathPercentageThreshold: 50,
-    fastPathFlatThreshold: 1,
-    quorum: 1,
-    durationInDays: 3,
-  },
+  votingSettings,
 });
 
 await walletClient.sendTransaction({
@@ -659,6 +690,27 @@ await walletClient.sendTransaction({
 });
 ```
 
+Create a new version of an existing edit proposal:
+
+```ts
+const updatedProposal = await geo.daoSpaces.proposeEdit({
+  name: "Update entity name, revision 2",
+  ops,
+  author: authorSpaceId,
+  daoSpaceAddress,
+  callerSpaceId: authorSpaceId,
+  daoSpaceId,
+  proposalId,
+  updateProposal: true,
+  versionId: 2,
+});
+```
+
+If `updateProposal: true` is set and `versionId` is omitted, the SDK reads
+`latestProposalVersion(...)` from the configured network RPC before uploading
+the edit. Pass `versionId` when you already know the next version or when your
+custom network config has no RPC URL.
+
 Manage DAO members and editors:
 
 ```ts
@@ -694,6 +746,27 @@ const removeEditor = geo.daoSpaces.proposeRemoveEditor({
 
 Editor changes only support `SLOW` voting. Member changes can use the default or an explicit `votingMode`.
 
+Propose voting-settings changes:
+
+```ts
+const updateVoting = geo.daoSpaces.proposeUpdateVotingSettings({
+  authorSpaceId,
+  spaceId: daoSpaceId,
+  daoSpaceAddress,
+  votingSettings: {
+    partialPercentageSupportThreshold: 60,
+    universalPercentageSupportThreshold: 95,
+    flatSupportThreshold: 2,
+    quorum: 2,
+    durationInDays: 5,
+    disableFastPathAccessForNewMembers: true,
+    executionGracePeriodInDays: 14,
+  },
+});
+```
+
+Updating voting settings only supports `SLOW` voting.
+
 Request membership in a DAO space:
 
 ```ts
@@ -710,50 +783,14 @@ await walletClient.sendTransaction({
 
 DAO proposal IDs and DAO space IDs are bytes16 hex strings, usually `0x` plus 32 hex characters.
 
-### `geo.daoSpaces.proposals`
-
-Use low-level proposal helpers when you want to assemble proposal actions yourself.
-
-```ts
-const actions = [
-  geo.daoSpaces.proposals.actions.addMember(daoSpaceAddress, memberSpaceId),
-  geo.daoSpaces.proposals.actions.updateVotingSettings(daoSpaceAddress, {
-    slowPathPercentageThreshold: 60,
-    fastPathFlatThreshold: 2,
-    quorum: 3,
-    durationInDays: 5,
-  }),
-];
-
-const proposal = geo.daoSpaces.proposals.create({
-  fromSpaceId: authorSpaceId,
-  daoSpaceId,
-  votingMode: "SLOW",
-  actions,
-});
-```
-
-Available proposal actions:
-
-```ts
-geo.daoSpaces.proposals.actions.publishEdit(daoSpaceAddress, cid);
-geo.daoSpaces.proposals.actions.addMember(daoSpaceAddress, memberSpaceId);
-geo.daoSpaces.proposals.actions.removeMember(daoSpaceAddress, memberSpaceId);
-geo.daoSpaces.proposals.actions.addEditor(daoSpaceAddress, editorSpaceId);
-geo.daoSpaces.proposals.actions.removeEditor(daoSpaceAddress, editorSpaceId);
-geo.daoSpaces.proposals.actions.updateVotingSettings(
-  daoSpaceAddress,
-  votingSettings,
-);
-```
-
 Vote on a proposal:
 
 ```ts
-const vote = geo.daoSpaces.proposals.vote({
+const vote = geo.daoSpaces.voteProposal({
   authorSpaceId,
   spaceId: daoSpaceId,
   proposalId,
+  versionId: 1,
   vote: "YES",
 });
 
@@ -763,10 +800,13 @@ await walletClient.sendTransaction({
 });
 ```
 
+`versionId` defaults to `1`. Pass it explicitly when voting on a later proposal
+version.
+
 Execute a passed proposal:
 
 ```ts
-const execute = geo.daoSpaces.proposals.execute({
+const execute = geo.daoSpaces.executeProposal({
   authorSpaceId,
   spaceId: daoSpaceId,
   proposalId,
@@ -1181,6 +1221,7 @@ const vote = daoSpace.voteProposal({
   authorSpaceId,
   spaceId: daoSpaceId,
   proposalId,
+  versionId: 1,
   vote: "YES",
   network: "TESTNET",
 });
@@ -1199,6 +1240,7 @@ Legacy DAO membership helpers:
 daoSpace.proposeAddMember({
   authorSpaceId,
   spaceId: daoSpaceId,
+  daoSpaceAddress,
   newMemberSpaceId,
   network: "TESTNET",
 });
@@ -1206,6 +1248,7 @@ daoSpace.proposeAddMember({
 daoSpace.proposeRemoveMember({
   authorSpaceId,
   spaceId: daoSpaceId,
+  daoSpaceAddress,
   memberToRemoveSpaceId,
   network: "TESTNET",
 });
@@ -1213,6 +1256,7 @@ daoSpace.proposeRemoveMember({
 daoSpace.proposeAddEditor({
   authorSpaceId,
   spaceId: daoSpaceId,
+  daoSpaceAddress,
   newEditorSpaceId,
   network: "TESTNET",
 });
@@ -1220,7 +1264,16 @@ daoSpace.proposeAddEditor({
 daoSpace.proposeRemoveEditor({
   authorSpaceId,
   spaceId: daoSpaceId,
+  daoSpaceAddress,
   editorToRemoveSpaceId,
+  network: "TESTNET",
+});
+
+daoSpace.proposeUpdateVotingSettings({
+  authorSpaceId,
+  spaceId: daoSpaceId,
+  daoSpaceAddress,
+  votingSettings,
   network: "TESTNET",
 });
 

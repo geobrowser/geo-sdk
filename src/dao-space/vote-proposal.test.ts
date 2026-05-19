@@ -1,6 +1,8 @@
+import { decodeAbiParameters, decodeFunctionData } from 'viem';
 import { describe, expect, it } from 'vitest';
-
 import { TESTNET } from '../../contracts.js';
+import { SpaceRegistryAbi } from '../abis/index.js';
+import { PROPOSAL_VOTED_ACTION, VOTE_OPTION_VALUES } from './constants.js';
 import { voteProposal } from './vote-proposal.js';
 
 describe('voteProposal', () => {
@@ -53,6 +55,84 @@ describe('voteProposal', () => {
     });
 
     expect(result.calldata).toBeTruthy();
+  });
+
+  it('should encode the proposal version and vote option', () => {
+    const result = voteProposal({
+      authorSpaceId: validAuthorSpaceId,
+      spaceId: validDaoSpaceId,
+      proposalId: validProposalId,
+      versionId: 3,
+      vote: 'ABSTAIN',
+    });
+    const decoded = decodeFunctionData({
+      abi: SpaceRegistryAbi,
+      data: result.calldata,
+    });
+    const [, , action, , data] = decoded.args as [
+      `0x${string}`,
+      `0x${string}`,
+      `0x${string}`,
+      `0x${string}`,
+      `0x${string}`,
+      `0x${string}`,
+    ];
+    const [proposalId, versionId, voteOption] = decodeAbiParameters(
+      [
+        { type: 'bytes16', name: 'proposalId' },
+        { type: 'uint8', name: 'versionId' },
+        { type: 'uint8', name: 'voteOption' },
+      ],
+      data,
+    );
+
+    expect(action).toBe(PROPOSAL_VOTED_ACTION);
+    expect(proposalId).toBe(validProposalId);
+    expect(versionId).toBe(3);
+    expect(voteOption).toBe(VOTE_OPTION_VALUES.ABSTAIN);
+  });
+
+  it('should default to proposal version 1', () => {
+    const result = voteProposal({
+      authorSpaceId: validAuthorSpaceId,
+      spaceId: validDaoSpaceId,
+      proposalId: validProposalId,
+      vote: 'YES',
+    });
+    const decoded = decodeFunctionData({
+      abi: SpaceRegistryAbi,
+      data: result.calldata,
+    });
+    const [, , , , data] = decoded.args as [
+      `0x${string}`,
+      `0x${string}`,
+      `0x${string}`,
+      `0x${string}`,
+      `0x${string}`,
+      `0x${string}`,
+    ];
+    const [, versionId] = decodeAbiParameters(
+      [
+        { type: 'bytes16', name: 'proposalId' },
+        { type: 'uint8', name: 'versionId' },
+        { type: 'uint8', name: 'voteOption' },
+      ],
+      data,
+    );
+
+    expect(versionId).toBe(1);
+  });
+
+  it('should reject invalid proposal versions', () => {
+    expect(() =>
+      voteProposal({
+        authorSpaceId: validAuthorSpaceId,
+        spaceId: validDaoSpaceId,
+        proposalId: validProposalId,
+        versionId: 0,
+        vote: 'YES',
+      }),
+    ).toThrow('versionId must be an integer between 1 and 255');
   });
 
   it('should accept NO vote', () => {

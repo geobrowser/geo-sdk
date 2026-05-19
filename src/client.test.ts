@@ -48,8 +48,10 @@ describe('createGeoClient', () => {
       'proposeRemoveMember',
       'proposeAddEditor',
       'proposeRemoveEditor',
+      'proposeUpdateVotingSettings',
       'proposeRequestMembership',
-      'proposals',
+      'voteProposal',
+      'executeProposal',
     ]);
   });
 
@@ -97,10 +99,13 @@ describe('createGeoClient', () => {
         name: 'Test DAO',
         author: '5cade5757ecd41ae83481b22ffc2f94e',
         votingSettings: {
-          slowPathPercentageThreshold: 50,
-          fastPathFlatThreshold: 1,
+          partialPercentageSupportThreshold: 50,
+          universalPercentageSupportThreshold: 90,
+          flatSupportThreshold: 1,
           quorum: 1,
           durationInDays: 2,
+          disableFastPathAccessForNewMembers: true,
+          executionGracePeriodInDays: 14,
         },
         initialEditorSpaceIds: ['0x11111111111111111111111111111111'],
       }),

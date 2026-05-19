@@ -12,7 +12,7 @@ import * as IdUtils from '../id-utils.js';
 import { assertValid } from '../id-utils.js';
 import type { PublishEditParams } from '../ipfs-core.js';
 import { requireGeoContract } from '../networks.js';
-import { EMPTY_SIGNATURE, TOPIC_DECLARED } from '../personal-space/constants.js';
+import { EMPTY_SIGNATURE, TOPIC_SET } from '../personal-space/constants.js';
 import type { GeoClientContext } from './context.js';
 
 export type CreatePersonalSpaceParams = {
@@ -161,7 +161,7 @@ export function setTopic(
       args: [
         authorSpaceIdBytes,
         spaceIdBytes,
-        TOPIC_DECLARED,
+        TOPIC_SET,
         bytes16ToBytes32LeftAligned(topicIdBytes),
         '0x',
         EMPTY_SIGNATURE,

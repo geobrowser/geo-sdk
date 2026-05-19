@@ -122,10 +122,13 @@ export type PublishPersonalSpaceEditParams = PublishEditParams & {
 export type PublishPersonalSpaceEditResult = PublishEditResult & CalldataResult;
 
 export type VotingSettingsInput = {
-  slowPathPercentageThreshold: number;
-  fastPathFlatThreshold: number;
+  partialPercentageSupportThreshold: number;
+  universalPercentageSupportThreshold: number;
+  flatSupportThreshold: number;
   quorum: number;
   durationInDays: number;
+  disableFastPathAccessForNewMembers: boolean;
+  executionGracePeriodInDays: number;
 };
 
 export type VotingMode = 'SLOW' | 'FAST';
@@ -159,6 +162,7 @@ export type CreateProposalParams = {
   proposalId?: string;
   votingMode?: VotingMode;
   actions: ProposalAction[];
+  updateProposal?: boolean;
 };
 
 export type ProposalResult = CalldataResult & {
@@ -171,9 +175,14 @@ export type ProposeEditParams = PublishEditParams & {
   daoSpaceId: string;
   votingMode?: VotingMode;
   proposalId?: string;
+  updateProposal?: boolean;
+  versionId?: number;
 };
 
-export type ProposeEditResult = PublishEditResult & ProposalResult;
+export type ProposeEditResult = PublishEditResult &
+  ProposalResult & {
+    versionId: number;
+  };
 
 export type DaoSpaceRoleProposalBaseParams = {
   authorSpaceId: string;
@@ -211,6 +220,7 @@ export type VoteProposalParams = {
   authorSpaceId: string;
   spaceId: string;
   proposalId: string;
+  versionId?: number;
   vote: VoteOption;
 };
 
@@ -218,6 +228,11 @@ export type ExecuteProposalParams = {
   authorSpaceId: string;
   spaceId: string;
   proposalId: string;
+};
+
+export type ProposeUpdateVotingSettingsParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
+  votingMode?: 'SLOW';
+  votingSettings: VotingSettingsInput;
 };
 
 export type EntityVoteParams = {
@@ -259,20 +274,10 @@ export type Client = {
     proposeRemoveMember(params: ProposeRemoveMemberParams): ProposalResult;
     proposeAddEditor(params: ProposeAddEditorParams): ProposalResult;
     proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposalResult;
+    proposeUpdateVotingSettings(params: ProposeUpdateVotingSettingsParams): ProposalResult;
     proposeRequestMembership(params: ProposeRequestMembershipParams): ProposalResult;
-    proposals: {
-      create(params: CreateProposalParams): ProposalResult;
-      vote(params: VoteProposalParams): CalldataResult;
-      execute(params: ExecuteProposalParams): CalldataResult;
-      actions: {
-        publishEdit(daoSpaceAddress: `0x${string}`, cid: string): ProposalAction;
-        addEditor(daoSpaceAddress: `0x${string}`, spaceId: string): ProposalAction;
-        removeEditor(daoSpaceAddress: `0x${string}`, spaceId: string): ProposalAction;
-        addMember(daoSpaceAddress: `0x${string}`, spaceId: string): ProposalAction;
-        removeMember(daoSpaceAddress: `0x${string}`, spaceId: string): ProposalAction;
-        updateVotingSettings(daoSpaceAddress: `0x${string}`, votingSettings: VotingSettingsInput): ProposalAction;
-      };
-    };
+    voteProposal(params: VoteProposalParams): CalldataResult;
+    executeProposal(params: ExecuteProposalParams): CalldataResult;
   };
   entityVotes: {
     upvote(params: EntityVoteParams): CalldataResult;
@@ -581,17 +586,20 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        *   author: authorSpaceId,
        *   initialEditorSpaceIds: [authorSpaceId],
        *   votingSettings: {
-       *     slowPathPercentageThreshold: 50,
-       *     fastPathFlatThreshold: 1,
+       *     partialPercentageSupportThreshold: 50,
+       *     universalPercentageSupportThreshold: 90,
+       *     flatSupportThreshold: 1,
        *     quorum: 1,
        *     durationInDays: 2,
+       *     disableFastPathAccessForNewMembers: true,
+       *     executionGracePeriodInDays: 14,
        *   },
        * });
        * ```
        */
       create: (params: CreateDaoSpaceParams) => DaoSpaces.create(context, params),
       /**
-       * Publishes an edit and wraps it in a DAO-space proposal action.
+       * Publishes an edit and wraps it in a DAO-space ping proposal action.
        *
        * @example
        * ```ts
@@ -663,6 +671,21 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        */
       proposeRemoveEditor: (params: ProposeRemoveEditorParams) => DaoSpaces.proposeRemoveEditor(context, params),
       /**
+       * Builds calldata for a DAO proposal that updates voting settings.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.proposeUpdateVotingSettings({
+       *   authorSpaceId,
+       *   spaceId: daoSpaceId,
+       *   daoSpaceAddress,
+       *   votingSettings,
+       * });
+       * ```
+       */
+      proposeUpdateVotingSettings: (params: ProposeUpdateVotingSettingsParams) =>
+        DaoSpaces.proposeUpdateVotingSettings(context, params),
+      /**
        * Builds calldata for requesting membership in a DAO space.
        *
        * @example
@@ -675,62 +698,34 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        */
       proposeRequestMembership: (params: ProposeRequestMembershipParams) =>
         DaoSpaces.proposeRequestMembership(context, params),
-      /** DAO-scoped low-level proposal helpers. */
-      proposals: {
-        /**
-         * Builds calldata for creating a DAO proposal from prebuilt actions.
-         *
-         * @example
-         * ```ts
-         * const action = geo.daoSpaces.proposals.actions.addMember(daoSpaceAddress, memberSpaceId);
-         * const tx = geo.daoSpaces.proposals.create({
-         *   fromSpaceId: authorSpaceId,
-         *   daoSpaceId,
-         *   actions: [action],
-         * });
-         * ```
-         */
-        create: (params: CreateProposalParams) => DaoSpaces.createProposal(context, params),
-        /**
-         * Builds calldata for voting on a DAO proposal.
-         *
-         * @example
-         * ```ts
-         * const tx = geo.daoSpaces.proposals.vote({
-         *   authorSpaceId,
-         *   spaceId: daoSpaceId,
-         *   proposalId,
-         *   vote: 'YES',
-         * });
-         * ```
-         */
-        vote: (params: VoteProposalParams) => DaoSpaces.voteProposal(context, params),
-        /**
-         * Builds calldata for executing a passed DAO proposal.
-         *
-         * @example
-         * ```ts
-         * const tx = geo.daoSpaces.proposals.execute({
-         *   authorSpaceId,
-         *   spaceId: daoSpaceId,
-         *   proposalId,
-         * });
-         * ```
-         */
-        execute: (params: ExecuteProposalParams) => DaoSpaces.executeProposal(context, params),
-        /**
-         * Helpers for constructing DAO proposal actions.
-         *
-         * @example
-         * ```ts
-         * const actions = [
-         *   geo.daoSpaces.proposals.actions.addEditor(daoSpaceAddress, editorSpaceId),
-         *   geo.daoSpaces.proposals.actions.updateVotingSettings(daoSpaceAddress, votingSettings),
-         * ];
-         * ```
-         */
-        actions: DaoSpaces.actions,
-      },
+      /**
+       * Builds calldata for voting on a DAO proposal version.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.voteProposal({
+       *   authorSpaceId,
+       *   spaceId: daoSpaceId,
+       *   proposalId,
+       *   versionId: 1,
+       *   vote: 'YES',
+       * });
+       * ```
+       */
+      voteProposal: (params: VoteProposalParams) => DaoSpaces.voteProposal(context, params),
+      /**
+       * Builds calldata for executing a passed DAO proposal.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.executeProposal({
+       *   authorSpaceId,
+       *   spaceId: daoSpaceId,
+       *   proposalId,
+       * });
+       * ```
+       */
+      executeProposal: (params: ExecuteProposalParams) => DaoSpaces.executeProposal(context, params),
     },
     /** Entity vote transaction helpers. */
     entityVotes: {

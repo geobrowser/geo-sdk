@@ -47,7 +47,7 @@ export type ProposeEditParams = {
   author: Id | string;
   /**
    * The DAO space contract address.
-   * This is the target of the publish() call in the proposal.
+   * This is the target of the ping() call in the proposal.
    */
   daoSpaceAddress: `0x${string}`;
   /**
@@ -62,7 +62,7 @@ export type ProposeEditParams = {
   daoSpaceId: `0x${string}`;
   /**
    * Voting mode for the proposal.
-   * Defaults to 'FAST' since publish() is a valid fast-path action.
+   * Defaults to 'FAST' since edit publishing uses a valid fast-path ping action.
    */
   votingMode?: VotingMode;
   /**
@@ -70,6 +70,16 @@ export type ProposeEditParams = {
    * If omitted, a unique id is generated.
    */
   proposalId?: `0x${string}`;
+  /**
+   * Set to true when publishing a new version of an existing proposal.
+   */
+  updateProposal?: boolean;
+  /**
+   * Proposal version to create. Only valid for update flows. Required for
+   * update flows unless the client can resolve the next version from the
+   * configured network RPC.
+   */
+  versionId?: number;
   /** Network to use (defaults to TESTNET) */
   network?: Network;
 };
@@ -85,6 +95,8 @@ export type ProposeEditResult = {
   calldata: `0x${string}`;
   /** The proposal ID (bytes16 hex) */
   proposalId: `0x${string}`;
+  /** The proposal version ID */
+  versionId: number;
 };
 
 /**
@@ -111,6 +123,10 @@ export type VoteProposalParams = {
    * The proposal to vote on (bytes16 hex, with or without 0x prefix).
    */
   proposalId: string;
+  /**
+   * The proposal version to vote on. Defaults to 1 for first-version proposals.
+   */
+  versionId?: number;
   /**
    * The vote option: 'YES', 'NO', or 'ABSTAIN'.
    */
@@ -193,6 +209,10 @@ export type ProposeRemoveMemberParams = {
    */
   spaceId: string;
   /**
+   * The DAO space contract address. This is the target of the role action.
+   */
+  daoSpaceAddress: `0x${string}`;
+  /**
    * The space ID of the member to remove (bytes16 hex, with or without 0x prefix).
    */
   memberToRemoveSpaceId: string;
@@ -230,6 +250,10 @@ export type ProposeAddMemberParams = {
    * This is the toSpaceId in the enter() call.
    */
   spaceId: string;
+  /**
+   * The DAO space contract address. This is the target of the role action.
+   */
+  daoSpaceAddress: `0x${string}`;
   /**
    * The space ID of the new member to add (bytes16 hex).
    */
@@ -269,14 +293,15 @@ export type ProposeRemoveEditorParams = {
    */
   spaceId: string;
   /**
+   * The DAO space contract address. This is the target of the role action.
+   */
+  daoSpaceAddress: `0x${string}`;
+  /**
    * The space ID of the editor to remove (bytes16 hex, with or without 0x prefix).
    */
   editorToRemoveSpaceId: string;
-  /**
-   * Voting mode for the proposal.
-   * Defaults to 'SLOW' since removeEditor is not a fast-path action.
-   */
-  votingMode?: VotingMode;
+  /** Editor changes only support SLOW voting. */
+  votingMode?: 'SLOW';
   /**
    * Optional bytes16 proposalId (0x + 32 hex chars, with or without 0x prefix).
    * If omitted, a unique id is generated.
@@ -307,14 +332,15 @@ export type ProposeAddEditorParams = {
    */
   spaceId: string;
   /**
+   * The DAO space contract address. This is the target of the role action.
+   */
+  daoSpaceAddress: `0x${string}`;
+  /**
    * The space ID of the new editor to add (bytes16 hex).
    */
   newEditorSpaceId: string;
-  /**
-   * Voting mode for the proposal.
-   * Defaults to 'SLOW' since addEditor() is a governance action.
-   */
-  votingMode?: VotingMode;
+  /** Editor changes only support SLOW voting. */
+  votingMode?: 'SLOW';
   /**
    * Optional bytes16 proposalId (0x + 32 hex chars).
    * If omitted, a unique id is generated.
@@ -325,6 +351,43 @@ export type ProposeAddEditorParams = {
 };
 
 export type ProposeAddEditorResult = {
+  /** The contract address to send the transaction to (Space Registry) */
+  to: `0x${string}`;
+  /** The calldata for the enter() function call */
+  calldata: `0x${string}`;
+  /** The proposal ID (bytes16 hex) */
+  proposalId: `0x${string}`;
+};
+
+export type ProposeUpdateVotingSettingsParams = {
+  /**
+   * The proposer's space ID (bytes16 hex).
+   * This is the fromSpaceId in the enter() call.
+   */
+  authorSpaceId: string;
+  /**
+   * The DAO space ID (bytes16 hex).
+   * This is the toSpaceId in the enter() call.
+   */
+  spaceId: string;
+  /**
+   * The DAO space contract address. This is the target of the updateVotingSettings action.
+   */
+  daoSpaceAddress: `0x${string}`;
+  /** New voting settings for the DAO space. */
+  votingSettings: VotingSettingsInput;
+  /** Updating voting settings only supports SLOW voting. */
+  votingMode?: 'SLOW';
+  /**
+   * Optional bytes16 proposalId (0x + 32 hex chars).
+   * If omitted, a unique id is generated.
+   */
+  proposalId?: string;
+  /** Network to use (defaults to TESTNET) */
+  network?: Network;
+};
+
+export type ProposeUpdateVotingSettingsResult = {
   /** The contract address to send the transaction to (Space Registry) */
   to: `0x${string}`;
   /** The calldata for the enter() function call */

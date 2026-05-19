@@ -6,7 +6,7 @@ import type { ExecuteProposalParams, ExecuteProposalResult } from './types.js';
 /**
  * Creates an execute transaction for a passed DAO space proposal.
  *
- * @deprecated Use `createGeoClient({ network }).daoSpaces.proposals.execute(...)`.
+ * @deprecated Use `createGeoClient({ network }).daoSpaces.executeProposal(...)`.
  */
 export function executeProposal(params: ExecuteProposalParams): ExecuteProposalResult {
   const { network = 'TESTNET', ...args } = params;
@@ -20,5 +20,5 @@ export function executeProposal(params: ExecuteProposalParams): ExecuteProposalR
     throw new Error(`proposalId must be bytes16 hex (32 hex chars). Received: ${args.proposalId}`);
   }
 
-  return createGeoClient({ network: resolveGeoNetwork(network) }).daoSpaces.proposals.execute(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).daoSpaces.executeProposal(args);
 }

@@ -1,5 +1,5 @@
 import type { CreateEntity, CreateRelation } from '@geoprotocol/grc-20';
-import { decodeAbiParameters, decodeFunctionData, encodeAbiParameters, type Hex } from 'viem';
+import { decodeFunctionData, encodeAbiParameters, type Hex, hexToString } from 'viem';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_SPACE_ID } from '../../contracts.js';
 import { DaoSpaceFactoryAbi, SpaceRegistryAbi } from '../abis/index.js';
@@ -8,7 +8,7 @@ import { ACCOUNT_TYPE, PERSON_TYPE, SPACE_TYPE, TYPES_PROPERTY } from '../core/i
 import { getCreatePersonalSpaceCalldata } from '../encodings/get-create-personal-space-calldata.js';
 import { toGrcId } from '../id-utils.js';
 import { defineGeoNetworkConfig } from '../networks.js';
-import { EMPTY_SIGNATURE, TOPIC_DECLARED } from '../personal-space/constants.js';
+import { EMPTY_SIGNATURE, TOPIC_SET } from '../personal-space/constants.js';
 
 const CID = 'ipfs://bafkreigwfjixq5cm3s4youhshorkpqh3ykpviyv76c2ei6gaalujtlqz5i' as const;
 const AUTHOR_ID = '5cade5757ecd41ae83481b22ffc2f94e';
@@ -143,7 +143,7 @@ describe('geo space clients', () => {
     expect(result.to).toBe(SPACE_REGISTRY_ADDRESS);
     expect(decoded.fromSpaceId).toBe(PERSONAL_SPACE_ID);
     expect(decoded.toSpaceId).toBe(PERSONAL_SPACE_ID);
-    expect(decoded.action).toBe(TOPIC_DECLARED);
+    expect(decoded.action).toBe(TOPIC_SET);
     expect(decoded.topic).toBe(`0x33333333333333333333333333333333${'0'.repeat(32)}`);
     expect(decoded.data).toBe('0x');
     expect(decoded.signature).toBe(EMPTY_SIGNATURE);
@@ -175,10 +175,13 @@ describe('geo space clients', () => {
       name: 'Test DAO',
       author: AUTHOR_ID,
       votingSettings: {
-        slowPathPercentageThreshold: 50,
-        fastPathFlatThreshold: 1,
+        partialPercentageSupportThreshold: 50,
+        universalPercentageSupportThreshold: 90,
+        flatSupportThreshold: 1,
         quorum: 1,
         durationInDays: 2,
+        disableFastPathAccessForNewMembers: true,
+        executionGracePeriodInDays: 14,
       },
       initialEditorSpaceIds: [EDITOR_SPACE_ID],
     });
@@ -194,9 +197,7 @@ describe('geo space clients', () => {
       `0x${string}`,
       `0x${string}`,
       `0x${string}`,
-      `0x${string}`,
     ];
-    const [decodedCid] = decodeAbiParameters([{ type: 'string' }], initialEditsContentUri);
 
     expect(result.to).toBe(DAO_SPACE_FACTORY_ADDRESS);
     expect(result.cid).toBe(CID);
@@ -204,7 +205,7 @@ describe('geo space clients', () => {
     expect(decoded.functionName).toBe('createDAOSpaceProxy');
     expect(initialEditors).toEqual([EDITOR_SPACE_ID]);
     expect(initialMembers).toEqual([]);
-    expect(decodedCid).toBe(CID);
+    expect(hexToString(initialEditsContentUri)).toBe(CID);
     expect(initialTopicId).toBe(`0x${result.spaceEntityId}`);
     expect(fetch).toHaveBeenCalledWith(
       'http://localhost:3000/ipfs/upload-edit',

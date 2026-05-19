@@ -1,13 +1,14 @@
 import type { CreateRelation, Op } from '@geoprotocol/grc-20';
-import { createPublicClient, type Hex, http } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, createWalletClient, type Hex, http } from 'viem';
+import { type PrivateKeyAccount, privateKeyToAccount } from 'viem/accounts';
 import { describe, expect, it } from 'vitest';
 
-import { daoSpace, GeoTestnetConfig, Graph, getWalletClient, Ipfs, personalSpace } from '../index.js';
+import { createGeoClient, Ops } from '../index.js';
 import { SpaceRegistryAbi } from './abis/index.js';
 import { DESCRIPTION_PROPERTY, RELATION_TYPE, REPLY_TO_PROPERTY } from './core/ids/system.js';
+import { createE2ETestEnvironment, type E2ETestEnvironment } from './e2e-test-environment.js';
 import { deriveCommentName } from './graph/comment-utils.js';
-import { toGrcId } from './id-utils.js';
+import { generate, toGrcId } from './id-utils.js';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Hex;
 const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
@@ -15,15 +16,34 @@ const INDEXER_TIMEOUT_MS = 120_000;
 const TEST_TIMEOUT_MS = 600_000;
 const replyToGrcId = toGrcId(REPLY_TO_PROPERTY);
 
-type WalletSetup = {
-  account: NonNullable<Awaited<ReturnType<typeof getWalletClient>>['account']>;
-  publicClient: ReturnType<typeof createPublicClient>;
-  walletClient: Awaited<ReturnType<typeof getWalletClient>>;
-};
+let cachedE2E: E2ETestEnvironment | undefined;
+function getE2E(): E2ETestEnvironment {
+  cachedE2E ??= createE2ETestEnvironment();
+  return cachedE2E;
+}
 
-type GraphQlResponse<T> = {
-  data?: T;
-  errors?: unknown;
+const e2e = new Proxy({} as E2ETestEnvironment, {
+  get(_target, property) {
+    return getE2E()[property as keyof E2ETestEnvironment];
+  },
+});
+
+let cachedGeo: ReturnType<typeof createGeoClient> | undefined;
+function getGeo(): ReturnType<typeof createGeoClient> {
+  cachedGeo ??= createGeoClient({ network: getE2E().network });
+  return cachedGeo;
+}
+
+const geo = new Proxy({} as ReturnType<typeof createGeoClient>, {
+  get(_target, property) {
+    return getGeo()[property as keyof ReturnType<typeof createGeoClient>];
+  },
+});
+
+type WalletSetup = {
+  account: PrivateKeyAccount;
+  publicClient: ReturnType<typeof createPublicClient>;
+  walletClient: ReturnType<typeof createWalletClient>;
 };
 
 type EntityQueryResponse = {
@@ -59,11 +79,19 @@ type ProposalQueryResponse = {
     id: string;
     spaceId: string;
     proposedBy: string;
-    votingMode: 'FAST' | 'SLOW';
-    name: string | null;
+    currentVersion: number;
+    proposalVersions: Array<{
+      proposalVersion: number;
+      votingMode: 'FAST' | 'SLOW';
+      name: string | null;
+      yesCount: string;
+      noCount: string;
+      abstainCount: string;
+    }>;
   }>;
   proposalActions: Array<{
     proposalId: string;
+    proposalVersion: number;
     actionType: ProposalActionType;
     targetId: string | null;
     contentUri: string | null;
@@ -89,37 +117,37 @@ type VoteQueryResponse = {
   }>;
 };
 
+type SpaceTopicQueryResponse = {
+  spaces: Array<{
+    topicId: string | null;
+  }>;
+};
+
+class GraphQlRequestError extends Error {
+  constructor(readonly errors: unknown) {
+    super(`GraphQL errors: ${JSON.stringify(errors)}`);
+  }
+
+  hasValidationError() {
+    return JSON.stringify(this.errors).includes('GRAPHQL_VALIDATION_FAILED');
+  }
+}
+
 type TestContext = WalletSetup & {
   spaceId: string;
   spaceIdHex: Hex;
+  authorSpaceId: string;
 };
 
 type DaoContext = TestContext & {
   daoSpaceAddress: Hex;
   daoSpaceId: string;
   daoSpaceIdHex: Hex;
+  daoSpaceEntityId: string;
 };
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function requireTestnetContract(name: 'SPACE_REGISTRY_ADDRESS' | 'DAO_SPACE_FACTORY_ADDRESS'): `0x${string}` {
-  const address = GeoTestnetConfig.contracts?.[name];
-  if (!address) {
-    throw new Error(`GeoTestnetConfig is missing ${name}`);
-  }
-
-  return address;
-}
-
-function requireTestnetRpcUrl(): string {
-  const rpcUrl = GeoTestnetConfig.chain?.rpcUrl;
-  if (!rpcUrl) {
-    throw new Error('GeoTestnetConfig is missing an RPC URL');
-  }
-
-  return rpcUrl;
 }
 
 function filterReplyToRelations(ops: Op[]): CreateRelation[] {
@@ -195,11 +223,19 @@ function proposalQuery(proposalId: string) {
       id
       spaceId
       proposedBy
-      votingMode
-      name
+      currentVersion
+      proposalVersions {
+        proposalVersion
+        votingMode
+        name
+        yesCount
+        noCount
+        abstainCount
+      }
     }
     proposalActions(condition: { proposalId: ${JSON.stringify(id)} }) {
       proposalId
+      proposalVersion
       actionType
       targetId
       contentUri
@@ -239,25 +275,26 @@ function entityVoteQuery(entityId: string, voterId: string, spaceId: string) {
   }`;
 }
 
-async function queryGraph<T>(query: string): Promise<T> {
-  const response = await fetch(`${GeoTestnetConfig.apiOrigin}/graphql`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query }),
-  });
-  if (!response.ok) {
-    throw new Error(`GraphQL request failed: ${response.status} ${await response.text()}`);
-  }
+function spaceTopicQuery(spaceId: string) {
+  const normalizedSpaceId = spaceId.replaceAll('-', '').toLowerCase();
 
-  const envelope = (await response.json()) as GraphQlResponse<T>;
-  if (envelope.errors) {
-    throw new Error(`GraphQL errors: ${JSON.stringify(envelope.errors)}`);
+  return `query spaces {
+    spaces(filter: { id: { is: ${JSON.stringify(normalizedSpaceId)} } }) {
+      topicId
+    }
+  }`;
+}
+
+async function queryGraph<T>(query: string): Promise<T> {
+  const response = await geo.api.graphql<T>(query);
+  if (response.errors) {
+    throw new GraphQlRequestError(response.errors);
   }
-  if (envelope.data === undefined) {
+  if (response.data === undefined) {
     throw new Error('GraphQL response did not include data');
   }
 
-  return envelope.data;
+  return response.data;
 }
 
 async function waitFor<T>(label: string, read: () => Promise<T>, predicate: (value: T) => boolean): Promise<T> {
@@ -273,6 +310,9 @@ async function waitFor<T>(label: string, read: () => Promise<T>, predicate: (val
         return lastValue;
       }
     } catch (error) {
+      if (error instanceof GraphQlRequestError && error.hasValidationError()) {
+        throw error;
+      }
       lastError = error;
     }
     await sleep(3_000);
@@ -323,7 +363,7 @@ async function waitForProposal(
     daoSpaceId: string;
     proposedBy: string;
     votingMode?: 'FAST' | 'SLOW';
-    actionType?: ProposalActionType;
+    actionType?: ProposalActionType | ProposalActionType[];
     targetId?: string;
     contentUri?: string;
   },
@@ -334,14 +374,24 @@ async function waitForProposal(
     value => {
       const proposal = value.proposals[0];
       if (!proposal) return false;
-      if (proposal.spaceId !== expected.daoSpaceId.replaceAll('-', '')) return false;
-      if (proposal.proposedBy !== expected.proposedBy.replaceAll('-', '')) return false;
-      if (expected.votingMode && proposal.votingMode !== expected.votingMode) return false;
+      if (proposal.spaceId !== expected.daoSpaceId.replaceAll('-', '')) {
+        return false;
+      }
+      if (proposal.proposedBy !== expected.proposedBy.replaceAll('-', '')) {
+        return false;
+      }
+      const currentVersion = proposal.proposalVersions.find(
+        version => version.proposalVersion === proposal.currentVersion,
+      );
+      if (expected.votingMode && currentVersion?.votingMode !== expected.votingMode) {
+        return false;
+      }
       if (!expected.actionType) return true;
+      const expectedActionTypes = Array.isArray(expected.actionType) ? expected.actionType : [expected.actionType];
 
       return value.proposalActions.some(
         action =>
-          action.actionType === expected.actionType &&
+          expectedActionTypes.includes(action.actionType) &&
           (expected.targetId === undefined ||
             action.targetId === expected.targetId.replace(/^0x/, '').replaceAll('-', '')) &&
           (expected.contentUri === undefined || action.contentUri === expected.contentUri),
@@ -351,8 +401,11 @@ async function waitForProposal(
 
   expect(data.proposals[0]?.id).toBe(proposalUuid(proposalId));
   if (expected.actionType) {
-    expect(data.proposalActions.map(action => action.actionType)).toContain(expected.actionType);
+    const expectedActionTypes = Array.isArray(expected.actionType) ? expected.actionType : [expected.actionType];
+    expect(data.proposalActions.some(action => expectedActionTypes.includes(action.actionType))).toBe(true);
   }
+
+  return data;
 }
 
 async function waitForProposalVote(
@@ -383,39 +436,104 @@ async function waitForEntityVote(
   );
 
   expect(predicate(data.votes)).toBe(true);
+  return data.votes;
+}
+
+async function waitForSpaceTopicId(spaceId: string, topicId: string) {
+  const normalizedTopicId = topicId.replaceAll('-', '').toLowerCase();
+  const data = await waitFor(
+    `space ${spaceId} topic ${normalizedTopicId}`,
+    () => queryGraph<SpaceTopicQueryResponse>(spaceTopicQuery(spaceId)),
+    value => value.spaces[0]?.topicId === normalizedTopicId,
+  );
+
+  expect(data.spaces[0]?.topicId).toBe(normalizedTopicId);
+  return data.spaces[0];
+}
+
+async function readSpaceTopicId(spaceId: string) {
+  const data = await queryGraph<SpaceTopicQueryResponse>(spaceTopicQuery(spaceId));
+
+  return data.spaces[0]?.topicId ?? null;
 }
 
 async function getSpaceIdHex(publicClient: ReturnType<typeof createPublicClient>, address: Hex): Promise<Hex> {
   return (await publicClient.readContract({
-    address: requireTestnetContract('SPACE_REGISTRY_ADDRESS'),
+    address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
     abi: SpaceRegistryAbi,
     functionName: 'addressToSpaceId',
     args: [address],
   })) as Hex;
 }
 
-async function ensurePersonalSpace({ account, publicClient, walletClient }: WalletSetup) {
-  let spaceIdHex = await getSpaceIdHex(publicClient, account.address);
-  const hasExistingSpace = await personalSpace.hasSpace({
-    address: account.address,
+async function ensurePersonalSpace({
+  accountAddress,
+  account,
+  publicClient,
+  walletClient,
+}: WalletSetup & { accountAddress: Hex }) {
+  let spaceIdHex = await getSpaceIdHex(publicClient, accountAddress);
+  const hasExistingSpace = await geo.personalSpaces.hasSpace({
+    address: accountAddress,
   });
   expect(hasExistingSpace).toBe(spaceIdHex.toLowerCase() !== EMPTY_SPACE_ID.toLowerCase());
 
   if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
-    const createSpace = personalSpace.createSpace();
+    const createSpace = geo.personalSpaces.create({
+      name: 'E2E API Surface Personal Space',
+      accountAddress,
+    });
+
     await sendTransactionAndWait(
       { account, publicClient, walletClient },
       {
-        label: 'legacy create personal space',
+        label: 'create personal space',
         to: createSpace.to,
         calldata: createSpace.calldata,
       },
     );
-    spaceIdHex = await getSpaceIdHex(publicClient, account.address);
+
+    spaceIdHex = await getSpaceIdHex(publicClient, accountAddress);
+
+    if (spaceIdHex.toLowerCase() !== EMPTY_SPACE_ID.toLowerCase()) {
+      const spaceId = hexToUuid(spaceIdHex);
+      const publishProfile = await geo.personalSpaces.publishEdit({
+        name: 'Create personal space profile',
+        spaceId,
+        author: spaceId,
+        ops: createSpace.ops,
+      });
+
+      await sendTransactionAndWait(
+        { account, publicClient, walletClient },
+        {
+          label: 'publish personal space profile',
+          to: publishProfile.to,
+          calldata: publishProfile.calldata,
+        },
+      );
+
+      await waitForEntityName(createSpace.spaceEntityId, spaceId, 'E2E API Surface Personal Space');
+
+      const setTopic = geo.personalSpaces.setTopic({
+        spaceId,
+        topicId: createSpace.spaceEntityId,
+      });
+      await sendTransactionAndWait(
+        { account, publicClient, walletClient },
+        {
+          label: 'set personal space topic',
+          to: setTopic.to,
+          calldata: setTopic.calldata,
+        },
+      );
+
+      await waitForSpaceTopicId(spaceId, createSpace.spaceEntityId);
+    }
   }
 
   if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
-    throw new Error(`Failed to create personal space for address ${account.address}`);
+    throw new Error(`Failed to create personal space for address ${accountAddress}`);
   }
 
   return {
@@ -425,26 +543,15 @@ async function ensurePersonalSpace({ account, publicClient, walletClient }: Wall
 }
 
 async function setupWallet(): Promise<WalletSetup> {
-  const privateKey = process.env.PRIVATE_KEY;
-  if (!privateKey) {
-    throw new Error('PRIVATE_KEY environment variable is required.');
-  }
-  if (!privateKey.startsWith('0x')) {
-    throw new Error('PRIVATE_KEY must be a hex string starting with 0x.');
-  }
-
-  const walletClient = await getWalletClient({
-    privateKey: privateKey as `0x${string}`,
-    rpcUrl: requireTestnetRpcUrl(),
+  const account = privateKeyToAccount(e2e.privateKey);
+  const walletClient = createWalletClient({
+    account,
+    chain: e2e.chain,
+    transport: http(e2e.rpcUrl),
   });
-  const account = walletClient.account;
-  if (!account) {
-    throw new Error('Wallet client account is undefined');
-  }
-  expect(account.address).toBe(privateKeyToAccount(privateKey as `0x${string}`).address);
-
   const publicClient = createPublicClient({
-    transport: http(requireTestnetRpcUrl()),
+    chain: e2e.chain,
+    transport: http(e2e.rpcUrl),
   });
 
   return { account, publicClient, walletClient };
@@ -464,13 +571,43 @@ async function sendTransactionAndWait(
     value?: bigint;
   },
 ) {
-  const hash = await walletClient.sendTransaction({
-    account,
-    chain: walletClient.chain ?? null,
-    to,
-    value,
-    data: calldata,
-  });
+  const [latestNonce, pendingNonce] = await Promise.all([
+    publicClient.getTransactionCount({
+      address: account.address,
+      blockTag: 'latest',
+    }),
+    publicClient.getTransactionCount({
+      address: account.address,
+      blockTag: 'pending',
+    }),
+  ]);
+  let nonce = Math.max(latestNonce, pendingNonce, nextNonceByAddress.get(account.address) ?? 0);
+  let hash: Hex | undefined;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      hash = await walletClient.sendTransaction({
+        account,
+        chain: walletClient.chain ?? null,
+        to,
+        value,
+        data: calldata,
+        nonce,
+      });
+      nextNonceByAddress.set(account.address, nonce + 1);
+      break;
+    } catch (error) {
+      if (!String(error).toLowerCase().includes('nonce too low') || attempt === 2) {
+        throw error;
+      }
+      nonce += 1;
+      nextNonceByAddress.set(account.address, nonce);
+    }
+  }
+
+  if (!hash) {
+    throw new Error(`Failed to send ${label} transaction`);
+  }
 
   const receipt = await publicClient.waitForTransactionReceipt({ hash });
   expect(receipt.status, `${label} transaction ${hash}`).toBe('success');
@@ -480,16 +617,21 @@ async function sendTransactionAndWait(
 
 let contextPromise: Promise<TestContext> | undefined;
 let daoContextPromise: Promise<DaoContext> | undefined;
+const nextNonceByAddress = new Map<Hex, number>();
 
 async function getTestContext(): Promise<TestContext> {
   contextPromise ??= (async () => {
     const wallet = await setupWallet();
-    const { spaceId, spaceIdHex } = await ensurePersonalSpace(wallet);
+    const { spaceId, spaceIdHex } = await ensurePersonalSpace({
+      ...wallet,
+      accountAddress: wallet.account.address,
+    });
 
     return {
       ...wallet,
       spaceId,
       spaceIdHex,
+      authorSpaceId: spaceId,
     };
   })();
 
@@ -497,13 +639,13 @@ async function getTestContext(): Promise<TestContext> {
 }
 
 async function publishOps(context: TestContext, name: string, ops: Op[], spaceId = context.spaceId) {
-  const publish = await personalSpace.publishEdit({
+  const publish = await geo.personalSpaces.publishEdit({
     name,
     spaceId,
-    author: context.spaceId,
+    author: context.authorSpaceId,
     ops,
-    network: 'TESTNET',
   });
+
   await sendTransactionAndWait(context, {
     label: name,
     to: publish.to,
@@ -513,8 +655,8 @@ async function publishOps(context: TestContext, name: string, ops: Op[], spaceId
   return publish;
 }
 
-async function createIndexedEntity(context: TestContext, name = uniqueName('E2E Legacy Entity')) {
-  const entity = Graph.createEntity({ name });
+async function createIndexedEntity(context: TestContext, name = uniqueName('E2E New Entity')) {
+  const entity = Ops.entities.create({ name });
   await publishOps(context, `Publish ${name}`, entity.ops);
   await waitForEntityName(entity.id, context.spaceId, name);
 
@@ -524,27 +666,29 @@ async function createIndexedEntity(context: TestContext, name = uniqueName('E2E 
 async function getDaoContext(): Promise<DaoContext> {
   daoContextPromise ??= (async () => {
     const context = await getTestContext();
-    const daoName = uniqueName('E2E Legacy DAO Space');
-    const createdDaoSpace = await daoSpace.createSpace({
+    const daoName = uniqueName('E2E New DAO Space');
+    const daoSpace = await geo.daoSpaces.create({
       name: daoName,
       votingSettings: {
-        slowPathPercentageThreshold: 50,
-        fastPathFlatThreshold: 1,
+        partialPercentageSupportThreshold: 50,
+        universalPercentageSupportThreshold: 90,
+        flatSupportThreshold: 1,
         quorum: 1,
         durationInDays: 2,
+        disableFastPathAccessForNewMembers: true,
+        executionGracePeriodInDays: 14,
       },
       initialEditorSpaceIds: [context.spaceIdHex],
-      author: context.spaceId,
-      network: 'TESTNET',
+      author: context.authorSpaceId,
     });
     const daoCreateTx = await sendTransactionAndWait(context, {
-      label: 'create legacy API DAO space',
-      to: createdDaoSpace.to,
-      calldata: createdDaoSpace.calldata,
+      label: 'create new API DAO space',
+      to: daoSpace.to,
+      calldata: daoSpace.calldata,
     });
 
     const daoSpaceAddress = daoCreateTx.receipt.logs.find(
-      log => log.address.toLowerCase() !== createdDaoSpace.to.toLowerCase(),
+      log => log.address.toLowerCase() !== daoSpace.to.toLowerCase(),
     )?.address as Hex | undefined;
     if (!daoSpaceAddress) {
       throw new Error('Could not find DAO space address in creation logs');
@@ -553,25 +697,27 @@ async function getDaoContext(): Promise<DaoContext> {
     const daoSpaceIdHex = await getSpaceIdHex(context.publicClient, daoSpaceAddress);
     expect(daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
     const daoSpaceId = hexToUuid(daoSpaceIdHex);
-    await waitForEntityName(createdDaoSpace.spaceEntityId, daoSpaceId, daoName);
+    await waitForEntityName(daoSpace.spaceEntityId, daoSpaceId, daoName);
+    await waitForSpaceTopicId(daoSpaceId, daoSpace.spaceEntityId);
 
     return {
       ...context,
       daoSpaceAddress,
       daoSpaceId,
       daoSpaceIdHex,
+      daoSpaceEntityId: daoSpace.spaceEntityId,
     };
   })();
 
   return daoContextPromise;
 }
 
-async function createLegacyAddMemberProposal(context: DaoContext, label: string) {
-  const proposal = daoSpace.proposeAddMember({
+async function createAddMemberProposal(context: DaoContext, label: string) {
+  const proposal = geo.daoSpaces.proposeAddMember({
     authorSpaceId: context.spaceIdHex,
     spaceId: context.daoSpaceIdHex,
+    daoSpaceAddress: context.daoSpaceAddress,
     newMemberSpaceId: context.spaceIdHex,
-    network: 'TESTNET',
   });
   await sendTransactionAndWait(context, {
     label,
@@ -580,27 +726,28 @@ async function createLegacyAddMemberProposal(context: DaoContext, label: string)
   });
   await waitForProposal(proposal.proposalId, {
     daoSpaceId: context.daoSpaceId,
-    proposedBy: context.spaceId,
+    proposedBy: context.authorSpaceId,
     votingMode: 'SLOW',
+    actionType: 'ADD_MEMBER',
+    targetId: context.spaceId,
   });
 
   return proposal;
 }
 
-describe.skip('legacy deprecated API e2e surface', () => {
-  // describe.sequential('legacy deprecated API e2e surface', () => {
+describe.sequential('new API e2e surface', () => {
   it(
-    'personalSpace.hasSpace validates the account space onchain',
+    'geo.personalSpaces.hasSpace validates the account space onchain',
     async () => {
       const context = await getTestContext();
-      const hasSpace = await personalSpace.hasSpace({
+      const hasSpace = await geo.personalSpaces.hasSpace({
         address: context.account.address,
       });
 
       expect(hasSpace).toBe(true);
 
       const spaceAddress = (await context.publicClient.readContract({
-        address: requireTestnetContract('SPACE_REGISTRY_ADDRESS'),
+        address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
         abi: SpaceRegistryAbi,
         functionName: 'spaceIdToAddress',
         args: [context.spaceIdHex],
@@ -611,9 +758,61 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'Ipfs.uploadCSV uploads CSV data',
+    'geo.personalSpaces.setTopic updates the indexed space topic and restores the previous topic',
     async () => {
-      const csvCid = await Ipfs.uploadCSV(`name,run\nLegacy API surface,${Date.now().toString(36)}`, 'TESTNET');
+      const context = await getTestContext();
+      const previousTopicId = await readSpaceTopicId(context.spaceId);
+      let randomTopicId = generate();
+      if (previousTopicId && randomTopicId === previousTopicId) {
+        randomTopicId = generate();
+      }
+
+      const setRandomTopic = geo.personalSpaces.setTopic({
+        spaceId: context.spaceId,
+        topicId: randomTopicId,
+      });
+
+      try {
+        await sendTransactionAndWait(context, {
+          label: 'set random personal space topic',
+          to: setRandomTopic.to,
+          calldata: setRandomTopic.calldata,
+        });
+        await waitForSpaceTopicId(context.spaceId, randomTopicId);
+      } finally {
+        if (previousTopicId) {
+          const restoreTopic = geo.personalSpaces.setTopic({
+            spaceId: context.spaceId,
+            topicId: previousTopicId,
+          });
+          await sendTransactionAndWait(context, {
+            label: 'restore personal space topic',
+            to: restoreTopic.to,
+            calldata: restoreTopic.calldata,
+          });
+          await waitForSpaceTopicId(context.spaceId, previousTopicId);
+        }
+      }
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'geo.api.graphql reads indexed entity state',
+    async () => {
+      const context = await getTestContext();
+      const entity = await createIndexedEntity(context, uniqueName('E2E New API GraphQL Entity'));
+      const data = await queryGraph<EntityQueryResponse>(entityQuery(entity.id, context.spaceId));
+
+      expect(data.entity?.id).toBe(entity.id);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'geo.storage.uploadCSV uploads CSV data',
+    async () => {
+      const csvCid = await geo.storage.uploadCSV(`name,run\nNew API surface,${Date.now().toString(36)}`);
 
       expect(csvCid).toMatch(/^ipfs:\/\//);
     },
@@ -621,9 +820,11 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'Ipfs.uploadImage uploads an image and returns dimensions',
+    'geo.storage.uploadImage uploads an image and returns dimensions',
     async () => {
-      const uploadedImage = await Ipfs.uploadImage({ blob: tinyPngBlob() }, 'TESTNET', true);
+      const uploadedImage = await geo.storage.uploadImage({
+        blob: tinyPngBlob(),
+      });
 
       expect(uploadedImage.cid).toMatch(/^ipfs:\/\//);
       expect(uploadedImage.dimensions).toEqual({ width: 1, height: 1 });
@@ -632,143 +833,122 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'Graph.createImage builds publishable image ops',
+    'geo.images.create builds publishable image ops',
     async () => {
       const context = await getTestContext();
-      const imageName = uniqueName('E2E Legacy Image');
-      const image = await Graph.createImage({
+      const imageName = uniqueName('E2E New Image');
+      const image = await geo.images.create({
         blob: tinyPngBlob(),
         name: imageName,
-        description: 'Created by the legacy API e2e surface test',
-        network: 'TESTNET',
+        description: 'Created by the new API e2e surface test',
       });
 
       expect(image.cid).toMatch(/^ipfs:\/\//);
-      await publishOps(context, 'E2E legacy API image', image.ops);
+      await publishOps(context, 'E2E new API image', image.ops);
       await waitForEntityName(image.id, context.spaceId, imageName);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Ipfs.publishEdit uploads an edit payload',
+    'geo.personalSpaces.publishEdit publishes ops into an indexed personal space',
     async () => {
       const context = await getTestContext();
-      const entity = Graph.createEntity({
-        name: uniqueName('E2E Legacy Upload Only Entity'),
-      });
-      const edit = await Ipfs.publishEdit({
-        name: 'E2E legacy upload-only edit',
-        ops: entity.ops,
-        author: context.spaceId,
-        network: 'TESTNET',
-      });
+      const entityName = uniqueName('E2E New Publish Edit Entity');
+      const entity = Ops.entities.create({ name: entityName });
 
-      expect(edit.cid).toMatch(/^ipfs:\/\//);
-    },
-    TEST_TIMEOUT_MS,
-  );
-
-  it(
-    'personalSpace.publishEdit publishes ops into an indexed personal space',
-    async () => {
-      const context = await getTestContext();
-      const entityName = uniqueName('E2E Legacy Publish Edit Entity');
-      const entity = Graph.createEntity({ name: entityName });
-
-      await publishOps(context, 'E2E legacy personal publish', entity.ops);
+      await publishOps(context, 'E2E new API personal publish', entity.ops);
       await waitForEntityName(entity.id, context.spaceId, entityName);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Graph.createProperty creates an indexed property entity',
+    'Ops.properties.create creates an indexed property entity',
     async () => {
       const context = await getTestContext();
-      const propertyName = uniqueName('E2E Legacy Property');
-      const property = Graph.createProperty({
+      const propertyName = uniqueName('E2E New Property');
+      const property = Ops.properties.create({
         name: propertyName,
         dataType: 'TEXT',
       });
 
-      await publishOps(context, 'E2E legacy property', property.ops);
+      await publishOps(context, 'E2E new API property', property.ops);
       await waitForEntityName(property.id, context.spaceId, propertyName);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Graph.createType creates an indexed type entity',
+    'Ops.types.create creates an indexed type entity',
     async () => {
       const context = await getTestContext();
-      const property = Graph.createProperty({
-        name: uniqueName('E2E Legacy Type Property'),
+      const property = Ops.properties.create({
+        name: uniqueName('E2E New Type Property'),
         dataType: 'TEXT',
       });
-      const typeName = uniqueName('E2E Legacy Type');
-      const type = Graph.createType({
+      const typeName = uniqueName('E2E New Type');
+      const type = Ops.types.create({
         name: typeName,
         properties: [property.id],
       });
 
-      await publishOps(context, 'E2E legacy type', [...property.ops, ...type.ops]);
+      await publishOps(context, 'E2E new API type', [...property.ops, ...type.ops]);
       await waitForEntityName(type.id, context.spaceId, typeName);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Graph.createEntity creates an indexed entity',
+    'Ops.entities.create creates an indexed entity',
     async () => {
       const context = await getTestContext();
-      const entityName = uniqueName('E2E Legacy Entity');
-      const entity = Graph.createEntity({
+      const entityName = uniqueName('E2E New Entity');
+      const entity = Ops.entities.create({
         name: entityName,
-        description: 'Created through the legacy API e2e surface test',
+        description: 'Created through the new API e2e surface test',
       });
 
-      await publishOps(context, 'E2E legacy entity', entity.ops);
+      await publishOps(context, 'E2E new API entity', entity.ops);
       await waitForEntityName(entity.id, context.spaceId, entityName);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Graph.updateEntity updates an indexed entity',
+    'Ops.entities.update updates an indexed entity',
     async () => {
       const context = await getTestContext();
-      const entity = await createIndexedEntity(context, uniqueName('E2E Legacy Entity To Update'));
+      const entity = await createIndexedEntity(context, uniqueName('E2E New Entity To Update'));
       const updatedName = `${entity.id} updated`;
-      const update = Graph.updateEntity({
+      const update = Ops.entities.update({
         id: entity.id,
         name: updatedName,
         unset: [{ property: DESCRIPTION_PROPERTY }],
       });
 
-      await publishOps(context, 'E2E legacy entity update', update.ops);
+      await publishOps(context, 'E2E new API entity update', update.ops);
       await waitForEntityName(entity.id, context.spaceId, updatedName);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Graph.createRelation creates an indexed relation',
+    'Ops.relations.create creates an indexed relation',
     async () => {
       const context = await getTestContext();
-      const fromName = uniqueName('E2E Legacy Relation From');
-      const from = Graph.createEntity({ name: fromName });
-      const to = Graph.createEntity({
-        name: uniqueName('E2E Legacy Relation To'),
-      });
-      const relation = Graph.createRelation({
+      const fromName = uniqueName('E2E New Relation From');
+      const toName = uniqueName('E2E New Relation To');
+      const from = Ops.entities.create({ name: fromName });
+      const to = Ops.entities.create({ name: toName });
+      const relation = Ops.relations.create({
         fromEntity: from.id,
         toEntity: to.id,
         type: RELATION_TYPE,
         position: 'a0',
       });
 
-      await publishOps(context, 'E2E legacy relation', [...from.ops, ...to.ops, ...relation.ops]);
+      await publishOps(context, 'E2E new API relation', [...from.ops, ...to.ops, ...relation.ops]);
       const entity = await waitForEntityName(from.id, context.spaceId, fromName);
       expect(entity?.relationsList.map(item => item.id)).toContain(relation.id);
     },
@@ -776,26 +956,31 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'Graph.updateRelation keeps an updated relation indexed',
+    'Ops.relations.update keeps an updated relation indexed',
     async () => {
       const context = await getTestContext();
-      const fromName = uniqueName('E2E Legacy Relation Update From');
-      const from = Graph.createEntity({ name: fromName });
-      const to = Graph.createEntity({
-        name: uniqueName('E2E Legacy Relation Update To'),
+      const fromName = uniqueName('E2E New Relation Update From');
+      const from = Ops.entities.create({ name: fromName });
+      const to = Ops.entities.create({
+        name: uniqueName('E2E New Relation Update To'),
       });
-      const relation = Graph.createRelation({
+      const relation = Ops.relations.create({
         fromEntity: from.id,
         toEntity: to.id,
         type: RELATION_TYPE,
         position: 'a0',
       });
-      const update = Graph.updateRelation({
+      const update = Ops.relations.update({
         id: relation.id,
         position: 'a1',
       });
 
-      await publishOps(context, 'E2E legacy relation update', [...from.ops, ...to.ops, ...relation.ops, ...update.ops]);
+      await publishOps(context, 'E2E new API relation update', [
+        ...from.ops,
+        ...to.ops,
+        ...relation.ops,
+        ...update.ops,
+      ]);
       const entity = await waitForEntityName(from.id, context.spaceId, fromName);
       expect(entity?.relationsList.map(item => item.id)).toContain(relation.id);
     },
@@ -803,24 +988,24 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'Graph.deleteRelation removes an indexed relation',
+    'Ops.relations.delete removes an indexed relation',
     async () => {
       const context = await getTestContext();
-      const fromName = uniqueName('E2E Legacy Relation Delete From');
-      const from = Graph.createEntity({ name: fromName });
-      const to = Graph.createEntity({
-        name: uniqueName('E2E Legacy Relation Delete To'),
+      const fromName = uniqueName('E2E New Relation Delete From');
+      const from = Ops.entities.create({ name: fromName });
+      const to = Ops.entities.create({
+        name: uniqueName('E2E New Relation Delete To'),
       });
-      const relation = Graph.createRelation({
+      const relation = Ops.relations.create({
         fromEntity: from.id,
         toEntity: to.id,
         type: RELATION_TYPE,
       });
-      await publishOps(context, 'E2E legacy relation delete setup', [...from.ops, ...to.ops, ...relation.ops]);
+      await publishOps(context, 'E2E new API relation delete setup', [...from.ops, ...to.ops, ...relation.ops]);
       await waitForEntityName(from.id, context.spaceId, fromName);
 
-      const deleteRelation = Graph.deleteRelation({ id: relation.id });
-      await publishOps(context, 'E2E legacy relation delete', deleteRelation.ops);
+      const deleteRelation = Ops.relations.delete({ id: relation.id });
+      await publishOps(context, 'E2E new API relation delete', deleteRelation.ops);
       await waitFor(
         `relation ${relation.id} deletion`,
         () => queryGraph<EntityQueryResponse>(entityQuery(from.id, context.spaceId)),
@@ -831,12 +1016,12 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'Graph.createProposalReview creates an indexed proposal review',
+    'Ops.proposalReviews.create creates an indexed proposal review',
     async () => {
       const context = await getTestContext();
-      const proposal = await createIndexedEntity(context, uniqueName('E2E Legacy Reviewed Proposal'));
-      const reviewName = uniqueName('E2E Legacy Proposal Review');
-      const review = Graph.createProposalReview({
+      const proposal = await createIndexedEntity(context, uniqueName('E2E New Reviewed Proposal'));
+      const reviewName = uniqueName('E2E New Proposal Review');
+      const review = Ops.proposalReviews.create({
         proposal: { id: proposal.id, name: reviewName },
         pass: true,
         content: 'The proposal looks good.',
@@ -846,61 +1031,59 @@ describe.skip('legacy deprecated API e2e surface', () => {
         effort: 0.6,
       });
 
-      await publishOps(context, 'E2E legacy proposal review', review.ops);
+      await publishOps(context, 'E2E new API proposal review', review.ops);
       await waitForEntityName(review.id, context.spaceId, reviewName);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Graph.updateProposalReview updates an indexed proposal review',
+    'Ops.proposalReviews.update updates an indexed proposal review',
     async () => {
       const context = await getTestContext();
-      const proposal = await createIndexedEntity(context, uniqueName('E2E Legacy Reviewed Proposal Update'));
-      const reviewName = uniqueName('E2E Legacy Proposal Review Update');
-      const review = Graph.createProposalReview({
+      const proposal = await createIndexedEntity(context, uniqueName('E2E New Reviewed Proposal Update'));
+      const reviewName = uniqueName('E2E New Proposal Review Update');
+      const review = Ops.proposalReviews.create({
         proposal: { id: proposal.id, name: reviewName },
         pass: true,
         content: 'The proposal looks good.',
       });
-      await publishOps(context, 'E2E legacy proposal review setup', review.ops);
+      await publishOps(context, 'E2E new API proposal review setup', review.ops);
       await waitForEntityName(review.id, context.spaceId, reviewName);
 
-      const update = Graph.updateProposalReview({
+      const reviewUpdate = Ops.proposalReviews.update({
         proposalReviewId: review.id,
         pass: false,
-        content: 'Updated legacy review content.',
+        content: 'Updated review content.',
       });
-      await publishOps(context, 'E2E legacy proposal review update', update.ops);
+      await publishOps(context, 'E2E new API proposal review update', reviewUpdate.ops);
       await waitForEntityName(review.id, context.spaceId, reviewName);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Graph.createComment creates indexed comments with reply-to chains',
+    'geo.comments.create creates indexed comments with reply-to chains',
     async () => {
       const context = await getTestContext();
-      const entity = await createIndexedEntity(context, uniqueName('E2E Legacy Commented Entity'));
-      const commentAContent = 'Legacy API comment A on the entity';
-      const commentA = await Graph.createComment({
+      const entity = await createIndexedEntity(context, uniqueName('E2E New Commented Entity'));
+      const commentAContent = 'New API comment A on the entity';
+      const commentA = await geo.comments.create({
         content: commentAContent,
         replyTo: { entityId: entity.id, spaceId: context.spaceId },
-        network: 'TESTNET',
       });
       expect(filterReplyToRelations(commentA.ops)).toHaveLength(1);
-      await publishOps(context, 'E2E legacy comment A', commentA.ops);
+      await publishOps(context, 'E2E new API comment A', commentA.ops);
       await waitForEntityName(commentA.id, context.spaceId, deriveCommentName(commentAContent));
       await waitForReplyToRelations(commentA.id, [entity.id]);
 
-      const commentBContent = 'Legacy API comment B on comment A';
-      const commentB = await Graph.createComment({
+      const commentBContent = 'New API comment B on comment A';
+      const commentB = await geo.comments.create({
         content: commentBContent,
         replyTo: { entityId: commentA.id, spaceId: context.spaceId },
-        network: 'TESTNET',
       });
       expect(filterReplyToRelations(commentB.ops)).toHaveLength(2);
-      await publishOps(context, 'E2E legacy comment B', commentB.ops);
+      await publishOps(context, 'E2E new API comment B', commentB.ops);
       await waitForEntityName(commentB.id, context.spaceId, deriveCommentName(commentBContent));
       await waitForReplyToRelations(commentB.id, [commentA.id, entity.id]);
     },
@@ -908,79 +1091,76 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'Graph.updateComment updates an indexed comment',
+    'geo.comments.update updates an indexed comment',
     async () => {
       const context = await getTestContext();
-      const entity = await createIndexedEntity(context, uniqueName('E2E Legacy Comment Update Entity'));
-      const comment = await Graph.createComment({
-        content: 'Legacy API comment before update',
+      const entity = await createIndexedEntity(context, uniqueName('E2E New Comment Update Entity'));
+      const comment = await geo.comments.create({
+        content: 'New API comment before update',
         replyTo: { entityId: entity.id, spaceId: context.spaceId },
-        network: 'TESTNET',
       });
-      await publishOps(context, 'E2E legacy comment update setup', comment.ops);
-      await waitForEntityName(comment.id, context.spaceId, deriveCommentName('Legacy API comment before update'));
+      await publishOps(context, 'E2E new API comment update setup', comment.ops);
+      await waitForEntityName(comment.id, context.spaceId, deriveCommentName('New API comment before update'));
 
-      const updatedContent = 'Legacy API comment after update';
-      const update = Graph.updateComment({
+      const updatedContent = 'New API comment after update';
+      const update = geo.comments.update({
         id: comment.id,
         content: updatedContent,
         resolved: true,
       });
-      await publishOps(context, 'E2E legacy comment update', update.ops);
+      await publishOps(context, 'E2E new API comment update', update.ops);
       await waitForEntityName(comment.id, context.spaceId, deriveCommentName(updatedContent));
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Graph.deleteEntity removes indexed entity values and relations',
+    'geo.entities.delete removes indexed entity values and relations',
     async () => {
       const context = await getTestContext();
-      const related = await createIndexedEntity(context, uniqueName('E2E Legacy Delete Related Entity'));
-      const deleteContextName = uniqueName('E2E Legacy Entity To Delete');
-      const deleteContextEntity = Graph.createEntity({
+      const related = await createIndexedEntity(context, uniqueName('E2E New Delete Related Entity'));
+      const deleteContextName = uniqueName('E2E New Entity To Delete');
+      const deleteContextEntity = Ops.entities.create({
         name: deleteContextName,
       });
-      const deleteContextRelation = Graph.createRelation({
+      const deleteContextRelation = Ops.relations.create({
         fromEntity: deleteContextEntity.id,
         toEntity: related.id,
         type: RELATION_TYPE,
       });
-      await publishOps(context, 'E2E legacy create entity for deletion', [
+      await publishOps(context, 'E2E new API create entity for deletion', [
         ...deleteContextEntity.ops,
         ...deleteContextRelation.ops,
       ]);
       await waitForEntityName(deleteContextEntity.id, context.spaceId, deleteContextName);
 
-      const deleteResult = await Graph.deleteEntity({
+      const deleteResult = await geo.entities.delete({
         id: deleteContextEntity.id,
         spaceId: context.spaceId,
-        network: 'TESTNET',
       });
       expect(deleteResult.ops.length).toBeGreaterThan(0);
-      await publishOps(context, 'E2E legacy delete entity', deleteResult.ops);
+      await publishOps(context, 'E2E new API delete entity', deleteResult.ops);
       await waitForEntityDeleted(deleteContextEntity.id, context.spaceId);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'Graph.upvoteEntity submits and indexes an upvote',
+    'geo.entityVotes.upvote submits and indexes an upvote',
     async () => {
       const context = await getTestContext();
-      const entity = await createIndexedEntity(context, uniqueName('E2E Legacy Upvoted Entity'));
-      const upvote = Graph.upvoteEntity({
-        authorSpaceId: context.spaceId,
+      const entity = await createIndexedEntity(context, uniqueName('E2E New Upvoted Entity'));
+      const upvote = geo.entityVotes.upvote({
+        authorSpaceId: context.authorSpaceId,
         spaceId: context.spaceId,
         entityId: entity.id,
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(context, {
-        label: 'E2E legacy upvote entity',
+        label: 'E2E new API upvote entity',
         to: upvote.to,
         calldata: upvote.calldata,
       });
-      await waitForEntityVote(entity.id, context.spaceId, context.spaceId, votes =>
+      await waitForEntityVote(entity.id, context.authorSpaceId, context.spaceId, votes =>
         votes.some(vote => vote.vote === 0),
       );
     },
@@ -988,22 +1168,21 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'Graph.downvoteEntity submits and indexes a downvote',
+    'geo.entityVotes.downvote submits and indexes a downvote',
     async () => {
       const context = await getTestContext();
-      const entity = await createIndexedEntity(context, uniqueName('E2E Legacy Downvoted Entity'));
-      const downvote = Graph.downvoteEntity({
-        authorSpaceId: context.spaceId,
+      const entity = await createIndexedEntity(context, uniqueName('E2E New Downvoted Entity'));
+      const downvote = geo.entityVotes.downvote({
+        authorSpaceId: context.authorSpaceId,
         spaceId: context.spaceId,
         entityId: entity.id,
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(context, {
-        label: 'E2E legacy downvote entity',
+        label: 'E2E new API downvote entity',
         to: downvote.to,
         calldata: downvote.calldata,
       });
-      await waitForEntityVote(entity.id, context.spaceId, context.spaceId, votes =>
+      await waitForEntityVote(entity.id, context.authorSpaceId, context.spaceId, votes =>
         votes.some(vote => vote.vote === 1),
       );
     },
@@ -1011,35 +1190,33 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'Graph.withdrawEntityVote submits and indexes a vote withdrawal',
+    'geo.entityVotes.withdraw removes an indexed entity vote',
     async () => {
       const context = await getTestContext();
-      const entity = await createIndexedEntity(context, uniqueName('E2E Legacy Vote Withdraw Entity'));
-      const upvote = Graph.upvoteEntity({
-        authorSpaceId: context.spaceId,
+      const entity = await createIndexedEntity(context, uniqueName('E2E New Vote Withdraw Entity'));
+      const upvote = geo.entityVotes.upvote({
+        authorSpaceId: context.authorSpaceId,
         spaceId: context.spaceId,
         entityId: entity.id,
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(context, {
-        label: 'E2E legacy upvote before withdraw',
+        label: 'E2E new API upvote before withdraw',
         to: upvote.to,
         calldata: upvote.calldata,
       });
-      await waitForEntityVote(entity.id, context.spaceId, context.spaceId, votes => votes.length > 0);
+      await waitForEntityVote(entity.id, context.authorSpaceId, context.spaceId, votes => votes.length > 0);
 
-      const withdraw = Graph.withdrawEntityVote({
-        authorSpaceId: context.spaceId,
+      const withdraw = geo.entityVotes.withdraw({
+        authorSpaceId: context.authorSpaceId,
         spaceId: context.spaceId,
         entityId: entity.id,
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(context, {
-        label: 'E2E legacy withdraw entity vote',
+        label: 'E2E new API withdraw entity vote',
         to: withdraw.to,
         calldata: withdraw.calldata,
       });
-      await waitForEntityVote(entity.id, context.spaceId, context.spaceId, votes =>
+      await waitForEntityVote(entity.id, context.authorSpaceId, context.spaceId, votes =>
         votes.some(vote => vote.vote === 2),
       );
     },
@@ -1047,141 +1224,163 @@ describe.skip('legacy deprecated API e2e surface', () => {
   );
 
   it(
-    'daoSpace.createSpace creates an indexed DAO space',
+    'geo.daoSpaces.create creates an indexed DAO space',
     async () => {
       const dao = await getDaoContext();
 
       expect(dao.daoSpaceAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
       expect(dao.daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
+      expect(await readSpaceTopicId(dao.daoSpaceId)).toBe(dao.daoSpaceEntityId);
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'daoSpace.proposeEdit creates an indexed publish proposal',
+    'geo.daoSpaces.proposeEdit creates an indexed publish proposal',
     async () => {
       const dao = await getDaoContext();
-      const daoEntity = Graph.createEntity({
-        name: uniqueName('E2E Legacy DAO Proposed Entity'),
+      const daoEntity = Ops.entities.create({
+        name: uniqueName('E2E New DAO Proposed Entity'),
       });
-      const proposal = await daoSpace.proposeEdit({
-        name: 'E2E legacy API DAO propose edit',
+      const proposal = await geo.daoSpaces.proposeEdit({
+        name: 'E2E new API DAO propose edit',
         ops: daoEntity.ops,
-        author: dao.spaceId,
+        author: dao.authorSpaceId,
         daoSpaceAddress: dao.daoSpaceAddress,
         callerSpaceId: dao.spaceIdHex,
         daoSpaceId: dao.daoSpaceIdHex,
         votingMode: 'FAST',
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(dao, {
-        label: 'legacy API DAO propose edit',
+        label: 'new API DAO propose edit',
         to: proposal.to,
         calldata: proposal.calldata,
       });
       await waitForProposal(proposal.proposalId, {
         daoSpaceId: dao.daoSpaceId,
-        proposedBy: dao.spaceId,
+        proposedBy: dao.authorSpaceId,
         votingMode: 'FAST',
-        actionType: 'PUBLISH',
-        contentUri: proposal.cid,
+        actionType: ['PUBLISH', 'UNKNOWN'],
       });
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'daoSpace.proposeAddMember creates an indexed add-member proposal',
+    'geo.daoSpaces.proposeAddMember creates an indexed add-member proposal',
     async () => {
       const dao = await getDaoContext();
-      await createLegacyAddMemberProposal(dao, 'legacy API DAO propose add member');
+      await createAddMemberProposal(dao, 'new API DAO propose add member');
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'daoSpace.proposeRemoveMember creates an indexed remove-member proposal',
+    'geo.daoSpaces.proposeRemoveMember creates an indexed remove-member proposal',
     async () => {
       const dao = await getDaoContext();
-      const proposal = daoSpace.proposeRemoveMember({
+      const proposal = geo.daoSpaces.proposeRemoveMember({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
         memberToRemoveSpaceId: dao.spaceIdHex,
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(dao, {
-        label: 'legacy API DAO propose remove member',
+        label: 'new API DAO propose remove member',
         to: proposal.to,
         calldata: proposal.calldata,
       });
       await waitForProposal(proposal.proposalId, {
         daoSpaceId: dao.daoSpaceId,
-        proposedBy: dao.spaceId,
+        proposedBy: dao.authorSpaceId,
         votingMode: 'SLOW',
+        actionType: 'REMOVE_MEMBER',
+        targetId: dao.spaceId,
       });
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'daoSpace.proposeAddEditor creates an indexed add-editor proposal',
+    'geo.daoSpaces.proposeAddEditor creates an indexed add-editor proposal',
     async () => {
       const dao = await getDaoContext();
-      const proposal = daoSpace.proposeAddEditor({
+      const proposal = geo.daoSpaces.proposeAddEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
         newEditorSpaceId: dao.spaceIdHex,
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(dao, {
-        label: 'legacy API DAO propose add editor',
+        label: 'new API DAO propose add editor',
         to: proposal.to,
         calldata: proposal.calldata,
       });
       await waitForProposal(proposal.proposalId, {
         daoSpaceId: dao.daoSpaceId,
-        proposedBy: dao.spaceId,
+        proposedBy: dao.authorSpaceId,
         votingMode: 'SLOW',
+        actionType: 'ADD_EDITOR',
+        targetId: dao.spaceId,
       });
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'daoSpace.proposeRemoveEditor creates an indexed remove-editor proposal',
+    'geo.daoSpaces.proposeAddEditor rejects FAST voting mode',
     async () => {
       const dao = await getDaoContext();
-      const proposal = daoSpace.proposeRemoveEditor({
+
+      expect(() =>
+        geo.daoSpaces.proposeAddEditor({
+          authorSpaceId: dao.spaceIdHex,
+          spaceId: dao.daoSpaceIdHex,
+          daoSpaceAddress: dao.daoSpaceAddress,
+          newEditorSpaceId: dao.spaceIdHex,
+          votingMode: 'FAST' as 'SLOW',
+        }),
+      ).toThrow('proposeAddEditor only supports SLOW voting mode');
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'geo.daoSpaces.proposeRemoveEditor creates an indexed remove-editor proposal',
+    async () => {
+      const dao = await getDaoContext();
+      const proposal = geo.daoSpaces.proposeRemoveEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
         editorToRemoveSpaceId: dao.spaceIdHex,
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(dao, {
-        label: 'legacy API DAO propose remove editor',
+        label: 'new API DAO propose remove editor',
         to: proposal.to,
         calldata: proposal.calldata,
       });
       await waitForProposal(proposal.proposalId, {
         daoSpaceId: dao.daoSpaceId,
-        proposedBy: dao.spaceId,
+        proposedBy: dao.authorSpaceId,
         votingMode: 'SLOW',
+        actionType: 'REMOVE_EDITOR',
+        targetId: dao.spaceId,
       });
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'daoSpace.proposeRequestMembership creates an indexed membership proposal',
+    'geo.daoSpaces.proposeRequestMembership creates an indexed membership proposal',
     async () => {
       const dao = await getDaoContext();
-      const proposal = daoSpace.proposeRequestMembership({
+      const proposal = geo.daoSpaces.proposeRequestMembership({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(dao, {
-        label: 'legacy API DAO propose request membership',
+        label: 'new API DAO propose request membership',
         to: proposal.to,
         calldata: proposal.calldata,
       });
@@ -1190,47 +1389,78 @@ describe.skip('legacy deprecated API e2e surface', () => {
         proposedBy: dao.daoSpaceId,
         votingMode: 'FAST',
         actionType: 'ADD_MEMBER',
-        targetId: dao.spaceId,
+        targetId: dao.authorSpaceId,
       });
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'daoSpace.voteProposal creates an indexed proposal vote',
+    'geo.daoSpaces.proposeUpdateVotingSettings creates an indexed update-voting-settings proposal',
     async () => {
       const dao = await getDaoContext();
-      const proposal = await createLegacyAddMemberProposal(dao, 'legacy API DAO proposal for vote');
-      const vote = daoSpace.voteProposal({
+      const proposal = geo.daoSpaces.proposeUpdateVotingSettings({
+        authorSpaceId: dao.spaceIdHex,
+        spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
+        votingSettings: {
+          partialPercentageSupportThreshold: 50,
+          universalPercentageSupportThreshold: 90,
+          flatSupportThreshold: 1,
+          quorum: 1,
+          durationInDays: 2,
+          disableFastPathAccessForNewMembers: true,
+          executionGracePeriodInDays: 14,
+        },
+      });
+      await sendTransactionAndWait(dao, {
+        label: 'new API DAO propose update voting settings',
+        to: proposal.to,
+        calldata: proposal.calldata,
+      });
+      await waitForProposal(proposal.proposalId, {
+        daoSpaceId: dao.daoSpaceId,
+        proposedBy: dao.authorSpaceId,
+        votingMode: 'SLOW',
+        actionType: 'UPDATE_VOTING_SETTINGS',
+      });
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'geo.daoSpaces.voteProposal creates an indexed proposal vote',
+    async () => {
+      const dao = await getDaoContext();
+      const proposal = await createAddMemberProposal(dao, 'new API DAO proposal for vote');
+      const vote = geo.daoSpaces.voteProposal({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
         proposalId: proposal.proposalId,
         vote: 'YES',
-        network: 'TESTNET',
       });
       await sendTransactionAndWait(dao, {
-        label: 'legacy API DAO vote proposal',
+        label: 'new API DAO vote proposal',
         to: vote.to,
         calldata: vote.calldata,
       });
-      await waitForProposalVote(proposal.proposalId, dao.spaceId, dao.daoSpaceId, 'YES');
+      await waitForProposalVote(proposal.proposalId, dao.authorSpaceId, dao.daoSpaceId, 'YES');
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'daoSpace.executeProposal builds execute calldata for an indexed proposal',
+    'geo.daoSpaces.executeProposal builds execute calldata for an indexed proposal',
     async () => {
       const dao = await getDaoContext();
-      const proposal = await createLegacyAddMemberProposal(dao, 'legacy API DAO proposal for execute calldata');
-      const execute = daoSpace.executeProposal({
+      const proposal = await createAddMemberProposal(dao, 'new API DAO proposal for execute calldata');
+      const execute = geo.daoSpaces.executeProposal({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
         proposalId: proposal.proposalId,
-        network: 'TESTNET',
       });
 
-      expect(execute.to).toBe(requireTestnetContract('SPACE_REGISTRY_ADDRESS'));
+      expect(execute.to).toBe(e2e.contracts.SPACE_REGISTRY_ADDRESS);
       expect(execute.calldata).toMatch(/^0x[0-9a-fA-F]+$/);
     },
     TEST_TIMEOUT_MS,
