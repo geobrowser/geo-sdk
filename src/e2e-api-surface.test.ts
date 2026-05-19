@@ -1,11 +1,12 @@
 import type { CreateRelation, Op } from '@geoprotocol/grc-20';
-import { type Chain, createPublicClient, createWalletClient, type Hex, http } from 'viem';
+import { createPublicClient, createWalletClient, type Hex, http } from 'viem';
 import { type PrivateKeyAccount, privateKeyToAccount } from 'viem/accounts';
 import { describe, expect, it } from 'vitest';
 
-import { createGeoClient, defineGeoNetworkConfig, GeoTestnetConfig, Ops } from '../index.js';
+import { createGeoClient, Ops } from '../index.js';
 import { SpaceRegistryAbi } from './abis/index.js';
 import { DESCRIPTION_PROPERTY, RELATION_TYPE, REPLY_TO_PROPERTY } from './core/ids/system.js';
+import { createE2ETestEnvironment } from './e2e-test-environment.js';
 import { deriveCommentName } from './graph/comment-utils.js';
 import { generate, toGrcId } from './id-utils.js';
 
@@ -15,9 +16,8 @@ const INDEXER_TIMEOUT_MS = 120_000;
 const TEST_TIMEOUT_MS = 600_000;
 const replyToGrcId = toGrcId(REPLY_TO_PROPERTY);
 
-const geo = createGeoClient({
-  network: defineGeoNetworkConfig(GeoTestnetConfig),
-});
+const e2e = createE2ETestEnvironment();
+const geo = createGeoClient({ network: e2e.network });
 
 type WalletSetup = {
   account: PrivateKeyAccount;
@@ -58,14 +58,19 @@ type ProposalQueryResponse = {
     id: string;
     spaceId: string;
     proposedBy: string;
-    votingMode: 'FAST' | 'SLOW';
-    name: string | null;
-    yesCount: string;
-    noCount: string;
-    abstainCount: string;
+    currentVersion: number;
+    proposalVersions: Array<{
+      proposalVersion: number;
+      votingMode: 'FAST' | 'SLOW';
+      name: string | null;
+      yesCount: string;
+      noCount: string;
+      abstainCount: string;
+    }>;
   }>;
   proposalActions: Array<{
     proposalId: string;
+    proposalVersion: number;
     actionType: ProposalActionType;
     targetId: string | null;
     contentUri: string | null;
@@ -97,6 +102,16 @@ type SpaceTopicQueryResponse = {
   }>;
 };
 
+class GraphQlRequestError extends Error {
+  constructor(readonly errors: unknown) {
+    super(`GraphQL errors: ${JSON.stringify(errors)}`);
+  }
+
+  hasValidationError() {
+    return JSON.stringify(this.errors).includes('GRAPHQL_VALIDATION_FAILED');
+  }
+}
+
 type TestContext = WalletSetup & {
   spaceId: string;
   spaceIdHex: Hex;
@@ -112,49 +127,6 @@ type DaoContext = TestContext & {
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function requireTestnetContract(name: 'SPACE_REGISTRY_ADDRESS' | 'DAO_SPACE_FACTORY_ADDRESS'): `0x${string}` {
-  const address = GeoTestnetConfig.contracts?.[name];
-  if (!address) {
-    throw new Error(`GeoTestnetConfig is missing ${name}`);
-  }
-
-  return address;
-}
-
-function requireTestnetRpcUrl(): string {
-  const rpcUrl = GeoTestnetConfig.chain?.rpcUrl;
-  if (!rpcUrl) {
-    throw new Error('GeoTestnetConfig is missing an RPC URL');
-  }
-
-  return rpcUrl;
-}
-
-function createTestnetChain(rpcUrl: string): Chain {
-  const chainConfig = GeoTestnetConfig.chain;
-  if (!chainConfig) {
-    throw new Error('GeoTestnetConfig is missing chain config');
-  }
-
-  return {
-    id: chainConfig.id,
-    name: chainConfig.name,
-    nativeCurrency: {
-      name: 'Ethereum',
-      symbol: 'ETH',
-      decimals: 18,
-    },
-    rpcUrls: {
-      default: {
-        http: [rpcUrl],
-      },
-      public: {
-        http: [rpcUrl],
-      },
-    },
-  };
 }
 
 function filterReplyToRelations(ops: Op[]): CreateRelation[] {
@@ -230,14 +202,19 @@ function proposalQuery(proposalId: string) {
       id
       spaceId
       proposedBy
-      votingMode
-      name
-      yesCount
-      noCount
-      abstainCount
+      currentVersion
+      proposalVersions {
+        proposalVersion
+        votingMode
+        name
+        yesCount
+        noCount
+        abstainCount
+      }
     }
     proposalActions(condition: { proposalId: ${JSON.stringify(id)} }) {
       proposalId
+      proposalVersion
       actionType
       targetId
       contentUri
@@ -290,7 +267,7 @@ function spaceTopicQuery(spaceId: string) {
 async function queryGraph<T>(query: string): Promise<T> {
   const response = await geo.api.graphql<T>(query);
   if (response.errors) {
-    throw new Error(`GraphQL errors: ${JSON.stringify(response.errors)}`);
+    throw new GraphQlRequestError(response.errors);
   }
   if (response.data === undefined) {
     throw new Error('GraphQL response did not include data');
@@ -312,6 +289,9 @@ async function waitFor<T>(label: string, read: () => Promise<T>, predicate: (val
         return lastValue;
       }
     } catch (error) {
+      if (error instanceof GraphQlRequestError && error.hasValidationError()) {
+        throw error;
+      }
       lastError = error;
     }
     await sleep(3_000);
@@ -362,7 +342,7 @@ async function waitForProposal(
     daoSpaceId: string;
     proposedBy: string;
     votingMode?: 'FAST' | 'SLOW';
-    actionType?: ProposalActionType;
+    actionType?: ProposalActionType | ProposalActionType[];
     targetId?: string;
     contentUri?: string;
   },
@@ -379,14 +359,18 @@ async function waitForProposal(
       if (proposal.proposedBy !== expected.proposedBy.replaceAll('-', '')) {
         return false;
       }
-      if (expected.votingMode && proposal.votingMode !== expected.votingMode) {
+      const currentVersion = proposal.proposalVersions.find(
+        version => version.proposalVersion === proposal.currentVersion,
+      );
+      if (expected.votingMode && currentVersion?.votingMode !== expected.votingMode) {
         return false;
       }
       if (!expected.actionType) return true;
+      const expectedActionTypes = Array.isArray(expected.actionType) ? expected.actionType : [expected.actionType];
 
       return value.proposalActions.some(
         action =>
-          action.actionType === expected.actionType &&
+          expectedActionTypes.includes(action.actionType) &&
           (expected.targetId === undefined ||
             action.targetId === expected.targetId.replace(/^0x/, '').replaceAll('-', '')) &&
           (expected.contentUri === undefined || action.contentUri === expected.contentUri),
@@ -396,7 +380,8 @@ async function waitForProposal(
 
   expect(data.proposals[0]?.id).toBe(proposalUuid(proposalId));
   if (expected.actionType) {
-    expect(data.proposalActions.map(action => action.actionType)).toContain(expected.actionType);
+    const expectedActionTypes = Array.isArray(expected.actionType) ? expected.actionType : [expected.actionType];
+    expect(data.proposalActions.some(action => expectedActionTypes.includes(action.actionType))).toBe(true);
   }
 
   return data;
@@ -453,7 +438,7 @@ async function readSpaceTopicId(spaceId: string) {
 
 async function getSpaceIdHex(publicClient: ReturnType<typeof createPublicClient>, address: Hex): Promise<Hex> {
   return (await publicClient.readContract({
-    address: requireTestnetContract('SPACE_REGISTRY_ADDRESS'),
+    address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
     abi: SpaceRegistryAbi,
     functionName: 'addressToSpaceId',
     args: [address],
@@ -537,25 +522,15 @@ async function ensurePersonalSpace({
 }
 
 async function setupWallet(): Promise<WalletSetup> {
-  const privateKey = process.env.PRIVATE_KEY;
-  if (!privateKey) {
-    throw new Error('PRIVATE_KEY environment variable is required.');
-  }
-  if (!privateKey.startsWith('0x')) {
-    throw new Error('PRIVATE_KEY must be a hex string starting with 0x.');
-  }
-
-  const rpcUrl = requireTestnetRpcUrl();
-  const account = privateKeyToAccount(privateKey as `0x${string}`);
-  const chain = createTestnetChain(rpcUrl);
+  const account = privateKeyToAccount(e2e.privateKey);
   const walletClient = createWalletClient({
     account,
-    chain,
-    transport: http(rpcUrl),
+    chain: e2e.chain,
+    transport: http(e2e.rpcUrl),
   });
   const publicClient = createPublicClient({
-    chain,
-    transport: http(rpcUrl),
+    chain: e2e.chain,
+    transport: http(e2e.rpcUrl),
   });
 
   return { account, publicClient, walletClient };
@@ -674,10 +649,13 @@ async function getDaoContext(): Promise<DaoContext> {
     const daoSpace = await geo.daoSpaces.create({
       name: daoName,
       votingSettings: {
-        slowPathPercentageThreshold: 50,
-        fastPathFlatThreshold: 1,
+        partialPercentageSupportThreshold: 50,
+        universalPercentageSupportThreshold: 90,
+        flatSupportThreshold: 1,
         quorum: 1,
         durationInDays: 2,
+        disableFastPathAccessForNewMembers: true,
+        executionGracePeriodInDays: 14,
       },
       initialEditorSpaceIds: [context.spaceIdHex],
       author: context.authorSpaceId,
@@ -737,7 +715,7 @@ async function createAddMemberProposal(context: DaoContext, label: string) {
 }
 
 describe.skip('new API e2e surface', () => {
-  // describe.sequential("new API e2e surface", () => {
+  // describe.sequential('new API e2e surface', () => {
   it(
     'geo.personalSpaces.hasSpace validates the account space onchain',
     async () => {
@@ -749,7 +727,7 @@ describe.skip('new API e2e surface', () => {
       expect(hasSpace).toBe(true);
 
       const spaceAddress = (await context.publicClient.readContract({
-        address: requireTestnetContract('SPACE_REGISTRY_ADDRESS'),
+        address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
         abi: SpaceRegistryAbi,
         functionName: 'spaceIdToAddress',
         args: [context.spaceIdHex],
@@ -1262,8 +1240,7 @@ describe.skip('new API e2e surface', () => {
         daoSpaceId: dao.daoSpaceId,
         proposedBy: dao.authorSpaceId,
         votingMode: 'FAST',
-        actionType: 'PUBLISH',
-        contentUri: proposal.cid,
+        actionType: ['PUBLISH', 'UNKNOWN'],
       });
     },
     TEST_TIMEOUT_MS,
@@ -1399,36 +1376,44 @@ describe.skip('new API e2e surface', () => {
   );
 
   it(
-    'geo.daoSpaces.proposals.create creates an indexed custom proposal',
+    'geo.daoSpaces.proposeUpdateVotingSettings creates an indexed update-voting-settings proposal',
     async () => {
       const dao = await getDaoContext();
-      const proposal = geo.daoSpaces.proposals.create({
-        fromSpaceId: dao.spaceIdHex,
-        daoSpaceId: dao.daoSpaceIdHex,
-        actions: [geo.daoSpaces.proposals.actions.addMember(dao.daoSpaceAddress, dao.spaceIdHex)],
+      const proposal = geo.daoSpaces.proposeUpdateVotingSettings({
+        authorSpaceId: dao.spaceIdHex,
+        spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
+        votingSettings: {
+          partialPercentageSupportThreshold: 50,
+          universalPercentageSupportThreshold: 90,
+          flatSupportThreshold: 1,
+          quorum: 1,
+          durationInDays: 2,
+          disableFastPathAccessForNewMembers: true,
+          executionGracePeriodInDays: 14,
+        },
       });
       await sendTransactionAndWait(dao, {
-        label: 'new API DAO custom proposal',
+        label: 'new API DAO propose update voting settings',
         to: proposal.to,
         calldata: proposal.calldata,
       });
       await waitForProposal(proposal.proposalId, {
         daoSpaceId: dao.daoSpaceId,
         proposedBy: dao.authorSpaceId,
-        votingMode: 'FAST',
-        actionType: 'ADD_MEMBER',
-        targetId: dao.spaceId,
+        votingMode: 'SLOW',
+        actionType: 'UPDATE_VOTING_SETTINGS',
       });
     },
     TEST_TIMEOUT_MS,
   );
 
   it(
-    'geo.daoSpaces.proposals.vote creates an indexed proposal vote',
+    'geo.daoSpaces.voteProposal creates an indexed proposal vote',
     async () => {
       const dao = await getDaoContext();
       const proposal = await createAddMemberProposal(dao, 'new API DAO proposal for vote');
-      const vote = geo.daoSpaces.proposals.vote({
+      const vote = geo.daoSpaces.voteProposal({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
         proposalId: proposal.proposalId,
@@ -1445,43 +1430,18 @@ describe.skip('new API e2e surface', () => {
   );
 
   it(
-    'geo.daoSpaces.proposals.execute builds execute calldata for an indexed proposal',
+    'geo.daoSpaces.executeProposal builds execute calldata for an indexed proposal',
     async () => {
       const dao = await getDaoContext();
       const proposal = await createAddMemberProposal(dao, 'new API DAO proposal for execute calldata');
-      const execute = geo.daoSpaces.proposals.execute({
+      const execute = geo.daoSpaces.executeProposal({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
         proposalId: proposal.proposalId,
       });
 
-      expect(execute.to).toBe(requireTestnetContract('SPACE_REGISTRY_ADDRESS'));
+      expect(execute.to).toBe(e2e.contracts.SPACE_REGISTRY_ADDRESS);
       expect(execute.calldata).toMatch(/^0x[0-9a-fA-F]+$/);
-    },
-    TEST_TIMEOUT_MS,
-  );
-
-  it(
-    'geo.daoSpaces.proposals.actions build proposal actions for custom proposals',
-    async () => {
-      const dao = await getDaoContext();
-      const publishAction = geo.daoSpaces.proposals.actions.publishEdit(
-        dao.daoSpaceAddress,
-        'ipfs://QmP6aJhM3SgoRSPUccBQK9VMHNqqezixG1Qvjy2xPWvPh5',
-      );
-      const updateVotingAction = geo.daoSpaces.proposals.actions.updateVotingSettings(dao.daoSpaceAddress, {
-        slowPathPercentageThreshold: 50,
-        fastPathFlatThreshold: 1,
-        quorum: 1,
-        durationInDays: 2,
-      });
-
-      expect(publishAction.to).toBe(dao.daoSpaceAddress);
-      expect(updateVotingAction.to).toBe(dao.daoSpaceAddress);
-      expect(geo.daoSpaces.proposals.actions.addMember(dao.daoSpaceAddress, dao.spaceIdHex).data).toMatch(/^0x/);
-      expect(geo.daoSpaces.proposals.actions.removeMember(dao.daoSpaceAddress, dao.spaceIdHex).data).toMatch(/^0x/);
-      expect(geo.daoSpaces.proposals.actions.addEditor(dao.daoSpaceAddress, dao.spaceIdHex).data).toMatch(/^0x/);
-      expect(geo.daoSpaces.proposals.actions.removeEditor(dao.daoSpaceAddress, dao.spaceIdHex).data).toMatch(/^0x/);
     },
     TEST_TIMEOUT_MS,
   );

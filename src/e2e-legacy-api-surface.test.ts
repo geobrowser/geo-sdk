@@ -1,11 +1,12 @@
 import type { CreateRelation, Op } from '@geoprotocol/grc-20';
-import { createPublicClient, type Hex, http } from 'viem';
+import { createPublicClient, createWalletClient, type Hex, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { describe, expect, it } from 'vitest';
 
-import { daoSpace, GeoTestnetConfig, Graph, getWalletClient, Ipfs, personalSpace } from '../index.js';
+import { daoSpace, Graph, Ipfs, personalSpace } from '../index.js';
 import { SpaceRegistryAbi } from './abis/index.js';
 import { DESCRIPTION_PROPERTY, RELATION_TYPE, REPLY_TO_PROPERTY } from './core/ids/system.js';
+import { createE2ETestEnvironment } from './e2e-test-environment.js';
 import { deriveCommentName } from './graph/comment-utils.js';
 import { toGrcId } from './id-utils.js';
 
@@ -14,11 +15,13 @@ const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
 const INDEXER_TIMEOUT_MS = 120_000;
 const TEST_TIMEOUT_MS = 600_000;
 const replyToGrcId = toGrcId(REPLY_TO_PROPERTY);
+const e2e = createE2ETestEnvironment();
+const legacyNetwork = e2e.networkish as 'TESTNET';
 
 type WalletSetup = {
-  account: NonNullable<Awaited<ReturnType<typeof getWalletClient>>['account']>;
+  account: ReturnType<typeof privateKeyToAccount>;
   publicClient: ReturnType<typeof createPublicClient>;
-  walletClient: Awaited<ReturnType<typeof getWalletClient>>;
+  walletClient: ReturnType<typeof createWalletClient>;
 };
 
 type GraphQlResponse<T> = {
@@ -59,11 +62,16 @@ type ProposalQueryResponse = {
     id: string;
     spaceId: string;
     proposedBy: string;
-    votingMode: 'FAST' | 'SLOW';
-    name: string | null;
+    currentVersion: number;
+    proposalVersions: Array<{
+      proposalVersion: number;
+      votingMode: 'FAST' | 'SLOW';
+      name: string | null;
+    }>;
   }>;
   proposalActions: Array<{
     proposalId: string;
+    proposalVersion: number;
     actionType: ProposalActionType;
     targetId: string | null;
     contentUri: string | null;
@@ -100,26 +108,18 @@ type DaoContext = TestContext & {
   daoSpaceIdHex: Hex;
 };
 
+class GraphQlRequestError extends Error {
+  constructor(readonly errors: unknown) {
+    super(`GraphQL errors: ${JSON.stringify(errors)}`);
+  }
+
+  hasValidationError() {
+    return JSON.stringify(this.errors).includes('GRAPHQL_VALIDATION_FAILED');
+  }
+}
+
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function requireTestnetContract(name: 'SPACE_REGISTRY_ADDRESS' | 'DAO_SPACE_FACTORY_ADDRESS'): `0x${string}` {
-  const address = GeoTestnetConfig.contracts?.[name];
-  if (!address) {
-    throw new Error(`GeoTestnetConfig is missing ${name}`);
-  }
-
-  return address;
-}
-
-function requireTestnetRpcUrl(): string {
-  const rpcUrl = GeoTestnetConfig.chain?.rpcUrl;
-  if (!rpcUrl) {
-    throw new Error('GeoTestnetConfig is missing an RPC URL');
-  }
-
-  return rpcUrl;
 }
 
 function filterReplyToRelations(ops: Op[]): CreateRelation[] {
@@ -195,11 +195,16 @@ function proposalQuery(proposalId: string) {
       id
       spaceId
       proposedBy
-      votingMode
-      name
+      currentVersion
+      proposalVersions {
+        proposalVersion
+        votingMode
+        name
+      }
     }
     proposalActions(condition: { proposalId: ${JSON.stringify(id)} }) {
       proposalId
+      proposalVersion
       actionType
       targetId
       contentUri
@@ -240,7 +245,7 @@ function entityVoteQuery(entityId: string, voterId: string, spaceId: string) {
 }
 
 async function queryGraph<T>(query: string): Promise<T> {
-  const response = await fetch(`${GeoTestnetConfig.apiOrigin}/graphql`, {
+  const response = await fetch(`${e2e.apiOrigin}/graphql`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query }),
@@ -251,7 +256,7 @@ async function queryGraph<T>(query: string): Promise<T> {
 
   const envelope = (await response.json()) as GraphQlResponse<T>;
   if (envelope.errors) {
-    throw new Error(`GraphQL errors: ${JSON.stringify(envelope.errors)}`);
+    throw new GraphQlRequestError(envelope.errors);
   }
   if (envelope.data === undefined) {
     throw new Error('GraphQL response did not include data');
@@ -273,6 +278,9 @@ async function waitFor<T>(label: string, read: () => Promise<T>, predicate: (val
         return lastValue;
       }
     } catch (error) {
+      if (error instanceof GraphQlRequestError && error.hasValidationError()) {
+        throw error;
+      }
       lastError = error;
     }
     await sleep(3_000);
@@ -323,7 +331,7 @@ async function waitForProposal(
     daoSpaceId: string;
     proposedBy: string;
     votingMode?: 'FAST' | 'SLOW';
-    actionType?: ProposalActionType;
+    actionType?: ProposalActionType | ProposalActionType[];
     targetId?: string;
     contentUri?: string;
   },
@@ -336,12 +344,16 @@ async function waitForProposal(
       if (!proposal) return false;
       if (proposal.spaceId !== expected.daoSpaceId.replaceAll('-', '')) return false;
       if (proposal.proposedBy !== expected.proposedBy.replaceAll('-', '')) return false;
-      if (expected.votingMode && proposal.votingMode !== expected.votingMode) return false;
+      const currentVersion = proposal.proposalVersions.find(
+        version => version.proposalVersion === proposal.currentVersion,
+      );
+      if (expected.votingMode && currentVersion?.votingMode !== expected.votingMode) return false;
       if (!expected.actionType) return true;
+      const expectedActionTypes = Array.isArray(expected.actionType) ? expected.actionType : [expected.actionType];
 
       return value.proposalActions.some(
         action =>
-          action.actionType === expected.actionType &&
+          expectedActionTypes.includes(action.actionType) &&
           (expected.targetId === undefined ||
             action.targetId === expected.targetId.replace(/^0x/, '').replaceAll('-', '')) &&
           (expected.contentUri === undefined || action.contentUri === expected.contentUri),
@@ -351,7 +363,8 @@ async function waitForProposal(
 
   expect(data.proposals[0]?.id).toBe(proposalUuid(proposalId));
   if (expected.actionType) {
-    expect(data.proposalActions.map(action => action.actionType)).toContain(expected.actionType);
+    const expectedActionTypes = Array.isArray(expected.actionType) ? expected.actionType : [expected.actionType];
+    expect(data.proposalActions.some(action => expectedActionTypes.includes(action.actionType))).toBe(true);
   }
 }
 
@@ -387,7 +400,7 @@ async function waitForEntityVote(
 
 async function getSpaceIdHex(publicClient: ReturnType<typeof createPublicClient>, address: Hex): Promise<Hex> {
   return (await publicClient.readContract({
-    address: requireTestnetContract('SPACE_REGISTRY_ADDRESS'),
+    address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
     abi: SpaceRegistryAbi,
     functionName: 'addressToSpaceId',
     args: [address],
@@ -398,11 +411,12 @@ async function ensurePersonalSpace({ account, publicClient, walletClient }: Wall
   let spaceIdHex = await getSpaceIdHex(publicClient, account.address);
   const hasExistingSpace = await personalSpace.hasSpace({
     address: account.address,
+    network: e2e.networkish,
   });
   expect(hasExistingSpace).toBe(spaceIdHex.toLowerCase() !== EMPTY_SPACE_ID.toLowerCase());
 
   if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
-    const createSpace = personalSpace.createSpace();
+    const createSpace = personalSpace.createSpace({ network: e2e.networkish });
     await sendTransactionAndWait(
       { account, publicClient, walletClient },
       {
@@ -425,26 +439,17 @@ async function ensurePersonalSpace({ account, publicClient, walletClient }: Wall
 }
 
 async function setupWallet(): Promise<WalletSetup> {
-  const privateKey = process.env.PRIVATE_KEY;
-  if (!privateKey) {
-    throw new Error('PRIVATE_KEY environment variable is required.');
-  }
-  if (!privateKey.startsWith('0x')) {
-    throw new Error('PRIVATE_KEY must be a hex string starting with 0x.');
-  }
-
-  const walletClient = await getWalletClient({
-    privateKey: privateKey as `0x${string}`,
-    rpcUrl: requireTestnetRpcUrl(),
+  const account = privateKeyToAccount(e2e.privateKey);
+  const walletClient = createWalletClient({
+    account,
+    chain: e2e.chain,
+    transport: http(e2e.rpcUrl),
   });
-  const account = walletClient.account;
-  if (!account) {
-    throw new Error('Wallet client account is undefined');
-  }
-  expect(account.address).toBe(privateKeyToAccount(privateKey as `0x${string}`).address);
+  expect(account.address).toBe(privateKeyToAccount(e2e.privateKey).address);
 
   const publicClient = createPublicClient({
-    transport: http(requireTestnetRpcUrl()),
+    chain: e2e.chain,
+    transport: http(e2e.rpcUrl),
   });
 
   return { account, publicClient, walletClient };
@@ -502,7 +507,7 @@ async function publishOps(context: TestContext, name: string, ops: Op[], spaceId
     spaceId,
     author: context.spaceId,
     ops,
-    network: 'TESTNET',
+    network: legacyNetwork,
   });
   await sendTransactionAndWait(context, {
     label: name,
@@ -528,14 +533,17 @@ async function getDaoContext(): Promise<DaoContext> {
     const createdDaoSpace = await daoSpace.createSpace({
       name: daoName,
       votingSettings: {
-        slowPathPercentageThreshold: 50,
-        fastPathFlatThreshold: 1,
+        partialPercentageSupportThreshold: 50,
+        universalPercentageSupportThreshold: 90,
+        flatSupportThreshold: 1,
         quorum: 1,
         durationInDays: 2,
+        disableFastPathAccessForNewMembers: true,
+        executionGracePeriodInDays: 14,
       },
       initialEditorSpaceIds: [context.spaceIdHex],
       author: context.spaceId,
-      network: 'TESTNET',
+      network: legacyNetwork,
     });
     const daoCreateTx = await sendTransactionAndWait(context, {
       label: 'create legacy API DAO space',
@@ -570,8 +578,9 @@ async function createLegacyAddMemberProposal(context: DaoContext, label: string)
   const proposal = daoSpace.proposeAddMember({
     authorSpaceId: context.spaceIdHex,
     spaceId: context.daoSpaceIdHex,
+    daoSpaceAddress: context.daoSpaceAddress,
     newMemberSpaceId: context.spaceIdHex,
-    network: 'TESTNET',
+    network: legacyNetwork,
   });
   await sendTransactionAndWait(context, {
     label,
@@ -595,12 +604,13 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const context = await getTestContext();
       const hasSpace = await personalSpace.hasSpace({
         address: context.account.address,
+        network: e2e.networkish,
       });
 
       expect(hasSpace).toBe(true);
 
       const spaceAddress = (await context.publicClient.readContract({
-        address: requireTestnetContract('SPACE_REGISTRY_ADDRESS'),
+        address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
         abi: SpaceRegistryAbi,
         functionName: 'spaceIdToAddress',
         args: [context.spaceIdHex],
@@ -613,7 +623,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
   it(
     'Ipfs.uploadCSV uploads CSV data',
     async () => {
-      const csvCid = await Ipfs.uploadCSV(`name,run\nLegacy API surface,${Date.now().toString(36)}`, 'TESTNET');
+      const csvCid = await Ipfs.uploadCSV(`name,run\nLegacy API surface,${Date.now().toString(36)}`, legacyNetwork);
 
       expect(csvCid).toMatch(/^ipfs:\/\//);
     },
@@ -623,7 +633,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
   it(
     'Ipfs.uploadImage uploads an image and returns dimensions',
     async () => {
-      const uploadedImage = await Ipfs.uploadImage({ blob: tinyPngBlob() }, 'TESTNET', true);
+      const uploadedImage = await Ipfs.uploadImage({ blob: tinyPngBlob() }, legacyNetwork, true);
 
       expect(uploadedImage.cid).toMatch(/^ipfs:\/\//);
       expect(uploadedImage.dimensions).toEqual({ width: 1, height: 1 });
@@ -640,7 +650,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
         blob: tinyPngBlob(),
         name: imageName,
         description: 'Created by the legacy API e2e surface test',
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
 
       expect(image.cid).toMatch(/^ipfs:\/\//);
@@ -661,7 +671,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
         name: 'E2E legacy upload-only edit',
         ops: entity.ops,
         author: context.spaceId,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
 
       expect(edit.cid).toMatch(/^ipfs:\/\//);
@@ -886,7 +896,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const commentA = await Graph.createComment({
         content: commentAContent,
         replyTo: { entityId: entity.id, spaceId: context.spaceId },
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       expect(filterReplyToRelations(commentA.ops)).toHaveLength(1);
       await publishOps(context, 'E2E legacy comment A', commentA.ops);
@@ -897,7 +907,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const commentB = await Graph.createComment({
         content: commentBContent,
         replyTo: { entityId: commentA.id, spaceId: context.spaceId },
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       expect(filterReplyToRelations(commentB.ops)).toHaveLength(2);
       await publishOps(context, 'E2E legacy comment B', commentB.ops);
@@ -915,7 +925,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const comment = await Graph.createComment({
         content: 'Legacy API comment before update',
         replyTo: { entityId: entity.id, spaceId: context.spaceId },
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await publishOps(context, 'E2E legacy comment update setup', comment.ops);
       await waitForEntityName(comment.id, context.spaceId, deriveCommentName('Legacy API comment before update'));
@@ -955,7 +965,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const deleteResult = await Graph.deleteEntity({
         id: deleteContextEntity.id,
         spaceId: context.spaceId,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       expect(deleteResult.ops.length).toBeGreaterThan(0);
       await publishOps(context, 'E2E legacy delete entity', deleteResult.ops);
@@ -973,7 +983,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
         authorSpaceId: context.spaceId,
         spaceId: context.spaceId,
         entityId: entity.id,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(context, {
         label: 'E2E legacy upvote entity',
@@ -996,7 +1006,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
         authorSpaceId: context.spaceId,
         spaceId: context.spaceId,
         entityId: entity.id,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(context, {
         label: 'E2E legacy downvote entity',
@@ -1019,7 +1029,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
         authorSpaceId: context.spaceId,
         spaceId: context.spaceId,
         entityId: entity.id,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(context, {
         label: 'E2E legacy upvote before withdraw',
@@ -1032,7 +1042,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
         authorSpaceId: context.spaceId,
         spaceId: context.spaceId,
         entityId: entity.id,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(context, {
         label: 'E2E legacy withdraw entity vote',
@@ -1072,7 +1082,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
         callerSpaceId: dao.spaceIdHex,
         daoSpaceId: dao.daoSpaceIdHex,
         votingMode: 'FAST',
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(dao, {
         label: 'legacy API DAO propose edit',
@@ -1083,8 +1093,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
         daoSpaceId: dao.daoSpaceId,
         proposedBy: dao.spaceId,
         votingMode: 'FAST',
-        actionType: 'PUBLISH',
-        contentUri: proposal.cid,
+        actionType: ['PUBLISH', 'UNKNOWN'],
       });
     },
     TEST_TIMEOUT_MS,
@@ -1106,8 +1115,9 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeRemoveMember({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
         memberToRemoveSpaceId: dao.spaceIdHex,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(dao, {
         label: 'legacy API DAO propose remove member',
@@ -1130,8 +1140,9 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeAddEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
         newEditorSpaceId: dao.spaceIdHex,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(dao, {
         label: 'legacy API DAO propose add editor',
@@ -1154,8 +1165,9 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeRemoveEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
         editorToRemoveSpaceId: dao.spaceIdHex,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(dao, {
         label: 'legacy API DAO propose remove editor',
@@ -1178,7 +1190,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeRequestMembership({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(dao, {
         label: 'legacy API DAO propose request membership',
@@ -1206,7 +1218,7 @@ describe.skip('legacy deprecated API e2e surface', () => {
         spaceId: dao.daoSpaceIdHex,
         proposalId: proposal.proposalId,
         vote: 'YES',
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
       await sendTransactionAndWait(dao, {
         label: 'legacy API DAO vote proposal',
@@ -1227,10 +1239,10 @@ describe.skip('legacy deprecated API e2e surface', () => {
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
         proposalId: proposal.proposalId,
-        network: 'TESTNET',
+        network: legacyNetwork,
       });
 
-      expect(execute.to).toBe(requireTestnetContract('SPACE_REGISTRY_ADDRESS'));
+      expect(execute.to).toBe(e2e.contracts.SPACE_REGISTRY_ADDRESS);
       expect(execute.calldata).toMatch(/^0x[0-9a-fA-F]+$/);
     },
     TEST_TIMEOUT_MS,

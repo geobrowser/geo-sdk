@@ -1,6 +1,10 @@
 import type { Op } from '@geoprotocol/grc-20';
 import type { Id } from '../id.js';
-import type { Network } from '../types.js';
+import type { Network, Networkish } from '../types.js';
+
+export type CreateSpaceParams = {
+  network?: Networkish;
+};
 
 export type CreateSpaceResult = {
   to: `0x${string}`;
