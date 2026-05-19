@@ -456,6 +456,36 @@ describe('geo DAO proposal client', () => {
     });
   });
 
+  it('creates DAO archive proposals that target the space registry', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    const result = geo.daoSpaces.proposeArchiveSpace({
+      authorSpaceId: CALLER_SPACE_ID,
+      spaceId: DAO_SPACE_ID,
+      proposalId: PROPOSAL_ID,
+    });
+    const decoded = decodeEnter(result.calldata);
+    const { votingMode, actions } = decodeProposalPayload(decoded.data);
+    const action = actions[0];
+    expect(action).toBeDefined();
+    if (!action) {
+      throw new Error('Expected archiveSpace action');
+    }
+    const archiveCall = decodeFunctionData({
+      abi: SpaceRegistryAbi,
+      data: action.data,
+    });
+
+    expect(result.to).toBe(SPACE_REGISTRY_ADDRESS);
+    expect(result.proposalId).toBe(PROPOSAL_ID);
+    expect(decoded.action).toBe(PROPOSAL_CREATED_ACTION);
+    expect(votingMode).toBe(0);
+    expect(action.to).toBe(SPACE_REGISTRY_ADDRESS);
+    expect(action.value).toBe(0n);
+    expect(archiveCall.functionName).toBe('archiveSpaceId');
+    expect(archiveCall.args ?? []).toEqual([]);
+  });
+
   it('validates voting settings before building update-voting-settings proposals', () => {
     const geo = createGeoClient({ network: customNetwork() });
 
@@ -511,6 +541,19 @@ describe('geo DAO proposal client', () => {
         votingMode: 'FAST' as never,
       }),
     ).toThrow('proposeAddEditor only supports SLOW voting mode');
+  });
+
+  it('restricts DAO archive proposals to SLOW voting', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    expect(() =>
+      geo.daoSpaces.proposeArchiveSpace({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        proposalId: PROPOSAL_ID,
+        votingMode: 'FAST' as never,
+      }),
+    ).toThrow('proposeArchiveSpace only supports SLOW voting mode');
   });
 
   it('requires daoSpaceAddress for DAO role proposal actions', () => {

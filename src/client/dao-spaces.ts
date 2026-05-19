@@ -121,6 +121,13 @@ export type ProposeRequestMembershipParams = {
   proposalId?: string;
 };
 
+export type ProposeArchiveSpaceParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  proposalId?: string;
+  votingMode?: 'SLOW';
+};
+
 export type ProposeUpdateVotingSettingsParams = SlowDaoSpaceRoleProposalBaseParams & {
   votingSettings: VotingSettingsInput;
 };
@@ -326,6 +333,20 @@ function encodeUpdateVotingSettingsAction(
           executionGracePeriod: contractVotingSettings.executionGracePeriod,
         },
       ],
+    }),
+  };
+}
+
+function encodeSpaceRegistryLifecycleAction(
+  spaceRegistryAddress: `0x${string}`,
+  functionName: 'archiveSpaceId',
+): ProposalAction {
+  return {
+    to: spaceRegistryAddress,
+    value: 0n,
+    data: encodeFunctionData({
+      abi: SpaceRegistryAbi,
+      functionName,
     }),
   };
 }
@@ -694,6 +715,39 @@ export function proposeRequestMembership(context: GeoClientContext, params: Prop
 }
 
 /**
+ * Builds calldata for a DAO proposal that archives the DAO space.
+ *
+ * The proposal action targets the Space Registry and calls `archiveSpaceId()`.
+ * When the proposal executes, the DAO space contract is `msg.sender`, so the
+ * registry archives the DAO space's registered ID. Archiving is a destructive
+ * governance action and only supports SLOW voting.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.daoSpaces.proposeArchiveSpace({
+ *   authorSpaceId,
+ *   spaceId: daoSpaceId,
+ * });
+ * ```
+ */
+export function proposeArchiveSpace(context: GeoClientContext, params: ProposeArchiveSpaceParams) {
+  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
+  if (votingMode !== 'SLOW') {
+    throw new Error('proposeArchiveSpace only supports SLOW voting mode');
+  }
+
+  const spaceRegistryAddress = requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS');
+
+  return createProposal(context, {
+    fromSpaceId: params.authorSpaceId,
+    daoSpaceId: params.spaceId,
+    proposalId: params.proposalId,
+    votingMode,
+    actions: [actions.archiveSpace(spaceRegistryAddress)],
+  });
+}
+
+/**
  * Builds calldata for voting on a DAO proposal.
  *
  * @example
@@ -788,6 +842,8 @@ export function executeProposal(context: GeoClientContext, params: ExecutePropos
  */
 export const actions = {
   publishEdit: encodePublishEditProposalAction,
+  archiveSpace: (spaceRegistryAddress: `0x${string}`) =>
+    encodeSpaceRegistryLifecycleAction(spaceRegistryAddress, 'archiveSpaceId'),
   addEditor: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
     encodeDaoRoleAction(daoSpaceAddress, 'addEditor', spaceId),
   removeEditor: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
