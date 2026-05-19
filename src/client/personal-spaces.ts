@@ -43,11 +43,26 @@ export type PublishPersonalSpaceEditParams = PublishEditParams & {
   spaceId: Id | string;
 };
 
+type SpaceRegistryLifecycleFunctionName = 'archiveSpaceId' | 'recoverSpaceId' | 'clearSpaceId';
+
 function idToBytes16(id: Id | string, sourceHint: string): `0x${string}` {
   const normalized = id.startsWith('0x') ? id.slice(2) : id.replaceAll('-', '');
   assertValid(normalized, sourceHint);
 
   return `0x${normalized.toLowerCase()}` as `0x${string}`;
+}
+
+function encodeSpaceRegistryLifecycleCalldata(
+  context: GeoClientContext,
+  functionName: SpaceRegistryLifecycleFunctionName,
+) {
+  return {
+    to: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
+    calldata: encodeFunctionData({
+      abi: SpaceRegistryAbi,
+      functionName,
+    }),
+  };
 }
 
 function bytes16ToBytes32LeftAligned(bytes16Hex: `0x${string}`): `0x${string}` {
@@ -168,6 +183,80 @@ export function setTopic(
       ],
     }),
   };
+}
+
+/**
+ * Builds calldata for archiving the caller's registered personal space.
+ *
+ * The Space Registry determines the affected space from `msg.sender`, so the
+ * transaction must be sent by the account that owns the personal space.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.personalSpaces.archiveSpace();
+ *
+ * await walletClient.sendTransaction({
+ *   to: tx.to,
+ *   data: tx.calldata,
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @returns Target registry address and calldata for `archiveSpaceId()`.
+ * @throws When the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
+export function archiveSpace(context: GeoClientContext) {
+  return encodeSpaceRegistryLifecycleCalldata(context, 'archiveSpaceId');
+}
+
+/**
+ * Builds calldata for recovering the caller's archived personal space.
+ *
+ * The Space Registry determines the affected space from `msg.sender`, so the
+ * transaction must be sent by the account that owns the archived personal
+ * space.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.personalSpaces.recoverSpace();
+ *
+ * await walletClient.sendTransaction({
+ *   to: tx.to,
+ *   data: tx.calldata,
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @returns Target registry address and calldata for `recoverSpaceId()`.
+ * @throws When the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
+export function recoverSpace(context: GeoClientContext) {
+  return encodeSpaceRegistryLifecycleCalldata(context, 'recoverSpaceId');
+}
+
+/**
+ * Builds calldata for clearing the caller's archived personal space.
+ *
+ * `clearSpaceId()` permanently unregisters the caller's archived space ID. The
+ * transaction must be sent by the account that owns the archived personal
+ * space, and the contract requires that space to already be archived.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.personalSpaces.clearSpace();
+ *
+ * await walletClient.sendTransaction({
+ *   to: tx.to,
+ *   data: tx.calldata,
+ * });
+ * ```
+ *
+ * @param context Client context containing the target network configuration.
+ * @returns Target registry address and calldata for `clearSpaceId()`.
+ * @throws When the configured network is missing `SPACE_REGISTRY_ADDRESS`.
+ */
+export function clearSpace(context: GeoClientContext) {
+  return encodeSpaceRegistryLifecycleCalldata(context, 'clearSpaceId');
 }
 
 /**

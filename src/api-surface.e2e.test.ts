@@ -1,6 +1,6 @@
 import type { CreateRelation, Op } from '@geoprotocol/grc-20';
-import { createPublicClient, createWalletClient, type Hex, http } from 'viem';
-import { type PrivateKeyAccount, privateKeyToAccount } from 'viem/accounts';
+import { createPublicClient, createWalletClient, type Hex, http, parseEther } from 'viem';
+import { generatePrivateKey, type PrivateKeyAccount, privateKeyToAccount } from 'viem/accounts';
 import { describe, expect, it } from 'vitest';
 
 import { createGeoClient, Ops } from '../index.js';
@@ -121,6 +121,10 @@ type SpaceTopicQueryResponse = {
   spaces: Array<{
     topicId: string | null;
   }>;
+};
+
+type LocalRpcResponse = {
+  error?: { message?: string };
 };
 
 class GraphQlRequestError extends Error {
@@ -457,6 +461,18 @@ async function readSpaceTopicId(spaceId: string) {
   return data.spaces[0]?.topicId ?? null;
 }
 
+async function readArchivedSpaceId(
+  publicClient: ReturnType<typeof createPublicClient>,
+  spaceId: Hex,
+): Promise<boolean> {
+  return (await publicClient.readContract({
+    address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
+    abi: SpaceRegistryAbi,
+    functionName: 'archivedSpaceIds',
+    args: [spaceId],
+  })) as boolean;
+}
+
 async function getSpaceIdHex(publicClient: ReturnType<typeof createPublicClient>, address: Hex): Promise<Hex> {
   return (await publicClient.readContract({
     address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
@@ -542,8 +558,8 @@ async function ensurePersonalSpace({
   };
 }
 
-async function setupWallet(): Promise<WalletSetup> {
-  const account = privateKeyToAccount(e2e.privateKey);
+async function setupWallet(privateKey = e2e.privateKey): Promise<WalletSetup> {
+  const account = privateKeyToAccount(privateKey);
   const walletClient = createWalletClient({
     account,
     chain: e2e.chain,
@@ -555,6 +571,58 @@ async function setupWallet(): Promise<WalletSetup> {
   });
 
   return { account, publicClient, walletClient };
+}
+
+async function advanceLocalTime(seconds: number) {
+  for (const [index, request] of [
+    { method: 'evm_increaseTime', params: [seconds] },
+    { method: 'evm_mine', params: [] },
+  ].entries()) {
+    const response = await fetch(e2e.rpcUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: Date.now() + index,
+        ...request,
+      }),
+    });
+    const body = (await response.json()) as LocalRpcResponse;
+    if (!response.ok || body.error) {
+      throw new Error(`Local RPC ${request.method} failed: ${body.error?.message ?? response.statusText}`);
+    }
+  }
+}
+
+async function createDisposablePersonalSpace(context: TestContext, name = uniqueName('E2E Disposable Personal Space')) {
+  const disposable = await setupWallet(generatePrivateKey());
+
+  await sendTransactionAndWait(context, {
+    label: 'fund disposable personal space account',
+    to: disposable.account.address,
+    calldata: '0x',
+    value: parseEther('1'),
+  });
+
+  const createSpace = geo.personalSpaces.create({
+    name,
+    accountAddress: disposable.account.address,
+  });
+  await sendTransactionAndWait(disposable, {
+    label: 'create disposable personal space',
+    to: createSpace.to,
+    calldata: createSpace.calldata,
+  });
+
+  const spaceIdHex = await getSpaceIdHex(disposable.publicClient, disposable.account.address);
+  expect(spaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
+
+  return {
+    ...disposable,
+    spaceIdHex,
+    spaceId: hexToUuid(spaceIdHex),
+    authorSpaceId: hexToUuid(spaceIdHex),
+  };
 }
 
 async function sendTransactionAndWait(
@@ -712,6 +780,46 @@ async function getDaoContext(): Promise<DaoContext> {
   return daoContextPromise;
 }
 
+async function createDisposableDaoContext(context: TestContext): Promise<DaoContext> {
+  const daoName = uniqueName('E2E Disposable DAO Space');
+  const daoSpace = await geo.daoSpaces.create({
+    name: daoName,
+    votingSettings: {
+      partialPercentageSupportThreshold: 50,
+      universalPercentageSupportThreshold: 90,
+      flatSupportThreshold: 1,
+      quorum: 1,
+      durationInDays: 2,
+      disableFastPathAccessForNewMembers: true,
+      executionGracePeriodInDays: 14,
+    },
+    initialEditorSpaceIds: [context.spaceIdHex],
+    author: context.authorSpaceId,
+  });
+  const daoCreateTx = await sendTransactionAndWait(context, {
+    label: 'create disposable new API DAO space',
+    to: daoSpace.to,
+    calldata: daoSpace.calldata,
+  });
+
+  const daoSpaceAddress = daoCreateTx.receipt.logs.find(log => log.address.toLowerCase() !== daoSpace.to.toLowerCase())
+    ?.address as Hex | undefined;
+  if (!daoSpaceAddress) {
+    throw new Error('Could not find disposable DAO space address in creation logs');
+  }
+
+  const daoSpaceIdHex = await getSpaceIdHex(context.publicClient, daoSpaceAddress);
+  expect(daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
+
+  return {
+    ...context,
+    daoSpaceAddress,
+    daoSpaceId: hexToUuid(daoSpaceIdHex),
+    daoSpaceIdHex,
+    daoSpaceEntityId: daoSpace.spaceEntityId,
+  };
+}
+
 async function createAddMemberProposal(context: DaoContext, label: string) {
   const proposal = geo.daoSpaces.proposeAddMember({
     authorSpaceId: context.spaceIdHex,
@@ -753,6 +861,90 @@ describe.sequential('new API e2e surface', () => {
         args: [context.spaceIdHex],
       })) as Hex;
       expect(spaceAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'geo.personalSpaces.archiveSpace and recoverSpace update the caller space archive status',
+    async () => {
+      const context = await getTestContext();
+      if (await readArchivedSpaceId(context.publicClient, context.spaceIdHex)) {
+        const recoverExisting = geo.personalSpaces.recoverSpace();
+        await sendTransactionAndWait(context, {
+          label: 'recover pre-archived personal space',
+          to: recoverExisting.to,
+          calldata: recoverExisting.calldata,
+        });
+      }
+
+      let shouldRecover = false;
+      try {
+        const archive = geo.personalSpaces.archiveSpace();
+        await sendTransactionAndWait(context, {
+          label: 'archive personal space',
+          to: archive.to,
+          calldata: archive.calldata,
+        });
+        shouldRecover = true;
+        expect(await readArchivedSpaceId(context.publicClient, context.spaceIdHex)).toBe(true);
+
+        const recover = geo.personalSpaces.recoverSpace();
+        await sendTransactionAndWait(context, {
+          label: 'recover personal space',
+          to: recover.to,
+          calldata: recover.calldata,
+        });
+        shouldRecover = false;
+        expect(await readArchivedSpaceId(context.publicClient, context.spaceIdHex)).toBe(false);
+      } finally {
+        if (shouldRecover) {
+          const recover = geo.personalSpaces.recoverSpace();
+          await sendTransactionAndWait(context, {
+            label: 'recover personal space after failed archive test',
+            to: recover.to,
+            calldata: recover.calldata,
+          });
+        }
+      }
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'geo.personalSpaces.clearSpace unregisters a disposable archived personal space locally',
+    async () => {
+      if (!e2e.localGeobrowserPath) {
+        return;
+      }
+
+      const context = await getTestContext();
+      const disposable = await createDisposablePersonalSpace(context);
+      const archive = geo.personalSpaces.archiveSpace();
+      await sendTransactionAndWait(disposable, {
+        label: 'archive disposable personal space',
+        to: archive.to,
+        calldata: archive.calldata,
+      });
+      expect(await readArchivedSpaceId(disposable.publicClient, disposable.spaceIdHex)).toBe(true);
+
+      const clear = geo.personalSpaces.clearSpace();
+      await sendTransactionAndWait(disposable, {
+        label: 'clear disposable personal space',
+        to: clear.to,
+        calldata: clear.calldata,
+      });
+
+      const registeredSpaceId = await getSpaceIdHex(disposable.publicClient, disposable.account.address);
+      const registeredAddress = (await disposable.publicClient.readContract({
+        address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
+        abi: SpaceRegistryAbi,
+        functionName: 'spaceIdToAddress',
+        args: [disposable.spaceIdHex],
+      })) as Hex;
+      expect(registeredSpaceId.toLowerCase()).toBe(EMPTY_SPACE_ID.toLowerCase());
+      expect(registeredAddress.toLowerCase()).toBe(ZERO_ADDRESS.toLowerCase());
+      expect(await readArchivedSpaceId(disposable.publicClient, disposable.spaceIdHex)).toBe(false);
     },
     TEST_TIMEOUT_MS,
   );
@@ -1231,6 +1423,55 @@ describe.sequential('new API e2e surface', () => {
       expect(dao.daoSpaceAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
       expect(dao.daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
       expect(await readSpaceTopicId(dao.daoSpaceId)).toBe(dao.daoSpaceEntityId);
+    },
+    TEST_TIMEOUT_MS,
+  );
+
+  it(
+    'geo.daoSpaces.proposeArchiveSpace archives a disposable DAO space locally',
+    async () => {
+      if (!e2e.localGeobrowserPath) {
+        return;
+      }
+
+      const context = await getTestContext();
+      const dao = await createDisposableDaoContext(context);
+      const proposal = geo.daoSpaces.proposeArchiveSpace({
+        authorSpaceId: dao.spaceIdHex,
+        spaceId: dao.daoSpaceIdHex,
+      });
+      await sendTransactionAndWait(dao, {
+        label: 'new API DAO propose archive space',
+        to: proposal.to,
+        calldata: proposal.calldata,
+      });
+
+      const vote = geo.daoSpaces.voteProposal({
+        authorSpaceId: dao.spaceIdHex,
+        spaceId: dao.daoSpaceIdHex,
+        proposalId: proposal.proposalId,
+        vote: 'YES',
+      });
+      await sendTransactionAndWait(dao, {
+        label: 'new API DAO vote archive space',
+        to: vote.to,
+        calldata: vote.calldata,
+      });
+
+      await advanceLocalTime(2 * 24 * 60 * 60 + 60);
+
+      const execute = geo.daoSpaces.executeProposal({
+        authorSpaceId: dao.spaceIdHex,
+        spaceId: dao.daoSpaceIdHex,
+        proposalId: proposal.proposalId,
+      });
+      await sendTransactionAndWait(dao, {
+        label: 'new API DAO execute archive space',
+        to: execute.to,
+        calldata: execute.calldata,
+      });
+
+      expect(await readArchivedSpaceId(dao.publicClient, dao.daoSpaceIdHex)).toBe(true);
     },
     TEST_TIMEOUT_MS,
   );

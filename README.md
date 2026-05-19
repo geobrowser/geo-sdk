@@ -614,6 +614,39 @@ await walletClient.sendTransaction({
 
 The `author` field is the author's personal space ID, not a wallet address.
 
+Archive or recover the personal space registered to the transaction sender:
+
+```ts
+const archive = geo.personalSpaces.archiveSpace();
+
+await walletClient.sendTransaction({
+  to: archive.to,
+  data: archive.calldata,
+});
+
+const recover = geo.personalSpaces.recoverSpace();
+
+await walletClient.sendTransaction({
+  to: recover.to,
+  data: recover.calldata,
+});
+```
+
+Clear an already archived personal space from the registry:
+
+```ts
+const clear = geo.personalSpaces.clearSpace();
+
+await walletClient.sendTransaction({
+  to: clear.to,
+  data: clear.calldata,
+});
+```
+
+These helpers do not take a `spaceId`. The Space Registry uses `msg.sender` to
+find the registered space, so send the transaction from the account that owns
+the personal space.
+
 ### `geo.daoSpaces`
 
 DAO helpers target the contracts v2 surface. Voting settings use percentages
@@ -745,6 +778,25 @@ const removeEditor = geo.daoSpaces.proposeRemoveEditor({
 ```
 
 Editor changes only support `SLOW` voting. Member changes can use the default or an explicit `votingMode`.
+
+Propose archiving a DAO space:
+
+```ts
+const archiveProposal = geo.daoSpaces.proposeArchiveSpace({
+  authorSpaceId,
+  spaceId: daoSpaceId,
+});
+
+await walletClient.sendTransaction({
+  to: archiveProposal.to,
+  data: archiveProposal.calldata,
+});
+```
+
+DAO archive proposals are always `SLOW` proposals. The SDK does not expose
+standalone DAO recover or clear helpers because archived DAO spaces cannot
+receive normal proposal actions through the registry, and clearing requires the
+space to already be archived.
 
 Propose voting-settings changes:
 

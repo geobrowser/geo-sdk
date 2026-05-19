@@ -149,6 +149,28 @@ describe('geo space clients', () => {
     expect(decoded.signature).toBe(EMPTY_SIGNATURE);
   });
 
+  it('creates personal space archive, recover, and clear calldata for the configured registry', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    const archive = geo.personalSpaces.archiveSpace();
+    const recover = geo.personalSpaces.recoverSpace();
+    const clear = geo.personalSpaces.clearSpace();
+
+    expect(archive.to).toBe(SPACE_REGISTRY_ADDRESS);
+    expect(recover.to).toBe(SPACE_REGISTRY_ADDRESS);
+    expect(clear.to).toBe(SPACE_REGISTRY_ADDRESS);
+    const decodedArchive = decodeFunctionData({ abi: SpaceRegistryAbi, data: archive.calldata });
+    const decodedRecover = decodeFunctionData({ abi: SpaceRegistryAbi, data: recover.calldata });
+    const decodedClear = decodeFunctionData({ abi: SpaceRegistryAbi, data: clear.calldata });
+
+    expect(decodedArchive.functionName).toBe('archiveSpaceId');
+    expect(decodedRecover.functionName).toBe('recoverSpaceId');
+    expect(decodedClear.functionName).toBe('clearSpaceId');
+    expect(decodedArchive.args ?? []).toEqual([]);
+    expect(decodedRecover.args ?? []).toEqual([]);
+    expect(decodedClear.args ?? []).toEqual([]);
+  });
+
   it('checks whether an address has a personal space using the configured registry', async () => {
     const fetch = mockRpcFetch(PERSONAL_SPACE_ID);
     vi.stubGlobal('fetch', fetch);

@@ -238,6 +238,32 @@ export const abi = [
   },
   {
     inputs: [],
+    name: 'archiveSpaceId',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [
+      {
+        internalType: 'bytes16',
+        name: '_spaceId',
+        type: 'bytes16',
+      },
+    ],
+    name: 'archivedSpaceIds',
+    outputs: [
+      {
+        internalType: 'bool',
+        name: '_isArchived',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  {
+    inputs: [],
     name: 'clearSpaceId',
     outputs: [],
     stateMutability: 'nonpayable',
@@ -410,6 +436,13 @@ export const abi = [
         type: 'bytes16',
       },
     ],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [],
+    name: 'recoverSpaceId',
+    outputs: [],
     stateMutability: 'nonpayable',
     type: 'function',
   },

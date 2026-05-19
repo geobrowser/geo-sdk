@@ -216,6 +216,13 @@ export type ProposeRequestMembershipParams = {
   proposalId?: string;
 };
 
+export type ProposeArchiveSpaceParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  proposalId?: string;
+  votingMode?: 'SLOW';
+};
+
 export type VoteProposalParams = {
   authorSpaceId: string;
   spaceId: string;
@@ -264,6 +271,9 @@ export type Client = {
   personalSpaces: {
     create(params: CreatePersonalSpaceParams): CreatePersonalSpaceResult;
     setTopic(params: SetPersonalSpaceTopicParams): CalldataResult;
+    archiveSpace(): CalldataResult;
+    recoverSpace(): CalldataResult;
+    clearSpace(): CalldataResult;
     hasSpace(params: HasPersonalSpaceParams): Promise<boolean>;
     publishEdit(params: PublishPersonalSpaceEditParams): Promise<PublishPersonalSpaceEditResult>;
   };
@@ -276,6 +286,7 @@ export type Client = {
     proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposalResult;
     proposeUpdateVotingSettings(params: ProposeUpdateVotingSettingsParams): ProposalResult;
     proposeRequestMembership(params: ProposeRequestMembershipParams): ProposalResult;
+    proposeArchiveSpace(params: ProposeArchiveSpaceParams): ProposalResult;
     voteProposal(params: VoteProposalParams): CalldataResult;
     executeProposal(params: ExecuteProposalParams): CalldataResult;
   };
@@ -549,6 +560,43 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        */
       setTopic: (params: SetPersonalSpaceTopicParams) => PersonalSpaces.setTopic(context, params),
       /**
+       * Returns calldata for archiving the caller's personal space.
+       *
+       * The Space Registry determines the archived space from the transaction
+       * sender, so send this transaction from the account that owns the
+       * personal space.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.personalSpaces.archiveSpace();
+       * await walletClient.sendTransaction({ to: tx.to, data: tx.calldata });
+       * ```
+       */
+      archiveSpace: () => PersonalSpaces.archiveSpace(context),
+      /**
+       * Returns calldata for recovering the caller's archived personal space.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.personalSpaces.recoverSpace();
+       * await walletClient.sendTransaction({ to: tx.to, data: tx.calldata });
+       * ```
+       */
+      recoverSpace: () => PersonalSpaces.recoverSpace(context),
+      /**
+       * Returns calldata for clearing the caller's archived personal space.
+       *
+       * `clearSpaceId()` permanently unregisters the caller's archived space
+       * ID, so only send this after intentionally archiving that space.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.personalSpaces.clearSpace();
+       * await walletClient.sendTransaction({ to: tx.to, data: tx.calldata });
+       * ```
+       */
+      clearSpace: () => PersonalSpaces.clearSpace(context),
+      /**
        * Checks whether an address already has a personal space.
        *
        * @example
@@ -698,6 +746,22 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        */
       proposeRequestMembership: (params: ProposeRequestMembershipParams) =>
         DaoSpaces.proposeRequestMembership(context, params),
+      /**
+       * Builds calldata for a SLOW DAO proposal that archives the DAO space.
+       *
+       * The proposal action targets the Space Registry. When the proposal
+       * executes, the DAO space contract is the caller and the registry
+       * archives that DAO's registered space ID.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.proposeArchiveSpace({
+       *   authorSpaceId,
+       *   spaceId: daoSpaceId,
+       * });
+       * ```
+       */
+      proposeArchiveSpace: (params: ProposeArchiveSpaceParams) => DaoSpaces.proposeArchiveSpace(context, params),
       /**
        * Builds calldata for voting on a DAO proposal version.
        *
