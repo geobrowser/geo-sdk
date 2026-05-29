@@ -617,9 +617,9 @@ The `author` field is the author's personal space ID, not a wallet address.
 ### `geo.daoSpaces`
 
 DAO helpers target the contracts v2 surface. Voting settings use percentages
-and days on the SDK side; the SDK maps them to ratio-base integers and seconds
-for the contract. Use a network config whose DAO contract addresses point at a
-contracts v2 deployment.
+and second-level voting durations on the SDK side; the SDK maps percentages to
+ratio-base integers for the contract. Use a network config whose DAO contract
+addresses point at a contracts v2 deployment.
 
 ```ts
 const votingSettings = {
@@ -627,7 +627,7 @@ const votingSettings = {
   universalPercentageSupportThreshold: 90,
   flatSupportThreshold: 1,
   quorum: 1,
-  durationInDays: 2,
+  durationInSeconds: 2 * 24 * 60 * 60,
   disableFastPathAccessForNewMembers: true,
   executionGracePeriodInDays: 14,
 };
@@ -758,7 +758,7 @@ const updateVoting = geo.daoSpaces.proposeUpdateVotingSettings({
     universalPercentageSupportThreshold: 95,
     flatSupportThreshold: 2,
     quorum: 2,
-    durationInDays: 5,
+    durationInSeconds: 5 * 24 * 60 * 60,
     disableFastPathAccessForNewMembers: true,
     executionGracePeriodInDays: 14,
   },

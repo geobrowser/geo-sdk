@@ -4,7 +4,5 @@
   "initialVersions": {
     "@geoprotocol/geo-sdk": "0.19.0"
   },
-  "changesets": [
-    "contracts-v2-dao-spaces"
-  ]
+  "changesets": ["contracts-v2-dao-spaces"]
 }

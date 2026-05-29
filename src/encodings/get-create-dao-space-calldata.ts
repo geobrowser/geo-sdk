@@ -9,10 +9,15 @@ import { DaoSpaceFactoryAbi } from '../abis/index.js';
 export const RATIO_BASE = BigInt(10e6);
 
 /** Minimum voting duration in seconds, matching the contracts v2 lower bound. */
-export const MINIMUM_VOTING_DURATION = BigInt(60);
+export const MINIMUM_VOTING_DURATION_SECONDS = 60;
+
+/** Minimum voting duration in seconds. */
+export const MINIMUM_VOTING_DURATION = BigInt(MINIMUM_VOTING_DURATION_SECONDS);
 
 /** Minimum voting duration in days */
 export const MINIMUM_VOTING_DURATION_DAYS = 1 / 24 / 60;
+
+const MINIMUM_VOTING_DURATION_DESCRIPTION = '1 minute';
 
 /** Minimum execution grace period in seconds, matching the contracts v2 lower bound. */
 export const MINIMUM_EXECUTION_GRACE_PERIOD = BigInt(60 * 60);
@@ -21,9 +26,9 @@ export const MINIMUM_EXECUTION_GRACE_PERIOD = BigInt(60 * 60);
 export const MINIMUM_EXECUTION_GRACE_PERIOD_DAYS = 1 / 24;
 
 /**
- * User-friendly voting settings input (using percentages and days)
+ * User-friendly voting settings input (using percentages and seconds)
  */
-export interface VotingSettingsInput {
+type VotingSettingsInputBase = {
   /** Partial percentage threshold for slow path late execution (0-100) */
   partialPercentageSupportThreshold: number;
   /** Universal percentage threshold for slow path early execution (0-100) */
@@ -32,13 +37,25 @@ export interface VotingSettingsInput {
   flatSupportThreshold: number;
   /** Minimum number of editors required to vote */
   quorum: number;
-  /** Voting duration in days */
-  durationInDays: number;
   /** Whether newly added members start without fast-path access */
   disableFastPathAccessForNewMembers: boolean;
   /** Execution grace period in days */
   executionGracePeriodInDays: number;
-}
+};
+
+export type VotingSettingsInput = VotingSettingsInputBase &
+  (
+    | {
+        /** Voting duration in seconds (minimum 1 minute) */
+        durationInSeconds: number;
+        durationInDays?: never;
+      }
+    | {
+        /** @deprecated Use durationInSeconds for minute-level durations. */
+        durationInDays: number;
+        durationInSeconds?: never;
+      }
+  );
 
 /**
  * Contract-level voting settings (using raw values)
@@ -61,7 +78,7 @@ export const DEFAULT_VOTING_SETTINGS: VotingSettingsInput = {
   universalPercentageSupportThreshold: 90,
   flatSupportThreshold: 1,
   quorum: 1,
-  durationInDays: 2,
+  durationInSeconds: 2 * 24 * 60 * 60,
   disableFastPathAccessForNewMembers: true,
   executionGracePeriodInDays: 14,
 };
@@ -80,6 +97,13 @@ export function daysToSeconds(days: number): bigint {
   return BigInt(Math.floor(days * 24 * 60 * 60));
 }
 
+function getVotingDurationInSeconds(input: VotingSettingsInput): bigint {
+  if (input.durationInSeconds !== undefined) {
+    return BigInt(Math.floor(input.durationInSeconds));
+  }
+  return BigInt(Math.round(input.durationInDays * 24 * 60 * 60));
+}
+
 /**
  * Convert user-friendly voting settings to contract format.
  */
@@ -89,7 +113,7 @@ export function toContractVotingSettings(input: VotingSettingsInput): VotingSett
     universalPercentageSupportThreshold: percentageToRatio(input.universalPercentageSupportThreshold),
     flatSupportThreshold: BigInt(input.flatSupportThreshold),
     quorum: BigInt(input.quorum),
-    duration: daysToSeconds(input.durationInDays),
+    duration: getVotingDurationInSeconds(input),
     disableFastPathAccessForNewMembers: input.disableFastPathAccessForNewMembers,
     executionGracePeriod: daysToSeconds(input.executionGracePeriodInDays),
   };
@@ -158,8 +182,21 @@ export function validateVotingSettingsInput(settings: VotingSettingsInput, total
   if (totalEditors !== undefined && settings.quorum > totalEditors) {
     return `quorum must be between 0 and ${totalEditors} (number of initial editors)`;
   }
-  if (!Number.isFinite(settings.durationInDays) || settings.durationInDays < MINIMUM_VOTING_DURATION_DAYS) {
-    return `durationInDays must be at least ${MINIMUM_VOTING_DURATION_DAYS} days`;
+  const hasDurationInSeconds = settings.durationInSeconds !== undefined;
+  const hasDurationInDays = settings.durationInDays !== undefined;
+
+  if (hasDurationInSeconds && hasDurationInDays) {
+    return 'Specify either durationInSeconds or durationInDays, not both';
+  }
+  if (!hasDurationInSeconds && !hasDurationInDays) {
+    return 'durationInSeconds is required';
+  }
+
+  const durationField = hasDurationInSeconds ? 'durationInSeconds' : 'durationInDays';
+  const duration = hasDurationInSeconds ? settings.durationInSeconds : settings.durationInDays;
+  const minimumDuration = hasDurationInSeconds ? MINIMUM_VOTING_DURATION_SECONDS : MINIMUM_VOTING_DURATION_DAYS;
+  if (!Number.isFinite(duration) || duration < minimumDuration) {
+    return `${durationField} must be at least ${MINIMUM_VOTING_DURATION_DESCRIPTION}`;
   }
   if (
     !Number.isFinite(settings.executionGracePeriodInDays) ||
