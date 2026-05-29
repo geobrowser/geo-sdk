@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.0-beta.1
+
+### Patch Changes
+
+- 7c3b38c: Add `durationInSeconds` for DAO voting settings and keep `durationInDays` as a deprecated compatibility option.
+
 ## 0.20.0-beta.0
 
 ### Minor Changes
