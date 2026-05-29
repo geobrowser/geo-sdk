@@ -10,6 +10,7 @@ import {
   MINIMUM_EXECUTION_GRACE_PERIOD_DAYS,
   MINIMUM_VOTING_DURATION,
   MINIMUM_VOTING_DURATION_DAYS,
+  MINIMUM_VOTING_DURATION_SECONDS,
   percentageToRatio,
   RATIO_BASE,
   toContractVotingSettings,
@@ -45,7 +46,9 @@ describe('daysToSeconds', () => {
   });
 
   it('should expose the contracts v2 minimum duration', () => {
-    expect(MINIMUM_VOTING_DURATION).toBe(BigInt(60));
+    expect(MINIMUM_VOTING_DURATION_SECONDS).toBe(60);
+    expect(MINIMUM_VOTING_DURATION).toBe(BigInt(MINIMUM_VOTING_DURATION_SECONDS));
+    expect(MINIMUM_VOTING_DURATION_DAYS * 24 * 60 * 60).toBeCloseTo(MINIMUM_VOTING_DURATION_SECONDS);
   });
 
   it('should handle fractional days', () => {
@@ -54,7 +57,29 @@ describe('daysToSeconds', () => {
 });
 
 describe('toContractVotingSettings', () => {
-  it('should convert user-friendly settings to contract format', () => {
+  it('should convert user-friendly settings with seconds to contract format', () => {
+    const input = {
+      partialPercentageSupportThreshold: 50,
+      universalPercentageSupportThreshold: 90,
+      flatSupportThreshold: 3,
+      quorum: 2,
+      durationInSeconds: 600,
+      disableFastPathAccessForNewMembers: true,
+      executionGracePeriodInDays: 14,
+    };
+
+    const result = toContractVotingSettings(input);
+
+    expect(result.partialPercentageSupportThreshold).toBe(percentageToRatio(50));
+    expect(result.universalPercentageSupportThreshold).toBe(percentageToRatio(90));
+    expect(result.flatSupportThreshold).toBe(BigInt(3));
+    expect(result.quorum).toBe(BigInt(2));
+    expect(result.duration).toBe(BigInt(600));
+    expect(result.disableFastPathAccessForNewMembers).toBe(true);
+    expect(result.executionGracePeriod).toBe(daysToSeconds(14));
+  });
+
+  it('should convert legacy user-friendly settings with days to contract format', () => {
     const input = {
       partialPercentageSupportThreshold: 50,
       universalPercentageSupportThreshold: 90,
@@ -111,7 +136,7 @@ describe('validateVotingSettingsInput', () => {
     universalPercentageSupportThreshold: 90,
     flatSupportThreshold: 3,
     quorum: 2,
-    durationInDays: 7,
+    durationInSeconds: 7 * 24 * 60 * 60,
     disableFastPathAccessForNewMembers: true,
     executionGracePeriodInDays: 14,
   };
@@ -165,11 +190,45 @@ describe('validateVotingSettingsInput', () => {
     expect(validateVotingSettingsInput({ ...validSettings, quorum: -1 })).toBe('quorum must be a non-negative integer');
   });
 
-  it('should reject durationInDays below minimum', () => {
-    const settings = { ...validSettings, durationInDays: MINIMUM_VOTING_DURATION_DAYS / 2 };
-    expect(validateVotingSettingsInput(settings, 5)).toBe(
-      `durationInDays must be at least ${MINIMUM_VOTING_DURATION_DAYS} days`,
-    );
+  it('should reject durationInSeconds below minimum', () => {
+    const settings = { ...validSettings, durationInSeconds: MINIMUM_VOTING_DURATION_SECONDS - 1 };
+    expect(validateVotingSettingsInput(settings, 5)).toBe('durationInSeconds must be at least 1 minute');
+  });
+
+  it('should reject non-finite durationInSeconds', () => {
+    const settings = { ...validSettings, durationInSeconds: Number.POSITIVE_INFINITY };
+    expect(validateVotingSettingsInput(settings, 5)).toBe('durationInSeconds must be at least 1 minute');
+  });
+
+  it('should reject legacy durationInDays below minimum', () => {
+    const settings = {
+      partialPercentageSupportThreshold: 50,
+      universalPercentageSupportThreshold: 90,
+      flatSupportThreshold: 3,
+      quorum: 2,
+      durationInDays: MINIMUM_VOTING_DURATION_DAYS / 2,
+      disableFastPathAccessForNewMembers: true,
+      executionGracePeriodInDays: 14,
+    };
+    expect(validateVotingSettingsInput(settings, 5)).toBe('durationInDays must be at least 1 minute');
+  });
+
+  it('should accept the minimum duration', () => {
+    const settings = { ...validSettings, durationInSeconds: MINIMUM_VOTING_DURATION_SECONDS };
+    expect(validateVotingSettingsInput(settings, 5)).toBeNull();
+  });
+
+  it('should accept the minimum legacy duration in days', () => {
+    const settings = {
+      partialPercentageSupportThreshold: 50,
+      universalPercentageSupportThreshold: 90,
+      flatSupportThreshold: 3,
+      quorum: 2,
+      durationInDays: MINIMUM_VOTING_DURATION_DAYS,
+      disableFastPathAccessForNewMembers: true,
+      executionGracePeriodInDays: 14,
+    };
+    expect(validateVotingSettingsInput(settings, 5)).toBeNull();
   });
 
   it('should reject executionGracePeriodInDays below minimum', () => {
@@ -187,7 +246,7 @@ describe('getCreateDaoSpaceCalldata', () => {
       universalPercentageSupportThreshold: 90,
       flatSupportThreshold: 2,
       quorum: 1,
-      durationInDays: 7,
+      durationInSeconds: 7 * 24 * 60 * 60,
       disableFastPathAccessForNewMembers: true,
       executionGracePeriodInDays: 14,
     },
@@ -243,11 +302,9 @@ describe('getCreateDaoSpaceCalldata', () => {
   it('should throw if duration is below minimum', () => {
     const args = {
       ...validArgs,
-      votingSettings: { ...validArgs.votingSettings, durationInDays: MINIMUM_VOTING_DURATION_DAYS / 2 },
+      votingSettings: { ...validArgs.votingSettings, durationInSeconds: MINIMUM_VOTING_DURATION_SECONDS - 1 },
     };
-    expect(() => getCreateDaoSpaceCalldata(args)).toThrow(
-      `durationInDays must be at least ${MINIMUM_VOTING_DURATION_DAYS} days`,
-    );
+    expect(() => getCreateDaoSpaceCalldata(args)).toThrow('durationInSeconds must be at least 1 minute');
   });
 
   it('should accept empty initial members', () => {
