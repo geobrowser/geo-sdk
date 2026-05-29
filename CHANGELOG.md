@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.19.2
+
+### Patch Changes
+
+- Rebuild package output for publishing.
+
 ## 0.19.1
 
 ### Patch Changes
