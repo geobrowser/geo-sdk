@@ -8,25 +8,42 @@ import { DaoSpaceFactoryAbi } from '../abis/index.js';
  */
 export const RATIO_BASE = BigInt(10e6);
 
-/** Minimum voting duration in seconds (2 days) */
-export const MINIMUM_VOTING_DURATION = BigInt(2 * 24 * 60 * 60);
+/** Minimum voting duration in seconds (1 minute) */
+export const MINIMUM_VOTING_DURATION_SECONDS = 60;
+
+/** Minimum voting duration in seconds */
+export const MINIMUM_VOTING_DURATION = BigInt(MINIMUM_VOTING_DURATION_SECONDS);
 
 /** Minimum voting duration in days */
-export const MINIMUM_VOTING_DURATION_DAYS = 2;
+export const MINIMUM_VOTING_DURATION_DAYS = 1 / (24 * 60);
+
+const MINIMUM_VOTING_DURATION_DESCRIPTION = '1 minute';
 
 /**
- * User-friendly voting settings input (using percentages and days)
+ * User-friendly voting settings input (using percentages and seconds)
  */
-export interface VotingSettingsInput {
+type VotingSettingsInputBase = {
   /** Percentage threshold for slow path (0-100) */
   slowPathPercentageThreshold: number;
   /** Number of editors required for fast path approval */
   fastPathFlatThreshold: number;
   /** Minimum number of editors required to vote */
   quorum: number;
-  /** Voting duration in days (minimum 2 days) */
-  durationInDays: number;
-}
+};
+
+export type VotingSettingsInput = VotingSettingsInputBase &
+  (
+    | {
+        /** Voting duration in seconds (minimum 1 minute) */
+        durationInSeconds: number;
+        durationInDays?: never;
+      }
+    | {
+        /** @deprecated Use durationInSeconds for minute-level durations. */
+        durationInDays: number;
+        durationInSeconds?: never;
+      }
+  );
 
 /**
  * Contract-level voting settings (using raw values)
@@ -52,6 +69,13 @@ export function daysToSeconds(days: number): bigint {
   return BigInt(Math.floor(days * 24 * 60 * 60));
 }
 
+function getVotingDurationInSeconds(input: VotingSettingsInput): bigint {
+  if (input.durationInSeconds !== undefined) {
+    return BigInt(Math.floor(input.durationInSeconds));
+  }
+  return daysToSeconds(input.durationInDays);
+}
+
 /**
  * Convert user-friendly voting settings to contract format.
  */
@@ -60,7 +84,7 @@ export function toContractVotingSettings(input: VotingSettingsInput): VotingSett
     slowPathPercentageThreshold: percentageToRatio(input.slowPathPercentageThreshold),
     fastPathFlatThreshold: BigInt(input.fastPathFlatThreshold),
     quorum: BigInt(input.quorum),
-    duration: daysToSeconds(input.durationInDays),
+    duration: getVotingDurationInSeconds(input),
   };
 }
 
@@ -100,8 +124,19 @@ export function validateVotingSettingsInput(settings: VotingSettingsInput, total
   if (settings.quorum < 0 || settings.quorum > totalEditors) {
     return `quorum must be between 0 and ${totalEditors} (number of initial editors)`;
   }
-  if (settings.durationInDays < MINIMUM_VOTING_DURATION_DAYS) {
-    return `durationInDays must be at least ${MINIMUM_VOTING_DURATION_DAYS} days`;
+  const hasDurationInSeconds = settings.durationInSeconds !== undefined;
+  const hasDurationInDays = settings.durationInDays !== undefined;
+
+  if (hasDurationInSeconds && hasDurationInDays) {
+    return 'Specify either durationInSeconds or durationInDays, not both';
+  }
+  if (!hasDurationInSeconds && !hasDurationInDays) {
+    return 'durationInSeconds is required';
+  }
+
+  const durationField = hasDurationInSeconds ? 'durationInSeconds' : 'durationInDays';
+  if (getVotingDurationInSeconds(settings) < MINIMUM_VOTING_DURATION) {
+    return `${durationField} must be at least ${MINIMUM_VOTING_DURATION_DESCRIPTION}`;
   }
   return null;
 }

@@ -736,8 +736,8 @@ async function createAddMemberProposal(context: DaoContext, label: string) {
   return proposal;
 }
 
-describe.skip('new API e2e surface', () => {
-  // describe.sequential("new API e2e surface", () => {
+// describe.skip('new API e2e surface', () => {
+describe.sequential('new API e2e surface', () => {
   it(
     'geo.personalSpaces.hasSpace validates the account space onchain',
     async () => {

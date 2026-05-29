@@ -5,6 +5,7 @@ import {
   getCreateDaoSpaceCalldata,
   MINIMUM_VOTING_DURATION,
   MINIMUM_VOTING_DURATION_DAYS,
+  MINIMUM_VOTING_DURATION_SECONDS,
   percentageToRatio,
   RATIO_BASE,
   toContractVotingSettings,
@@ -35,8 +36,10 @@ describe('daysToSeconds', () => {
     expect(daysToSeconds(1)).toBe(BigInt(86400));
   });
 
-  it('should convert 2 days to 172800 seconds', () => {
-    expect(daysToSeconds(2)).toBe(MINIMUM_VOTING_DURATION);
+  it('should define the minimum voting duration as 1 minute', () => {
+    expect(MINIMUM_VOTING_DURATION_SECONDS).toBe(60);
+    expect(MINIMUM_VOTING_DURATION).toBe(BigInt(MINIMUM_VOTING_DURATION_SECONDS));
+    expect(daysToSeconds(MINIMUM_VOTING_DURATION_DAYS)).toBe(MINIMUM_VOTING_DURATION);
   });
 
   it('should handle fractional days', () => {
@@ -45,7 +48,23 @@ describe('daysToSeconds', () => {
 });
 
 describe('toContractVotingSettings', () => {
-  it('should convert user-friendly settings to contract format', () => {
+  it('should convert user-friendly settings with seconds to contract format', () => {
+    const input = {
+      slowPathPercentageThreshold: 50,
+      fastPathFlatThreshold: 3,
+      quorum: 2,
+      durationInSeconds: 600,
+    };
+
+    const result = toContractVotingSettings(input);
+
+    expect(result.slowPathPercentageThreshold).toBe(percentageToRatio(50));
+    expect(result.fastPathFlatThreshold).toBe(BigInt(3));
+    expect(result.quorum).toBe(BigInt(2));
+    expect(result.duration).toBe(BigInt(600));
+  });
+
+  it('should convert user-friendly settings with days to contract format', () => {
     const input = {
       slowPathPercentageThreshold: 50,
       fastPathFlatThreshold: 3,
@@ -95,7 +114,7 @@ describe('validateVotingSettingsInput', () => {
     slowPathPercentageThreshold: 50,
     fastPathFlatThreshold: 3,
     quorum: 2,
-    durationInDays: 7,
+    durationInSeconds: 7 * 24 * 60 * 60,
   };
 
   it('should return null for valid settings', () => {
@@ -124,11 +143,34 @@ describe('validateVotingSettingsInput', () => {
     expect(validateVotingSettingsInput(settings, 5)).toBe('quorum must be between 0 and 5 (number of initial editors)');
   });
 
-  it('should reject durationInDays below minimum', () => {
-    const settings = { ...validSettings, durationInDays: 1 };
-    expect(validateVotingSettingsInput(settings, 5)).toBe(
-      `durationInDays must be at least ${MINIMUM_VOTING_DURATION_DAYS} days`,
-    );
+  it('should reject durationInSeconds below minimum', () => {
+    const settings = { ...validSettings, durationInSeconds: 59 };
+    expect(validateVotingSettingsInput(settings, 5)).toBe('durationInSeconds must be at least 1 minute');
+  });
+
+  it('should reject legacy durationInDays below minimum', () => {
+    const settings = {
+      slowPathPercentageThreshold: 50,
+      fastPathFlatThreshold: 3,
+      quorum: 2,
+      durationInDays: 0,
+    };
+    expect(validateVotingSettingsInput(settings, 5)).toBe('durationInDays must be at least 1 minute');
+  });
+
+  it('should accept the minimum duration', () => {
+    const settings = { ...validSettings, durationInSeconds: MINIMUM_VOTING_DURATION_SECONDS };
+    expect(validateVotingSettingsInput(settings, 5)).toBeNull();
+  });
+
+  it('should accept the minimum legacy duration in days', () => {
+    const settings = {
+      slowPathPercentageThreshold: 50,
+      fastPathFlatThreshold: 3,
+      quorum: 2,
+      durationInDays: MINIMUM_VOTING_DURATION_DAYS,
+    };
+    expect(validateVotingSettingsInput(settings, 5)).toBeNull();
   });
 });
 
@@ -138,7 +180,7 @@ describe('getCreateDaoSpaceCalldata', () => {
       slowPathPercentageThreshold: 50,
       fastPathFlatThreshold: 2,
       quorum: 1,
-      durationInDays: 7,
+      durationInSeconds: 7 * 24 * 60 * 60,
     },
     initialEditorSpaceIds: [
       '0x12345678901234567890123456789012' as `0x${string}`,
@@ -170,11 +212,9 @@ describe('getCreateDaoSpaceCalldata', () => {
   it('should throw if duration is below minimum', () => {
     const args = {
       ...validArgs,
-      votingSettings: { ...validArgs.votingSettings, durationInDays: 1 },
+      votingSettings: { ...validArgs.votingSettings, durationInSeconds: 59 },
     };
-    expect(() => getCreateDaoSpaceCalldata(args)).toThrow(
-      `durationInDays must be at least ${MINIMUM_VOTING_DURATION_DAYS} days`,
-    );
+    expect(() => getCreateDaoSpaceCalldata(args)).toThrow('durationInSeconds must be at least 1 minute');
   });
 
   it('should accept empty initial members', () => {

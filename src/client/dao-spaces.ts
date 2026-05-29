@@ -265,7 +265,7 @@ function encodeUpdateVotingSettingsAction(
  *     slowPathPercentageThreshold: 50,
  *     fastPathFlatThreshold: 1,
  *     quorum: 1,
- *     durationInDays: 3,
+ *     durationInSeconds: 3 * 24 * 60 * 60,
  *   },
  * });
  *
@@ -339,7 +339,7 @@ export async function create(context: GeoClientContext, params: CreateDaoSpacePa
  *     slowPathPercentageThreshold: 60,
  *     fastPathFlatThreshold: 2,
  *     quorum: 3,
- *     durationInDays: 5,
+ *     durationInSeconds: 5 * 24 * 60 * 60,
  *   }),
  * ];
  *

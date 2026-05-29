@@ -7,6 +7,7 @@ import * as DaoSpaces from './client/dao-spaces.js';
 import { deleteEntity } from './client/entities.js';
 import * as EntityVotes from './client/entity-votes.js';
 import * as PersonalSpaces from './client/personal-spaces.js';
+import type { VotingSettingsInput } from './encodings/get-create-dao-space-calldata.js';
 import type { Id } from './id.js';
 import { defineGeoNetworkConfig } from './networks.js';
 import type { GeoNetworkConfig } from './types.js';
@@ -121,12 +122,7 @@ export type PublishPersonalSpaceEditParams = PublishEditParams & {
 
 export type PublishPersonalSpaceEditResult = PublishEditResult & CalldataResult;
 
-export type VotingSettingsInput = {
-  slowPathPercentageThreshold: number;
-  fastPathFlatThreshold: number;
-  quorum: number;
-  durationInDays: number;
-};
+export type { VotingSettingsInput } from './encodings/get-create-dao-space-calldata.js';
 
 export type VotingMode = 'SLOW' | 'FAST';
 
@@ -584,7 +580,7 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        *     slowPathPercentageThreshold: 50,
        *     fastPathFlatThreshold: 1,
        *     quorum: 1,
-       *     durationInDays: 2,
+       *     durationInSeconds: 2 * 24 * 60 * 60,
        *   },
        * });
        * ```

@@ -609,7 +609,7 @@ const tx = await geo.daoSpaces.create({
     slowPathPercentageThreshold: 50,
     fastPathFlatThreshold: 1,
     quorum: 1,
-    durationInDays: 3,
+    durationInSeconds: 3 * 24 * 60 * 60,
   },
 });
 
@@ -721,7 +721,7 @@ const actions = [
     slowPathPercentageThreshold: 60,
     fastPathFlatThreshold: 2,
     quorum: 3,
-    durationInDays: 5,
+    durationInSeconds: 5 * 24 * 60 * 60,
   }),
 ];
 

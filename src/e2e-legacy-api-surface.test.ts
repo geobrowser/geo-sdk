@@ -587,8 +587,8 @@ async function createLegacyAddMemberProposal(context: DaoContext, label: string)
   return proposal;
 }
 
-describe.skip('legacy deprecated API e2e surface', () => {
-  // describe.sequential('legacy deprecated API e2e surface', () => {
+// describe.skip('legacy deprecated API e2e surface', () => {
+describe.sequential('legacy deprecated API e2e surface', () => {
   it(
     'personalSpace.hasSpace validates the account space onchain',
     async () => {
