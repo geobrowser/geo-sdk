@@ -13,6 +13,10 @@ const movie1Id = IdUtils.generate();
 const movie2Id = IdUtils.generate();
 const movie3Id = IdUtils.generate();
 
+// Each ranked entity is scoped to a space perspective via `spaceId`. In a real
+// application this is the space the ranked entity lives in.
+const spaceId = IdUtils.generate();
+
 // =============================================================================
 // Example 1: Creating an Ordinal Rank (Ordered List)
 // =============================================================================
@@ -24,9 +28,9 @@ const ordinalRankResult = Rank.createRank({
   description: 'A ranked list of my top movies this year',
   rankType: 'ORDINAL',
   votes: [
-    { entityId: movie1Id }, // 1st place
-    { entityId: movie2Id }, // 2nd place
-    { entityId: movie3Id }, // 3rd place
+    { entityId: movie1Id, spaceId }, // 1st place
+    { entityId: movie2Id, spaceId }, // 2nd place
+    { entityId: movie3Id, spaceId }, // 3rd place
   ],
 });
 

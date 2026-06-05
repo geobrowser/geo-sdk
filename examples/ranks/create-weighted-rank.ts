@@ -13,6 +13,10 @@ const restaurant1Id = IdUtils.generate();
 const restaurant2Id = IdUtils.generate();
 const restaurant3Id = IdUtils.generate();
 
+// Each ranked entity is scoped to a space perspective via `spaceId`. In a real
+// application this is the space the ranked entity lives in.
+const spaceId = IdUtils.generate();
+
 // =============================================================================
 // Example 1: Creating a Weighted Rank (Scored List)
 // =============================================================================
@@ -24,9 +28,9 @@ const weightedRankResult = Rank.createRank({
   description: 'My restaurant reviews',
   rankType: 'WEIGHTED',
   votes: [
-    { entityId: restaurant1Id, value: 90 }, // Can use any number and scale as needed
-    { entityId: restaurant2Id, value: 65 },
-    { entityId: restaurant3Id, value: 50 },
+    { entityId: restaurant1Id, spaceId, value: 90 }, // Can use any number and scale as needed
+    { entityId: restaurant2Id, spaceId, value: 65 },
+    { entityId: restaurant3Id, spaceId, value: 50 },
   ],
 });
 
