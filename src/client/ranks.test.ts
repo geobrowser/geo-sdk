@@ -31,26 +31,6 @@ function voteRelations(ops: Array<{ type: string }>) {
 }
 
 describe('geo.ranks', () => {
-  describe('create', () => {
-    it('builds rank creation ops without hitting the network', () => {
-      const fetch = vi.fn<typeof globalThis.fetch>();
-      const geo = createGeoClient({ network: customNetwork(), fetch });
-
-      const result = geo.ranks.create({
-        name: 'Top movies',
-        rankType: 'ORDINAL',
-        votes: [
-          { entityId: MOVIE_1, spaceId: SPACE_ID },
-          { entityId: MOVIE_2, spaceId: SPACE_ID },
-        ],
-      });
-
-      expect(result.voteIds).toHaveLength(2);
-      expect(voteRelations(result.ops)).toHaveLength(2);
-      expect(fetch).not.toHaveBeenCalled();
-    });
-  });
-
   describe('update', () => {
     it('fetches existing vote relations then supersedes them with new votes', async () => {
       const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(

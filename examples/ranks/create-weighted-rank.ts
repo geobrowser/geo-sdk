@@ -1,11 +1,11 @@
 /**
  * Example: Creating a Weighted Rank with grc-20-ts
  *
- * This example demonstrates how to use the `createRank` function to create
+ * This example demonstrates how to use `Ops.ranks.create` to create
  * a weighted (scored) rank in the Knowledge Graph.
  */
 
-import { IdUtils, Rank } from '@geoprotocol/geo-sdk';
+import { IdUtils, Ops } from '@geoprotocol/geo-sdk';
 
 // For this example, we'll generate some entity IDs to represent items we want to rank.
 // In a real application, these would be existing entity IDs from your Knowledge Graph.
@@ -23,7 +23,7 @@ const spaceId = IdUtils.generate();
 // Weighted ranks are used when you want to assign numeric scores to items.
 // Useful for ratings, reviews, or any scenario where magnitude matters.
 
-const weightedRankResult = Rank.createRank({
+const weightedRankResult = Ops.ranks.create({
   name: 'Restaurant Ratings',
   description: 'My restaurant reviews',
   rankType: 'WEIGHTED',

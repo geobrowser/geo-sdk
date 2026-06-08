@@ -82,7 +82,7 @@ export const createRank = ({
   if (blockId) {
     assertValid(blockId, '`blockId` in `createRank`');
   }
-  validateVotes(votes, 'createRank');
+  validateVotes(votes, rankType, 'createRank');
 
   const id = providedId ?? generate();
   const ops: Op[] = [];

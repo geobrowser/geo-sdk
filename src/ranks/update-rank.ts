@@ -47,7 +47,7 @@ export const updateRank = ({ rankId, rankType, votes, existingVotes }: UpdateRan
     assertValid(existing.relationId, '`relationId` in `existingVotes` in `updateRank`');
     assertValid(existing.voteEntityId, '`voteEntityId` in `existingVotes` in `updateRank`');
   }
-  validateVotes(votes, 'updateRank');
+  validateVotes(votes, rankType, 'updateRank');
 
   const ops: Op[] = [];
 

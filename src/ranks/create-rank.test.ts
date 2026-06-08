@@ -466,6 +466,41 @@ describe('createRank', () => {
         }),
       ).toThrow(`Duplicate (entityId, spaceId) in votes: "${movie1Id}:${spaceId}".`);
     });
+
+    it('detects duplicates across dashed and dashless forms of the same id', () => {
+      const dashless = String(movie1Id).replaceAll('-', '');
+      expect(() =>
+        createRank({
+          name: 'My Rank',
+          rankType: 'ORDINAL',
+          votes: [
+            { entityId: movie1Id, spaceId }, // dashed
+            { entityId: dashless, spaceId }, // same id, dashless
+          ],
+        }),
+      ).toThrow('Duplicate (entityId, spaceId) in votes');
+    });
+
+    it('throws when a weighted vote is missing its numeric value', () => {
+      expect(() =>
+        createRank({
+          name: 'My Scores',
+          rankType: 'WEIGHTED',
+          // `Vote` is not discriminated by rankType, so this compiles; runtime guards it.
+          votes: [{ entityId: movie1Id, spaceId } as never],
+        }),
+      ).toThrow(`Weighted vote for "${movie1Id}" must have a finite numeric \`value\``);
+    });
+
+    it('throws when a weighted vote value is not finite', () => {
+      expect(() =>
+        createRank({
+          name: 'My Scores',
+          rankType: 'WEIGHTED',
+          votes: [{ entityId: movie1Id, spaceId, value: Number.NaN }],
+        }),
+      ).toThrow(`Weighted vote for "${movie1Id}" must have a finite numeric \`value\``);
+    });
   });
 
   describe('empty votes', () => {

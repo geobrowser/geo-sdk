@@ -12,7 +12,7 @@ import * as Ranks from './client/ranks.js';
 import type { VotingSettingsInput } from './encodings/get-create-dao-space-calldata.js';
 import type { Id } from './id.js';
 import { defineGeoNetworkConfig } from './networks.js';
-import type { CreateRankParams, CreateRankResult, UpdateRankResult } from './ranks/types.js';
+import type { UpdateRankResult } from './ranks/types.js';
 import type { GeoNetworkConfig } from './types.js';
 
 export type FetchLike = typeof fetch;
@@ -258,7 +258,6 @@ export type Client = {
     update(params: UpdateCommentParams): CreateResult;
   };
   ranks: {
-    create(params: CreateRankParams): CreateRankResult;
     update(params: UpdateRankClientParams): Promise<UpdateRankResult>;
   };
   personalSpaces: {
@@ -522,23 +521,6 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
     },
     /** Rank operation helpers. */
     ranks: {
-      /**
-       * Builds rank creation ops.
-       *
-       * @example
-       * ```ts
-       * const { id, ops, voteIds } = geo.ranks.create({
-       *   name: 'My Favorite Movies',
-       *   rankType: 'ORDINAL',
-       *   blockId,
-       *   votes: [
-       *     { entityId: movie1Id, spaceId },
-       *     { entityId: movie2Id, spaceId },
-       *   ],
-       * });
-       * ```
-       */
-      create: Ranks.create,
       /**
        * Fetches the rank's current votes and builds ops that supersede them with
        * the new ordered votes.

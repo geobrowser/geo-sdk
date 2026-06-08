@@ -12,28 +12,44 @@ import {
   VOTE_WEIGHTED_VALUE_PROPERTY,
 } from '../core/ids/system.js';
 import type { Id } from '../id.js';
-import { assertValid, generate, toGrcId } from '../id-utils.js';
+import { assertValid, fromBytes, generate, toBytes, toGrcId } from '../id-utils.js';
 import type { RankType, Vote, VoteWeighted } from './types.js';
 
 /**
- * Validates every vote's IDs and enforces `(entityId, spaceId)` uniqueness within
- * a rank. A rank may include the same `entityId` under multiple `spaceId`s
- * (ranking perspectives), so uniqueness is keyed on the pair rather than the
- * entity alone.
+ * Validates every vote and enforces `(entityId, spaceId)` uniqueness within a
+ * rank. A rank may include the same `entityId` under multiple `spaceId`s (ranking
+ * perspectives), so uniqueness is keyed on the pair rather than the entity alone.
+ * The pair is compared after normalizing each ID, so a dashed and a dashless form
+ * of the same UUID still collide.
  *
- * @throws When any `entityId`/`spaceId` is invalid, or a `(entityId, spaceId)`
- *   pair is duplicated.
+ * For `WEIGHTED` ranks every vote must carry a finite numeric `value` — the `Vote`
+ * union is not discriminated by `rankType`, so this is enforced at runtime to stop
+ * weighted ranks from emitting `undefined` float values.
+ *
+ * @throws When any `entityId`/`spaceId` is invalid, a weighted vote is missing a
+ *   finite numeric `value`, or a `(entityId, spaceId)` pair is duplicated.
  */
-export function validateVotes(votes: Vote[], context: string): void {
+export function validateVotes(votes: Vote[], rankType: RankType, context: string): void {
   const seen = new Set<string>();
   for (const vote of votes) {
     assertValid(vote.entityId, `\`entityId\` in \`votes\` in \`${context}\``);
     assertValid(vote.spaceId, `\`spaceId\` in \`votes\` in \`${context}\``);
 
-    const key = `${String(vote.entityId)}:${String(vote.spaceId)}`;
+    if (rankType === 'WEIGHTED') {
+      const { value } = vote as VoteWeighted;
+      if (typeof value !== 'number' || !Number.isFinite(value)) {
+        throw new Error(
+          `Weighted vote for "${String(vote.entityId)}" must have a finite numeric \`value\` in \`${context}\`.`,
+        );
+      }
+    }
+
+    // Key on the canonical (lowercase, dashless) form so a dashed and a dashless
+    // — or differently-cased — spelling of the same UUID still collide.
+    const key = `${fromBytes(toBytes(vote.entityId))}:${fromBytes(toBytes(vote.spaceId))}`;
     if (seen.has(key)) {
       throw new Error(
-        `Duplicate (entityId, spaceId) in votes: "${key}". Each entity can only be voted once per space perspective in a rank.`,
+        `Duplicate (entityId, spaceId) in votes: "${String(vote.entityId)}:${String(vote.spaceId)}". Each entity can only be voted once per space perspective in a rank.`,
       );
     }
     seen.add(key);
