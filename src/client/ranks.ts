@@ -13,7 +13,7 @@ class UpdateRankError extends Error {
 
 type RankRelationsResponse = {
   entity: {
-    relationsList: Array<{ id: string }>;
+    relationsList: Array<{ id: string; entityId: string }>;
   } | null;
 };
 
@@ -87,6 +87,7 @@ export async function update(
     entity(id: "${rankId}") {
       relationsList(filter: { typeId: { in: ["${RANK_VOTES_RELATION_TYPE}"] } }) {
         id
+        entityId
       }
     }
   }`;
@@ -102,7 +103,10 @@ export async function update(
     throw new UpdateRankError(`Rank ${rankId} not found`);
   }
 
-  const existingVotes = response.entity.relationsList.map(relation => ({ relationId: relation.id }));
+  const existingVotes = response.entity.relationsList.map(relation => ({
+    relationId: relation.id,
+    voteEntityId: relation.entityId,
+  }));
 
   return updateRank({ rankId, rankType, votes, existingVotes });
 }

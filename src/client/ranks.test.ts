@@ -1,4 +1,4 @@
-import type { CreateEntity, CreateRelation, DeleteRelation } from '@geoprotocol/grc-20';
+import type { CreateEntity, CreateRelation, DeleteEntity, DeleteRelation } from '@geoprotocol/grc-20';
 import { describe, expect, it, vi } from 'vitest';
 import { createGeoClient } from '../client.js';
 import { RANK_VOTES_RELATION_TYPE } from '../core/ids/system.js';
@@ -11,6 +11,8 @@ const MOVIE_2 = '550e8400e29b41d4a716446655440000';
 const SPACE_ID = 'd4bc2f205e2d415e971eb0b9fbf6b6fc';
 const EXISTING_REL_1 = 'aaaaaaaa11114111811aaaaaaaaaaaaa';
 const EXISTING_REL_2 = 'bbbbbbbb22224222822bbbbbbbbbbbbb';
+const EXISTING_VOTE_1 = 'cccccccc33334333833ccccccccccccc';
+const EXISTING_VOTE_2 = 'dddddddd44444444844ddddddddddddd';
 
 function customNetwork() {
   return defineGeoNetworkConfig({
@@ -56,7 +58,10 @@ describe('geo.ranks', () => {
           JSON.stringify({
             data: {
               entity: {
-                relationsList: [{ id: EXISTING_REL_1 }, { id: EXISTING_REL_2 }],
+                relationsList: [
+                  { id: EXISTING_REL_1, entityId: EXISTING_VOTE_1 },
+                  { id: EXISTING_REL_2, entityId: EXISTING_VOTE_2 },
+                ],
               },
             },
           }),
@@ -72,11 +77,17 @@ describe('geo.ranks', () => {
 
       expect(fetch).toHaveBeenCalledWith('http://localhost:3000/graphql', expect.objectContaining({ method: 'POST' }));
 
-      // Two deletes for the fetched relations
+      // Two relation deletes for the fetched relations
       const deletes = result.ops.filter((op): op is DeleteRelation => op.type === 'deleteRelation');
       expect(deletes).toHaveLength(2);
       expect(deletes[0]?.id).toEqual(toGrcId(EXISTING_REL_1));
       expect(deletes[1]?.id).toEqual(toGrcId(EXISTING_REL_2));
+
+      // Each superseded vote also deletes its reified vote entity
+      const entityDeletes = result.ops.filter((op): op is DeleteEntity => op.type === 'deleteEntity');
+      expect(entityDeletes).toHaveLength(2);
+      expect(entityDeletes[0]?.id).toEqual(toGrcId(EXISTING_VOTE_1));
+      expect(entityDeletes[1]?.id).toEqual(toGrcId(EXISTING_VOTE_2));
 
       // One new vote relation + entity
       expect(voteRelations(result.ops)).toHaveLength(1);

@@ -40,10 +40,14 @@ export type CreateRankResult = CreateResult & {
 /**
  * An existing vote relation on a rank, used by {@link UpdateRankParams} to
  * supersede the previous submission. `relationId` is the `RANK_VOTES` relation
- * to delete.
+ * to delete; `voteEntityId` is its reified vote entity (the relation's `entity`),
+ * deleted alongside it so the prior submission leaves no orphaned vote entity.
  */
 export type ExistingVoteRelation = {
+  /** The `RANK_VOTES` relation to delete. */
   relationId: Id | string;
+  /** The reified vote entity carried by the relation, deleted to avoid orphans. */
+  voteEntityId: Id | string;
 };
 
 export type UpdateRankParams = {
@@ -52,7 +56,10 @@ export type UpdateRankParams = {
   rankType: RankType;
   /** The new, ordered list of votes that replaces the rank's current votes. */
   votes: Vote[];
-  /** The rank's current `RANK_VOTES` relations, which will be deleted. */
+  /**
+   * The rank's current `RANK_VOTES` relations (and their reified vote entities),
+   * which will be deleted.
+   */
   existingVotes: ExistingVoteRelation[];
 };
 

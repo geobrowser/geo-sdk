@@ -1,4 +1,4 @@
-import { deleteRelation as grcDeleteRelation, type Op } from '@geoprotocol/grc-20';
+import { deleteEntity as grcDeleteEntity, deleteRelation as grcDeleteRelation, type Op } from '@geoprotocol/grc-20';
 import { Id } from '../id.js';
 import { assertValid, toGrcId } from '../id-utils.js';
 import type { UpdateRankParams, UpdateRankResult } from './types.js';
@@ -6,8 +6,10 @@ import { buildVoteOps, validateVotes } from './vote-ops.js';
 
 /**
  * Updates an existing rank's votes (a re-submission). This is the pure
- * op-builder: it deletes the rank's current `RANK_VOTES` relations (passed in
- * `existingVotes`) and re-emits the new ordered votes.
+ * op-builder: it deletes the rank's current `RANK_VOTES` relations and their
+ * reified vote entities (passed in `existingVotes`) and re-emits the new ordered
+ * votes. Deleting the reified vote entity prevents the prior submission from
+ * leaving orphaned entities behind.
  *
  * Because the SDK does not read from the graph, callers must supply the current
  * vote relations to supersede. Prefer the `geo.ranks.update(...)` client helper,
@@ -28,8 +30,8 @@ import { buildVoteOps, validateVotes } from './vote-ops.js';
  *     { entityId: movie1Id, spaceId },
  *   ],
  *   existingVotes: [
- *     { relationId: existingRelation1Id },
- *     { relationId: existingRelation2Id },
+ *     { relationId: existingRelation1Id, voteEntityId: existingVote1Id },
+ *     { relationId: existingRelation2Id, voteEntityId: existingVote2Id },
  *   ],
  * });
  * ```
@@ -43,14 +45,17 @@ export const updateRank = ({ rankId, rankType, votes, existingVotes }: UpdateRan
   assertValid(rankId, '`rankId` in `updateRank`');
   for (const existing of existingVotes) {
     assertValid(existing.relationId, '`relationId` in `existingVotes` in `updateRank`');
+    assertValid(existing.voteEntityId, '`voteEntityId` in `existingVotes` in `updateRank`');
   }
   validateVotes(votes, 'updateRank');
 
   const ops: Op[] = [];
 
-  // Delete the rank's current vote relations to supersede the prior submission.
+  // Delete the rank's current vote relations and their reified vote entities to
+  // supersede the prior submission without leaving orphaned entities behind.
   for (const existing of existingVotes) {
     ops.push(grcDeleteRelation(toGrcId(existing.relationId)));
+    ops.push(grcDeleteEntity(toGrcId(existing.voteEntityId)));
   }
 
   // Re-emit the new ordered votes.
