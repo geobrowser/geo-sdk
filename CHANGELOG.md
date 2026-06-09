@@ -1,6 +1,6 @@
 # @geoprotocol/geo-sdk
 
-## 0.19.2
+## 0.19.3
 
 ### Patch Changes
 
@@ -11,6 +11,10 @@
   - `Ops.ranks.create(...)` accepts an optional `blockId` to link the rank to a `Ranking Block` via a `Rank → Ranking Block` relation.
   - Each vote relation now carries a fractional-index `position`, so clients can order votes natively by the relation's `position` field.
   - New `geo.ranks.update(...)` re-submits a rank: it fetches the rank's current vote relations from the configured Geo API, deletes them and their reified vote entities, then re-emits the new ordered votes — no indexer involvement required. The lower-level `updateRank` op-builder is internal.
+
+## 0.19.2
+
+- Fix build
 
 ## 0.19.1
 
