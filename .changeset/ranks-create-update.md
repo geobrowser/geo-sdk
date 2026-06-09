@@ -1,5 +1,5 @@
 ---
-"@geoprotocol/geo-sdk": minor
+"@geoprotocol/geo-sdk": patch
 ---
 
 Ranking submissions: extend the ranks module with per-item space, block links, and updates.
