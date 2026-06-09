@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DESCRIPTION_PROPERTY,
   NAME_PROPERTY,
+  RANK_BLOCK_RELATION_TYPE,
   RANK_TYPE,
   RANK_TYPE_PROPERTY,
   RANK_VOTES_RELATION_TYPE,
@@ -18,13 +19,15 @@ describe('createRank', () => {
   const movie1Id = Id('f47ac10b-58cc-4372-a567-0e02b2c3d479');
   const movie2Id = Id('550e8400-e29b-41d4-a716-446655440000');
   const movie3Id = Id('6ba7b810-9dad-11d1-80b4-00c04fd430c8');
+  const spaceId = Id('0e8d692f-1c2d-4f6b-9a0e-7b6d2c1f3a4b');
+  const otherSpaceId = Id('1a2b3c4d-5e6f-4a8b-9c0d-1e2f3a4b5c6d');
 
   describe('ordinal ranks', () => {
     it('creates a basic ordinal rank with one vote', () => {
       const rank = createRank({
         name: 'My Favorite Movie',
         rankType: 'ORDINAL',
-        votes: [{ entityId: movie1Id }],
+        votes: [{ entityId: movie1Id, spaceId }],
       });
 
       expect(rank).toBeDefined();
@@ -75,6 +78,11 @@ describe('createRank', () => {
       expect(voteRelOp.from).toEqual(toGrcId(rank.id));
       expect(voteRelOp.to).toEqual(toGrcId(movie1Id));
       expect(voteRelOp.relationType).toEqual(toGrcId(RANK_VOTES_RELATION_TYPE));
+      // Vote relation is scoped to the vote's space perspective
+      expect(voteRelOp.toSpace).toEqual(toGrcId(spaceId));
+      // Vote relation carries the order in its `position` field
+      expect(typeof voteRelOp.position).toBe('string');
+      expect((voteRelOp.position as string).length).toBeGreaterThan(0);
 
       // Check vote entity with ordinal value
       const voteEntityOp = rank.ops[3] as CreateEntity;
@@ -82,17 +90,17 @@ describe('createRank', () => {
       // biome-ignore lint/style/noNonNullAssertion: test file - we verified voteIds has 1 element
       expect(voteEntityOp.id).toEqual(toGrcId(rank.voteIds[0]!));
 
-      // Verify ordinal value property
+      // Verify ordinal value property matches the relation position
       const ordinalValue = voteEntityOp.values.find(v => {
         const propBytes = v.property;
         return propBytes.every((b, i) => b === toGrcId(VOTE_ORDINAL_VALUE_PROPERTY)[i]);
       });
       expect(ordinalValue).toBeDefined();
       expect(ordinalValue?.value.type).toBe('text');
-      // Value should be a fractional index string
       if (ordinalValue?.value.type === 'text') {
         expect(typeof ordinalValue.value.value).toBe('string');
         expect(ordinalValue.value.value.length).toBeGreaterThan(0);
+        expect(ordinalValue.value.value).toBe(voteRelOp.position);
       }
     });
 
@@ -100,7 +108,11 @@ describe('createRank', () => {
       const rank = createRank({
         name: 'Top 3 Movies',
         rankType: 'ORDINAL',
-        votes: [{ entityId: movie1Id }, { entityId: movie2Id }, { entityId: movie3Id }],
+        votes: [
+          { entityId: movie1Id, spaceId },
+          { entityId: movie2Id, spaceId },
+          { entityId: movie3Id, spaceId },
+        ],
       });
 
       expect(rank.voteIds).toHaveLength(3);
@@ -129,6 +141,15 @@ describe('createRank', () => {
       expect(ordinalValues[0]! < ordinalValues[1]!).toBe(true);
       // biome-ignore lint/style/noNonNullAssertion: test file - we just verified length is 3
       expect(ordinalValues[1]! < ordinalValues[2]!).toBe(true);
+
+      // Vote relation positions match the ordinal values and ascend with array order
+      const voteRelOps = [rank.ops[2], rank.ops[4], rank.ops[6]] as CreateRelation[];
+      const positions = voteRelOps.map(op => op.position as string);
+      expect(positions).toEqual(ordinalValues);
+      // biome-ignore lint/style/noNonNullAssertion: test file - we just verified length is 3
+      expect(positions[0]! < positions[1]!).toBe(true);
+      // biome-ignore lint/style/noNonNullAssertion: test file - we just verified length is 3
+      expect(positions[1]! < positions[2]!).toBe(true);
     });
 
     it('creates an ordinal rank with optional description', () => {
@@ -136,7 +157,7 @@ describe('createRank', () => {
         name: 'My Movies',
         description: 'A ranked list of my favorite movies',
         rankType: 'ORDINAL',
-        votes: [{ entityId: movie1Id }],
+        votes: [{ entityId: movie1Id, spaceId }],
       });
 
       const rankEntityOp = rank.ops[0] as CreateEntity;
@@ -180,7 +201,7 @@ describe('createRank', () => {
       const rank = createRank({
         name: 'Restaurant Rating',
         rankType: 'WEIGHTED',
-        votes: [{ entityId: movie1Id, value: 4.5 }],
+        votes: [{ entityId: movie1Id, spaceId, value: 4.5 }],
       });
 
       expect(rank).toBeDefined();
@@ -199,6 +220,11 @@ describe('createRank', () => {
       if (rankTypeValue?.value.type === 'text') {
         expect(rankTypeValue.value.value).toBe('WEIGHTED');
       }
+
+      // Weighted vote relations still carry a position for stable ordering
+      const voteRelOp = rank.ops[2] as CreateRelation;
+      expect(voteRelOp.toSpace).toEqual(toGrcId(spaceId));
+      expect(typeof voteRelOp.position).toBe('string');
 
       // Check vote entity with weighted value
       const voteEntityOp = rank.ops[3] as CreateEntity;
@@ -220,9 +246,9 @@ describe('createRank', () => {
         name: 'Movie Scores',
         rankType: 'WEIGHTED',
         votes: [
-          { entityId: movie1Id, value: 9.2 },
-          { entityId: movie2Id, value: 8.5 },
-          { entityId: movie3Id, value: 7.8 },
+          { entityId: movie1Id, spaceId, value: 9.2 },
+          { entityId: movie2Id, spaceId, value: 8.5 },
+          { entityId: movie3Id, spaceId, value: 7.8 },
         ],
       });
 
@@ -250,7 +276,7 @@ describe('createRank', () => {
       const rank = createRank({
         name: 'Star Ratings',
         rankType: 'WEIGHTED',
-        votes: [{ entityId: movie1Id, value: 5 }],
+        votes: [{ entityId: movie1Id, spaceId, value: 5 }],
       });
 
       const voteEntityOp = rank.ops[3] as CreateEntity;
@@ -267,6 +293,88 @@ describe('createRank', () => {
     });
   });
 
+  describe('per-item space', () => {
+    it('sets the vote relation `toSpace` to each vote’s spaceId', () => {
+      const rank = createRank({
+        name: 'Cross-space rank',
+        rankType: 'ORDINAL',
+        votes: [
+          { entityId: movie1Id, spaceId },
+          { entityId: movie2Id, spaceId: otherSpaceId },
+        ],
+      });
+
+      const voteRel1 = rank.ops[2] as CreateRelation;
+      const voteRel2 = rank.ops[4] as CreateRelation;
+      expect(voteRel1.toSpace).toEqual(toGrcId(spaceId));
+      expect(voteRel2.toSpace).toEqual(toGrcId(otherSpaceId));
+    });
+
+    it('allows the same entity across multiple spaces (perspectives)', () => {
+      expect(() =>
+        createRank({
+          name: 'Perspectives on crypto',
+          rankType: 'ORDINAL',
+          votes: [
+            { entityId: movie1Id, spaceId },
+            { entityId: movie1Id, spaceId: otherSpaceId },
+          ],
+        }),
+      ).not.toThrow();
+    });
+  });
+
+  describe('block link', () => {
+    const blockId = Id('9f8e7d6c-5b4a-4938-8271-605f4e3d2c1b');
+
+    it('emits a Rank → Ranking Block relation when blockId is provided', () => {
+      const rank = createRank({
+        name: 'Block-linked rank',
+        rankType: 'ORDINAL',
+        blockId,
+        votes: [{ entityId: movie1Id, spaceId }],
+      });
+
+      // rank entity + type relation + block link relation + vote relation + vote entity
+      expect(rank.ops).toHaveLength(5);
+
+      const blockRelOp = rank.ops[2] as CreateRelation;
+      expect(blockRelOp.type).toBe('createRelation');
+      expect(blockRelOp.from).toEqual(toGrcId(rank.id));
+      expect(blockRelOp.to).toEqual(toGrcId(blockId));
+      expect(blockRelOp.relationType).toEqual(toGrcId(RANK_BLOCK_RELATION_TYPE));
+
+      // Votes follow the block link
+      const voteRelOp = rank.ops[3] as CreateRelation;
+      expect(voteRelOp.relationType).toEqual(toGrcId(RANK_VOTES_RELATION_TYPE));
+    });
+
+    it('does not emit a block link when blockId is omitted', () => {
+      const rank = createRank({
+        name: 'No block',
+        rankType: 'ORDINAL',
+        votes: [{ entityId: movie1Id, spaceId }],
+      });
+      const hasBlockRel = rank.ops.some(
+        op =>
+          op.type === 'createRelation' &&
+          (op as CreateRelation).relationType.every((b, i) => b === toGrcId(RANK_BLOCK_RELATION_TYPE)[i]),
+      );
+      expect(hasBlockRel).toBe(false);
+    });
+
+    it('throws an error if blockId is invalid', () => {
+      expect(() =>
+        createRank({
+          name: 'Bad block',
+          rankType: 'ORDINAL',
+          blockId: 'invalid',
+          votes: [{ entityId: movie1Id, spaceId }],
+        }),
+      ).toThrow('Invalid id: "invalid" for `blockId` in `createRank`');
+    });
+  });
+
   describe('provided id', () => {
     it('uses provided id when specified', () => {
       const providedId = Id('b1dc6e5c-63e1-43ba-b3d4-755b251a4ea1');
@@ -274,7 +382,7 @@ describe('createRank', () => {
         id: providedId,
         name: 'My Rank',
         rankType: 'ORDINAL',
-        votes: [{ entityId: movie1Id }],
+        votes: [{ entityId: movie1Id, spaceId }],
       });
 
       expect(rank.id).toBe(providedId);
@@ -292,7 +400,7 @@ describe('createRank', () => {
       const rank = createRank({
         name: 'My Rank',
         rankType: 'ORDINAL',
-        votes: [{ entityId: movie1Id }],
+        votes: [{ entityId: movie1Id, spaceId }],
       });
 
       expect(typeof rank.id).toBe('string');
@@ -307,7 +415,7 @@ describe('createRank', () => {
           id: 'invalid',
           name: 'My Rank',
           rankType: 'ORDINAL',
-          votes: [{ entityId: movie1Id }],
+          votes: [{ entityId: movie1Id, spaceId }],
         }),
       ).toThrow('Invalid id: "invalid" for `id` in `createRank`');
     });
@@ -317,32 +425,81 @@ describe('createRank', () => {
         createRank({
           name: 'My Rank',
           rankType: 'ORDINAL',
-          votes: [{ entityId: 'invalid-entity-id' }],
+          votes: [{ entityId: 'invalid-entity-id', spaceId }],
         }),
       ).toThrow('Invalid id: "invalid-entity-id" for `entityId` in `votes` in `createRank`');
     });
 
-    it('throws an error if duplicate entity IDs are in votes', () => {
+    it('throws an error if a vote spaceId is invalid', () => {
       expect(() =>
         createRank({
           name: 'My Rank',
           rankType: 'ORDINAL',
-          votes: [{ entityId: movie1Id }, { entityId: movie2Id }, { entityId: movie1Id }],
+          votes: [{ entityId: movie1Id, spaceId: 'invalid-space-id' }],
         }),
-      ).toThrow(`Duplicate entityId in votes: "${movie1Id}". Each entity can only be voted once per rank.`);
+      ).toThrow('Invalid id: "invalid-space-id" for `spaceId` in `votes` in `createRank`');
     });
 
-    it('throws an error for duplicate entity IDs in weighted ranks', () => {
+    it('throws an error if a duplicate (entityId, spaceId) is in votes', () => {
+      expect(() =>
+        createRank({
+          name: 'My Rank',
+          rankType: 'ORDINAL',
+          votes: [
+            { entityId: movie1Id, spaceId },
+            { entityId: movie2Id, spaceId },
+            { entityId: movie1Id, spaceId },
+          ],
+        }),
+      ).toThrow(`Duplicate (entityId, spaceId) in votes: "${movie1Id}:${spaceId}".`);
+    });
+
+    it('throws an error for duplicate (entityId, spaceId) in weighted ranks', () => {
       expect(() =>
         createRank({
           name: 'My Scores',
           rankType: 'WEIGHTED',
           votes: [
-            { entityId: movie1Id, value: 5 },
-            { entityId: movie1Id, value: 3 },
+            { entityId: movie1Id, spaceId, value: 5 },
+            { entityId: movie1Id, spaceId, value: 3 },
           ],
         }),
-      ).toThrow(`Duplicate entityId in votes: "${movie1Id}". Each entity can only be voted once per rank.`);
+      ).toThrow(`Duplicate (entityId, spaceId) in votes: "${movie1Id}:${spaceId}".`);
+    });
+
+    it('detects duplicates across dashed and dashless forms of the same id', () => {
+      const dashless = String(movie1Id).replaceAll('-', '');
+      expect(() =>
+        createRank({
+          name: 'My Rank',
+          rankType: 'ORDINAL',
+          votes: [
+            { entityId: movie1Id, spaceId }, // dashed
+            { entityId: dashless, spaceId }, // same id, dashless
+          ],
+        }),
+      ).toThrow('Duplicate (entityId, spaceId) in votes');
+    });
+
+    it('throws when a weighted vote is missing its numeric value', () => {
+      expect(() =>
+        createRank({
+          name: 'My Scores',
+          rankType: 'WEIGHTED',
+          // `Vote` is not discriminated by rankType, so this compiles; runtime guards it.
+          votes: [{ entityId: movie1Id, spaceId } as never],
+        }),
+      ).toThrow(`Weighted vote for "${movie1Id}" must have a finite numeric \`value\``);
+    });
+
+    it('throws when a weighted vote value is not finite', () => {
+      expect(() =>
+        createRank({
+          name: 'My Scores',
+          rankType: 'WEIGHTED',
+          votes: [{ entityId: movie1Id, spaceId, value: Number.NaN }],
+        }),
+      ).toThrow(`Weighted vote for "${movie1Id}" must have a finite numeric \`value\``);
     });
   });
 
@@ -375,7 +532,10 @@ describe('createRank', () => {
       const rank = createRank({
         name: 'My Rank',
         rankType: 'ORDINAL',
-        votes: [{ entityId: movie1Id }, { entityId: movie2Id }],
+        votes: [
+          { entityId: movie1Id, spaceId },
+          { entityId: movie2Id, spaceId },
+        ],
       });
 
       // Vote relations are at indices 2 and 4 (after rank entity and type relation)
