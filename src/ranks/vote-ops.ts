@@ -12,8 +12,12 @@ import {
   VOTE_WEIGHTED_VALUE_PROPERTY,
 } from '../core/ids/system.js';
 import type { Id } from '../id.js';
-import { assertValid, fromBytes, generate, toBytes, toGrcId } from '../id-utils.js';
+import { assertValid, generate, toGrcId } from '../id-utils.js';
 import type { RankType, Vote, VoteWeighted } from './types.js';
+
+function normalizeIdKey(id: string): string {
+  return id.replaceAll('-', '').toLowerCase();
+}
 
 /**
  * Validates every vote and enforces `(entityId, spaceId)` uniqueness within a
@@ -46,7 +50,7 @@ export function validateVotes(votes: Vote[], rankType: RankType, context: string
 
     // Key on the canonical (lowercase, dashless) form so a dashed and a dashless
     // — or differently-cased — spelling of the same UUID still collide.
-    const key = `${fromBytes(toBytes(vote.entityId))}:${fromBytes(toBytes(vote.spaceId))}`;
+    const key = `${normalizeIdKey(vote.entityId)}:${normalizeIdKey(vote.spaceId)}`;
     if (seen.has(key)) {
       throw new Error(
         `Duplicate (entityId, spaceId) in votes: "${String(vote.entityId)}:${String(vote.spaceId)}". Each entity can only be voted once per space perspective in a rank.`,
