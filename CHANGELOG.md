@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.19.4
+
+### Patch Changes
+
+- f7b6064: Fix `createRank`/`updateRank` throwing `TypeError: Invalid UUID` for valid Geo IDs that are not RFC 4122 UUIDs. The vote duplicate check now normalizes IDs as plain hex instead of parsing them as UUIDs.
+
 ## 0.19.3
 
 ### Patch Changes
