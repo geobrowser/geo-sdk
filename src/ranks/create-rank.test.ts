@@ -467,6 +467,33 @@ describe('createRank', () => {
       ).toThrow(`Duplicate (entityId, spaceId) in votes: "${movie1Id}:${spaceId}".`);
     });
 
+    it('accepts ids that are not RFC 4122 UUIDs (arbitrary 16-byte hex)', () => {
+      // Geo space IDs are arbitrary 16-byte values; this one has non-spec
+      // version ('f') and variant ('f') nibbles.
+      const nonRfcSpaceId = Id('73a82967cb12f604f9589ac4bc8024cb');
+      expect(() =>
+        createRank({
+          name: 'My Rank',
+          rankType: 'WEIGHTED',
+          votes: [{ entityId: movie1Id, spaceId: nonRfcSpaceId, value: 1 }],
+        }),
+      ).not.toThrow();
+    });
+
+    it('detects duplicates for ids that are not RFC 4122 UUIDs', () => {
+      const nonRfcSpaceId = Id('73a82967cb12f604f9589ac4bc8024cb');
+      expect(() =>
+        createRank({
+          name: 'My Rank',
+          rankType: 'ORDINAL',
+          votes: [
+            { entityId: movie1Id, spaceId: nonRfcSpaceId },
+            { entityId: movie1Id, spaceId: nonRfcSpaceId },
+          ],
+        }),
+      ).toThrow('Duplicate (entityId, spaceId) in votes');
+    });
+
     it('detects duplicates across dashed and dashless forms of the same id', () => {
       const dashless = String(movie1Id).replaceAll('-', '');
       expect(() =>
