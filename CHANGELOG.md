@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.0-beta.4
+
+### Patch Changes
+
+- fix build
+
 ## 0.20.0-beta.3
 
 ### Patch Changes
