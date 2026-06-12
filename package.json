@@ -1,6 +1,6 @@
 {
   "name": "@geoprotocol/geo-sdk",
-  "version": "0.19.4",
+  "version": "0.19.5",
   "license": "MIT",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",

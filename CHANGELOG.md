@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.19.5
+
+### Patch Changes
+
+- d0d8b51: Fix legacy DAO role proposal helpers to target the DAO space contract in embedded proposal actions.
+
 ## 0.19.4
 
 ### Patch Changes
