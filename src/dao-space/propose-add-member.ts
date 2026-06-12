@@ -28,6 +28,7 @@ import type { ProposeAddMemberParams, ProposeAddMemberResult } from './types.js'
  * const { to, calldata, proposalId } = daoSpace.proposeAddMember({
  *   authorSpaceId: '0xProposerBytes16SpaceId...',
  *   spaceId: '0xDAOBytes16SpaceId...',
+ *   daoSpaceAddress: '0xDAOSpaceContractAddress...',
  *   newMemberSpaceId: '0xNewMemberBytes16SpaceId...',
  * });
  *
@@ -39,6 +40,7 @@ export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemb
   const {
     authorSpaceId: rawAuthorSpaceId,
     spaceId: rawSpaceId,
+    daoSpaceAddress,
     newMemberSpaceId: rawNewMemberSpaceId,
     votingMode = 'SLOW',
     proposalId: rawProposalId,
@@ -78,7 +80,7 @@ export function proposeAddMember(params: ProposeAddMemberParams): ProposeAddMemb
   // Create the proposal action (calling addMember on the DAO space)
   const proposalActions = [
     {
-      to: contracts.SPACE_REGISTRY_ADDRESS,
+      to: daoSpaceAddress,
       value: 0n,
       data: proposalActionCalldata,
     },

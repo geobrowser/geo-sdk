@@ -28,6 +28,7 @@ import type { ProposeAddEditorParams, ProposeAddEditorResult } from './types.js'
  * const { to, calldata, proposalId } = daoSpace.proposeAddEditor({
  *   authorSpaceId: '0xProposerBytes16SpaceId...',
  *   spaceId: '0xDAOBytes16SpaceId...',
+ *   daoSpaceAddress: '0xDAOSpaceContractAddress...',
  *   newEditorSpaceId: '0xNewEditorBytes16SpaceId...',
  * });
  *
@@ -39,6 +40,7 @@ export function proposeAddEditor(params: ProposeAddEditorParams): ProposeAddEdit
   const {
     authorSpaceId: rawAuthorSpaceId,
     spaceId: rawSpaceId,
+    daoSpaceAddress,
     newEditorSpaceId: rawNewEditorSpaceId,
     votingMode = 'SLOW',
     proposalId: rawProposalId,
@@ -78,7 +80,7 @@ export function proposeAddEditor(params: ProposeAddEditorParams): ProposeAddEdit
   // Create the proposal action (calling addEditor on the DAO space)
   const proposalActions = [
     {
-      to: contracts.SPACE_REGISTRY_ADDRESS,
+      to: daoSpaceAddress,
       value: 0n,
       data: proposalActionCalldata,
     },

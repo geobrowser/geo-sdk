@@ -29,6 +29,7 @@ import type { ProposeRemoveEditorParams, ProposeRemoveEditorResult } from './typ
  * const { to, calldata, proposalId } = daoSpace.proposeRemoveEditor({
  *   authorSpaceId: '0xAuthorBytes16SpaceId...',
  *   spaceId: '0xDAOBytes16SpaceId...',
+ *   daoSpaceAddress: '0xDAOSpaceContractAddress...',
  *   editorToRemoveSpaceId: '0xEditorBytes16SpaceId...',
  *   network: 'TESTNET',
  * });
@@ -41,6 +42,7 @@ export function proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposeR
   const {
     authorSpaceId: rawAuthorSpaceId,
     spaceId: rawSpaceId,
+    daoSpaceAddress,
     editorToRemoveSpaceId: rawEditorToRemoveSpaceId,
     votingMode = 'SLOW',
     proposalId: rawProposalId,
@@ -80,10 +82,10 @@ export function proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposeR
   });
   const contracts = getContractAddressesBasedOnNetwork(network);
 
-  // Create the proposal action (calling removeEditor on the Space Registry)
+  // Create the proposal action (calling removeEditor on the DAO space)
   const proposalActions = [
     {
-      to: contracts.SPACE_REGISTRY_ADDRESS,
+      to: daoSpaceAddress,
       value: 0n,
       data: proposalActionCalldata,
     },

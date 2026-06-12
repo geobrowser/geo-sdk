@@ -570,6 +570,7 @@ async function createLegacyAddMemberProposal(context: DaoContext, label: string)
   const proposal = daoSpace.proposeAddMember({
     authorSpaceId: context.spaceIdHex,
     spaceId: context.daoSpaceIdHex,
+    daoSpaceAddress: context.daoSpaceAddress,
     newMemberSpaceId: context.spaceIdHex,
     network: 'TESTNET',
   });
@@ -1106,6 +1107,7 @@ describe.sequential('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeRemoveMember({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
         memberToRemoveSpaceId: dao.spaceIdHex,
         network: 'TESTNET',
       });
@@ -1130,6 +1132,7 @@ describe.sequential('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeAddEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
         newEditorSpaceId: dao.spaceIdHex,
         network: 'TESTNET',
       });
@@ -1154,6 +1157,7 @@ describe.sequential('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeRemoveEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
+        daoSpaceAddress: dao.daoSpaceAddress,
         editorToRemoveSpaceId: dao.spaceIdHex,
         network: 'TESTNET',
       });

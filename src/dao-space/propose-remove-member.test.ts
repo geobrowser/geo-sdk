@@ -8,6 +8,7 @@ describe('proposeRemoveMember', () => {
   // Valid test values
   const validAuthorSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validSpaceId = '0xabcdef12345678901234567890abcdef' as const;
+  const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
 
   const validMemberToRemove = '0x11111111111111111111111111111111' as const;
 
@@ -15,6 +16,7 @@ describe('proposeRemoveMember', () => {
     const result = proposeRemoveMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
     });
 
@@ -27,6 +29,7 @@ describe('proposeRemoveMember', () => {
     const { to } = proposeRemoveMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
     });
 
@@ -37,6 +40,7 @@ describe('proposeRemoveMember', () => {
     const { calldata } = proposeRemoveMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
     });
 
@@ -48,6 +52,7 @@ describe('proposeRemoveMember', () => {
     const { proposalId } = proposeRemoveMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
     });
 
@@ -60,6 +65,7 @@ describe('proposeRemoveMember', () => {
     const { proposalId } = proposeRemoveMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
       proposalId: customProposalId,
     });
@@ -71,6 +77,7 @@ describe('proposeRemoveMember', () => {
     const result = proposeRemoveMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
     });
 
@@ -81,6 +88,7 @@ describe('proposeRemoveMember', () => {
     const result = proposeRemoveMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
       votingMode: 'FAST',
     });
@@ -92,6 +100,7 @@ describe('proposeRemoveMember', () => {
     const params = {
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
     } as const;
 
@@ -112,6 +121,7 @@ describe('proposeRemoveMember', () => {
     const result1 = proposeRemoveMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
       proposalId: sharedProposalId,
     });
@@ -119,6 +129,7 @@ describe('proposeRemoveMember', () => {
     const result2 = proposeRemoveMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: otherMember,
       proposalId: sharedProposalId,
     });
@@ -130,6 +141,7 @@ describe('proposeRemoveMember', () => {
     const result = proposeRemoveMember({
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: 'abcdef12345678901234567890abcdef',
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: '11111111111111111111111111111111',
     });
 
@@ -142,6 +154,7 @@ describe('proposeRemoveMember', () => {
     const withPrefix = proposeRemoveMember({
       authorSpaceId: '0x0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: '0xabcdef12345678901234567890abcdef',
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: '0x11111111111111111111111111111111',
       proposalId,
     });
@@ -149,6 +162,7 @@ describe('proposeRemoveMember', () => {
     const withoutPrefix = proposeRemoveMember({
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: 'abcdef12345678901234567890abcdef',
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: '11111111111111111111111111111111',
       proposalId,
     });
@@ -160,6 +174,7 @@ describe('proposeRemoveMember', () => {
     const params = {
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
+      daoSpaceAddress: validDaoSpaceAddress,
       memberToRemoveSpaceId: validMemberToRemove,
     } as const;
 
@@ -174,6 +189,7 @@ describe('proposeRemoveMember', () => {
       proposeRemoveMember({
         authorSpaceId: 'invalid',
         spaceId: validSpaceId,
+        daoSpaceAddress: validDaoSpaceAddress,
         memberToRemoveSpaceId: validMemberToRemove,
       }),
     ).toThrow('authorSpaceId must be bytes16 hex');
@@ -184,6 +200,7 @@ describe('proposeRemoveMember', () => {
       proposeRemoveMember({
         authorSpaceId: validAuthorSpaceId,
         spaceId: 'tooshort',
+        daoSpaceAddress: validDaoSpaceAddress,
         memberToRemoveSpaceId: validMemberToRemove,
       }),
     ).toThrow('spaceId must be bytes16 hex');
@@ -194,6 +211,7 @@ describe('proposeRemoveMember', () => {
       proposeRemoveMember({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
+        daoSpaceAddress: validDaoSpaceAddress,
         memberToRemoveSpaceId: 'badid',
       }),
     ).toThrow('memberToRemoveSpaceId must be bytes16 hex');
@@ -204,6 +222,7 @@ describe('proposeRemoveMember', () => {
       proposeRemoveMember({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
+        daoSpaceAddress: validDaoSpaceAddress,
         memberToRemoveSpaceId: validMemberToRemove,
         proposalId: 'badproposalid',
       }),

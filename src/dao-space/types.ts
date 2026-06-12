@@ -193,6 +193,10 @@ export type ProposeRemoveMemberParams = {
    */
   spaceId: string;
   /**
+   * The DAO space contract address. This is the target of the role action.
+   */
+  daoSpaceAddress: `0x${string}`;
+  /**
    * The space ID of the member to remove (bytes16 hex, with or without 0x prefix).
    */
   memberToRemoveSpaceId: string;
@@ -230,6 +234,10 @@ export type ProposeAddMemberParams = {
    * This is the toSpaceId in the enter() call.
    */
   spaceId: string;
+  /**
+   * The DAO space contract address. This is the target of the role action.
+   */
+  daoSpaceAddress: `0x${string}`;
   /**
    * The space ID of the new member to add (bytes16 hex).
    */
@@ -269,6 +277,10 @@ export type ProposeRemoveEditorParams = {
    */
   spaceId: string;
   /**
+   * The DAO space contract address. This is the target of the role action.
+   */
+  daoSpaceAddress: `0x${string}`;
+  /**
    * The space ID of the editor to remove (bytes16 hex, with or without 0x prefix).
    */
   editorToRemoveSpaceId: string;
@@ -306,6 +318,10 @@ export type ProposeAddEditorParams = {
    * This is the toSpaceId in the enter() call.
    */
   spaceId: string;
+  /**
+   * The DAO space contract address. This is the target of the role action.
+   */
+  daoSpaceAddress: `0x${string}`;
   /**
    * The space ID of the new editor to add (bytes16 hex).
    */

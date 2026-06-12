@@ -635,6 +635,24 @@ const tx = await geo.daoSpaces.create({
 });
 ```
 
+Resolve a DAO space contract address from a DAO space ID:
+
+```ts
+import { zeroAddress } from "viem";
+import { SpaceRegistryAbi } from "@geoprotocol/geo-sdk/abis";
+
+const daoSpaceAddress = await publicClient.readContract({
+  address: GeoTestnetConfig.contracts.SPACE_REGISTRY_ADDRESS,
+  abi: SpaceRegistryAbi,
+  functionName: "spaceIdToAddress",
+  args: [daoSpaceId],
+});
+
+if (daoSpaceAddress === zeroAddress) {
+  throw new Error("No DAO space contract found for daoSpaceId.");
+}
+```
+
 Propose an edit to a DAO space:
 
 ```ts
