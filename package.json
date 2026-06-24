@@ -43,7 +43,6 @@
   },
   "dependencies": {
     "@geoprotocol/grc-20": "^0.4.1",
-    "@zerodev/sdk": "^5.5.10",
     "effect": "^3.17.13",
     "fflate": "^0.8.2",
     "fractional-indexing-jittered": "^1.0.0",
@@ -56,6 +55,7 @@
     "@biomejs/biome": "^2.2.4",
     "@changesets/cli": "^2.29.7",
     "@types/uuid": "^11.0.0",
+    "@zerodev/sdk": "^5.5.10",
     "typescript": "^5.9.2",
     "viem": "^2.37.6",
     "vitest": "^3.2.4"
