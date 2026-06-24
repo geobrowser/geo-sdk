@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@geoprotocol/grc-20": "^0.4.1",
+    "@zerodev/sdk": "^5.5.10",
     "effect": "^3.17.13",
     "fflate": "^0.8.2",
     "fractional-indexing-jittered": "^1.0.0",

@@ -16,6 +16,7 @@ export type E2ETestEnvironment = {
   networkish: Networkish;
   privateKey: `0x${string}`;
   rpcUrl: string;
+  zeroDevRpcUrl?: string;
   apiOrigin: string;
   chain: Chain;
   contracts: {
@@ -178,6 +179,7 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
         'GEO_LOCAL_GEOBROWSER_PRIVATE_KEY',
       ),
       rpcUrl,
+      zeroDevRpcUrl: process.env.GEO_LOCAL_GEOBROWSER_ZERODEV_RPC_URL,
       apiOrigin,
       chain: createChain(network, rpcUrl),
       contracts: {
@@ -190,6 +192,7 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
   }
 
   const rpcUrl = process.env.GEO_E2E_RPC_URL ?? requireNetworkRpcUrl(GeoTestnetConfig);
+  const zeroDevRpcUrl = process.env.GEO_E2E_ZERODEV_RPC_URL;
   const network = defineGeoNetworkConfig({
     ...GeoTestnetConfig,
     chain: GeoTestnetConfig.chain ? { ...GeoTestnetConfig.chain, rpcUrl } : undefined,
@@ -200,6 +203,7 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
     networkish: 'TESTNET',
     privateKey: requireHexPrivateKey(process.env.GEO_E2E_PRIVATE_KEY ?? process.env.PRIVATE_KEY, 'PRIVATE_KEY'),
     rpcUrl,
+    zeroDevRpcUrl,
     apiOrigin: network.apiOrigin,
     chain: createChain(network, rpcUrl),
     contracts: {
