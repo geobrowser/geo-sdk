@@ -28,8 +28,6 @@ export type E2ETestEnvironment = {
 };
 
 const DEFAULT_LOCAL_GEOBROWSER_PRIVATE_KEY = '0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a';
-const DEFAULT_GEO_TESTNET_ZERODEV_RPC_URL =
-  'https://rpc.zerodev.app/api/v3/d26c96b9-7ee9-4d78-b139-954470b696e5/chain/55516';
 const INDEXED_LOCAL_GEOBROWSER_DAO_FACTORIES: Record<string, `0x${string}`> = {
   // First deterministic local-geobrowser deployment. The running hermes-substream
   // may still be compiled against this registry after contracts are redeployed.
@@ -197,7 +195,7 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
   }
 
   const rpcUrl = process.env.GEO_E2E_RPC_URL ?? requireNetworkRpcUrl(GeoTestnetConfig);
-  const zeroDevRpcUrl = process.env.GEO_E2E_ZERODEV_RPC_URL ?? DEFAULT_GEO_TESTNET_ZERODEV_RPC_URL;
+  const zeroDevRpcUrl = process.env.GEO_E2E_ZERODEV_RPC_URL;
   const network = defineGeoNetworkConfig({
     ...GeoTestnetConfig,
     chain: GeoTestnetConfig.chain ? { ...GeoTestnetConfig.chain, rpcUrl } : undefined,
