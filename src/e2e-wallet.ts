@@ -65,7 +65,7 @@ async function createZeroDevEoaWalletClient({
     client: publicClient,
     paymaster: {
       getPaymasterStubData(userOperation) {
-        return paymaster.getPaymasterStubData(userOperation);
+        return paymaster.sponsorUserOperation({ userOperation, shouldConsume: false });
       },
       getPaymasterData(userOperation) {
         return paymaster.sponsorUserOperation({ userOperation });
