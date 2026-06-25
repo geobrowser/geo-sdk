@@ -97,6 +97,16 @@ export async function createE2EWalletSetup(e2e: E2ETestEnvironment): Promise<E2E
     };
   }
 
+  const balance = await publicClient.getBalance({ address: account.address });
+  if (balance === 0n) {
+    throw new Error(
+      [
+        `EOA ${account.address} has no testnet ETH and GEO_E2E_ZERODEV_RPC_URL is not set.`,
+        'Set GEO_E2E_ZERODEV_RPC_URL to use ZeroDev sponsorship, or fund this EOA to run without ZeroDev.',
+      ].join(' '),
+    );
+  }
+
   const walletClient = createWalletClient({
     account,
     chain: e2e.chain,
