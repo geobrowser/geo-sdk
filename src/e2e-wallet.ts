@@ -64,6 +64,9 @@ async function createZeroDevEoaWalletClient({
     bundlerTransport: http(zeroDevRpcUrl),
     client: publicClient,
     paymaster: {
+      getPaymasterStubData(userOperation) {
+        return paymaster.getPaymasterStubData(userOperation);
+      },
       getPaymasterData(userOperation) {
         return paymaster.sponsorUserOperation({ userOperation });
       },
