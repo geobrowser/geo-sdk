@@ -24,20 +24,19 @@ Integration tests are skipped by default. They require environment variables in 
 
 ### EOA wallet tests
 
-The e2e surfaces can run against the built-in Geo testnet config. By default they use a plain EOA wallet, which requires testnet ETH. To use the Privy EOA through ZeroDev gas sponsorship, set `GEO_E2E_ZERODEV_RPC_URL`.
+The e2e surfaces run against the built-in Geo testnet config by default. They use the Privy EOA through the default ZeroDev testnet RPC unless you override `GEO_E2E_ZERODEV_RPC_URL`.
 
 1. Generate a private key and write it to `.env`:
    ```bash
    pnpm create-private-key
    ```
-2. For a funded EOA run, fund the generated `ADDRESS` on Geo testnet.
-3. For a ZeroDev-sponsored Privy EOA run, add the ZeroDev RPC to `.env`:
-   ```bash
-   GEO_E2E_ZERODEV_RPC_URL=https://rpc.zerodev.app/api/v3/<project-id>/chain/55516
-   ```
-4. Run the e2e suite:
+2. Run the e2e suite:
    ```bash
    pnpm test:e2e
+   ```
+3. To use a different ZeroDev project, add the ZeroDev RPC to `.env`:
+   ```bash
+   GEO_E2E_ZERODEV_RPC_URL=https://rpc.zerodev.app/api/v3/<project-id>/chain/55516
    ```
 
 ### Smart account test (`src/smart-account-flow-test.test.ts`)
