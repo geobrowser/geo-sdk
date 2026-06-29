@@ -11,6 +11,9 @@ importers:
       '@geoprotocol/grc-20':
         specifier: ^0.4.1
         version: 0.4.1
+      '@zerodev/sdk':
+        specifier: ^5.5.10
+        version: 5.5.10(viem@2.37.6(typescript@5.9.2))
       effect:
         specifier: ^3.17.13
         version: 3.17.13
@@ -539,6 +542,11 @@ packages:
 
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
+
+  '@zerodev/sdk@5.5.10':
+    resolution: {integrity: sha512-WVyj2XR9F6zK2GdXrvappx7yo6zoJ46cWe42dOIArp3xDjFBninjA4O1O94MwohB0G+yFqtXNsEU+WxdE67SgQ==}
+    peerDependencies:
+      viem: ^2.28.0
 
   abitype@1.1.0:
     resolution: {integrity: sha512-6Vh4HcRxNMLA0puzPjM5GBgT4aAcFGKZzSgAXvuZ27shJP6NEpielTuqbBmZILR5/xd0PizkBGy5hReKz9jl5A==}
@@ -1588,6 +1596,11 @@ snapshots:
       '@vitest/pretty-format': 3.2.4
       loupe: 3.2.1
       tinyrainbow: 2.0.0
+
+  '@zerodev/sdk@5.5.10(viem@2.37.6(typescript@5.9.2))':
+    dependencies:
+      semver: 7.7.2
+      viem: 2.37.6(typescript@5.9.2)
 
   abitype@1.1.0(typescript@5.9.2):
     optionalDependencies:

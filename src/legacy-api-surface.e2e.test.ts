@@ -1,12 +1,12 @@
 import type { CreateRelation, Op } from '@geoprotocol/grc-20';
-import { createPublicClient, createWalletClient, type Hex, http } from 'viem';
-import { privateKeyToAccount } from 'viem/accounts';
+import type { Hex } from 'viem';
 import { describe, expect, it } from 'vitest';
 
 import { daoSpace, Graph, Ipfs, personalSpace } from '../index.js';
 import { SpaceRegistryAbi } from './abis/index.js';
 import { DESCRIPTION_PROPERTY, RELATION_TYPE, REPLY_TO_PROPERTY } from './core/ids/system.js';
 import { createE2ETestEnvironment, type E2ETestEnvironment } from './e2e-test-environment.js';
+import { createE2EWalletSetup, type E2EPublicClient, type E2EWalletSetup } from './e2e-wallet.js';
 import { deriveCommentName } from './graph/comment-utils.js';
 import { toGrcId } from './id-utils.js';
 
@@ -32,11 +32,7 @@ function getLegacyNetwork() {
   return getE2E().networkish as 'TESTNET';
 }
 
-type WalletSetup = {
-  account: ReturnType<typeof privateKeyToAccount>;
-  publicClient: ReturnType<typeof createPublicClient>;
-  walletClient: ReturnType<typeof createWalletClient>;
-};
+type WalletSetup = E2EWalletSetup;
 
 type GraphQlResponse<T> = {
   data?: T;
@@ -412,7 +408,7 @@ async function waitForEntityVote(
   expect(predicate(data.votes)).toBe(true);
 }
 
-async function getSpaceIdHex(publicClient: ReturnType<typeof createPublicClient>, address: Hex): Promise<Hex> {
+async function getSpaceIdHex(publicClient: E2EPublicClient, address: Hex): Promise<Hex> {
   return (await publicClient.readContract({
     address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
     abi: SpaceRegistryAbi,
@@ -421,7 +417,30 @@ async function getSpaceIdHex(publicClient: ReturnType<typeof createPublicClient>
   })) as Hex;
 }
 
-async function ensurePersonalSpace({ account, publicClient, walletClient }: WalletSetup) {
+async function findRegisteredSpaceAddress(
+  publicClient: E2EPublicClient,
+  logs: Array<{ address: Hex }>,
+  excludedAddress: Hex,
+): Promise<Hex | undefined> {
+  const seenAddresses = new Set<string>();
+
+  for (const { address } of logs) {
+    const normalizedAddress = address.toLowerCase();
+    if (normalizedAddress === excludedAddress.toLowerCase() || seenAddresses.has(normalizedAddress)) {
+      continue;
+    }
+    seenAddresses.add(normalizedAddress);
+
+    const spaceIdHex = await getSpaceIdHex(publicClient, address);
+    if (spaceIdHex.toLowerCase() !== EMPTY_SPACE_ID.toLowerCase()) {
+      return address;
+    }
+  }
+
+  return undefined;
+}
+
+async function ensurePersonalSpace({ account, publicClient, walletClient, usesUserOperations }: WalletSetup) {
   let spaceIdHex = await getSpaceIdHex(publicClient, account.address);
   const hasExistingSpace = await personalSpace.hasSpace({
     address: account.address,
@@ -432,7 +451,7 @@ async function ensurePersonalSpace({ account, publicClient, walletClient }: Wall
   if (spaceIdHex.toLowerCase() === EMPTY_SPACE_ID.toLowerCase()) {
     const createSpace = personalSpace.createSpace({ network: e2e.networkish });
     await sendTransactionAndWait(
-      { account, publicClient, walletClient },
+      { account, publicClient, walletClient, usesUserOperations },
       {
         label: 'legacy create personal space',
         to: createSpace.to,
@@ -453,24 +472,11 @@ async function ensurePersonalSpace({ account, publicClient, walletClient }: Wall
 }
 
 async function setupWallet(): Promise<WalletSetup> {
-  const account = privateKeyToAccount(e2e.privateKey);
-  const walletClient = createWalletClient({
-    account,
-    chain: e2e.chain,
-    transport: http(e2e.rpcUrl),
-  });
-  expect(account.address).toBe(privateKeyToAccount(e2e.privateKey).address);
-
-  const publicClient = createPublicClient({
-    chain: e2e.chain,
-    transport: http(e2e.rpcUrl),
-  });
-
-  return { account, publicClient, walletClient };
+  return createE2EWalletSetup(e2e);
 }
 
 async function sendTransactionAndWait(
-  { account, publicClient, walletClient }: WalletSetup,
+  { account, publicClient, walletClient, usesUserOperations }: WalletSetup,
   {
     label,
     to,
@@ -484,7 +490,7 @@ async function sendTransactionAndWait(
   },
 ) {
   const hash = await walletClient.sendTransaction({
-    account,
+    account: usesUserOperations ? undefined : account,
     chain: walletClient.chain ?? null,
     to,
     value,
@@ -565,9 +571,11 @@ async function getDaoContext(): Promise<DaoContext> {
       calldata: createdDaoSpace.calldata,
     });
 
-    const daoSpaceAddress = daoCreateTx.receipt.logs.find(
-      log => log.address.toLowerCase() !== createdDaoSpace.to.toLowerCase(),
-    )?.address as Hex | undefined;
+    const daoSpaceAddress = await findRegisteredSpaceAddress(
+      context.publicClient,
+      daoCreateTx.receipt.logs,
+      createdDaoSpace.to,
+    );
     if (!daoSpaceAddress) {
       throw new Error('Could not find DAO space address in creation logs');
     }

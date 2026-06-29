@@ -69,6 +69,47 @@ const tx = await geo.personalSpaces.publishEdit({
 await walletClient.sendTransaction({ to: tx.to, data: tx.calldata });
 ```
 
+### Sponsored EIP-7702 Transactions
+
+Use the experimental ZeroDev helper when you want a Privy-backed EOA, local EOA,
+or other ZeroDev-compatible signer to send sponsored transactions while keeping
+the EOA address as the account identity.
+
+```ts
+import {
+  GeoTestnetConfig,
+  createGeoClient,
+  createGeoZeroDev7702WalletClient,
+} from "@geoprotocol/geo-sdk";
+
+const geo = createGeoClient({ network: GeoTestnetConfig });
+const chain = GeoTestnetConfig.chain;
+const zeroDevRpcUrl = process.env.GEO_ZERODEV_RPC_URL;
+
+if (!chain || !zeroDevRpcUrl) {
+  throw new Error("Geo testnet chain and ZeroDev RPC URL are required");
+}
+
+const walletClient = await createGeoZeroDev7702WalletClient({
+  signer, // Privy viem wallet client, EIP-1193 provider, or local account
+  chain,
+  zeroDevRpcUrl,
+});
+
+const tx = await geo.personalSpaces.publishEdit({
+  name: "Create Test Entity",
+  spaceId,
+  author: spaceId,
+  ops,
+});
+
+await walletClient.sendTransaction({ to: tx.to, data: tx.calldata });
+```
+
+The ZeroDev RPC URL is credential-like if the project sponsors gas. Store it in
+environment variables or app configuration, and scope the ZeroDev gas policy once
+the integration is validated.
+
 ### Imports
 
 Use the root package when convenience matters:

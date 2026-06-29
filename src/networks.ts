@@ -1,9 +1,9 @@
 import { TESTNET } from '../contracts.js';
 import type { GeoContractAddresses, GeoNetworkConfig, Networkish } from './types.js';
 
-export const TESTNET_API_ORIGIN = 'https://testnet-api.geobrowser.io';
+export const TESTNET_API_ORIGIN = 'https://testnet-api-v2.geobrowser.io';
 
-const GEO_TESTNET_RPC_URL = 'https://rpc-geo-test-zc16z3tcvf.t.conduit.xyz';
+const GEO_TESTNET_RPC_URL = 'https://rpc-geo-testnet-irdc0cgb0w.t.conduit.xyz';
 
 function asContractAddresses(contracts: Record<string, string | undefined>): GeoContractAddresses {
   return contracts as GeoContractAddresses;
@@ -69,7 +69,7 @@ export const GeoTestnetConfig = defineGeoNetworkConfig({
   name: 'Geo Testnet',
   apiOrigin: TESTNET_API_ORIGIN,
   chain: {
-    id: 19411,
+    id: 55516,
     name: 'Geo Testnet',
     rpcUrl: GEO_TESTNET_RPC_URL,
   },
