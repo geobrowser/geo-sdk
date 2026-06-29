@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.0-beta.5
+
+### Patch Changes
+
+- 835df94: Update the built-in Geo testnet config and support ZeroDev-sponsored EOA e2e transactions.
+
 ## 0.20.0-beta.4
 
 ### Patch Changes
