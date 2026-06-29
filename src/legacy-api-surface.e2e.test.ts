@@ -417,6 +417,29 @@ async function getSpaceIdHex(publicClient: E2EPublicClient, address: Hex): Promi
   })) as Hex;
 }
 
+async function findRegisteredSpaceAddress(
+  publicClient: E2EPublicClient,
+  logs: Array<{ address: Hex }>,
+  excludedAddress: Hex,
+): Promise<Hex | undefined> {
+  const seenAddresses = new Set<string>();
+
+  for (const { address } of logs) {
+    const normalizedAddress = address.toLowerCase();
+    if (normalizedAddress === excludedAddress.toLowerCase() || seenAddresses.has(normalizedAddress)) {
+      continue;
+    }
+    seenAddresses.add(normalizedAddress);
+
+    const spaceIdHex = await getSpaceIdHex(publicClient, address);
+    if (spaceIdHex.toLowerCase() !== EMPTY_SPACE_ID.toLowerCase()) {
+      return address;
+    }
+  }
+
+  return undefined;
+}
+
 async function ensurePersonalSpace({ account, publicClient, walletClient, usesUserOperations }: WalletSetup) {
   let spaceIdHex = await getSpaceIdHex(publicClient, account.address);
   const hasExistingSpace = await personalSpace.hasSpace({
@@ -548,9 +571,11 @@ async function getDaoContext(): Promise<DaoContext> {
       calldata: createdDaoSpace.calldata,
     });
 
-    const daoSpaceAddress = daoCreateTx.receipt.logs.find(
-      log => log.address.toLowerCase() !== createdDaoSpace.to.toLowerCase(),
-    )?.address as Hex | undefined;
+    const daoSpaceAddress = await findRegisteredSpaceAddress(
+      context.publicClient,
+      daoCreateTx.receipt.logs,
+      createdDaoSpace.to,
+    );
     if (!daoSpaceAddress) {
       throw new Error('Could not find DAO space address in creation logs');
     }
