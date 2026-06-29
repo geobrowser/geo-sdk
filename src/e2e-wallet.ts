@@ -1,13 +1,7 @@
-import {
-  createKernelAccount,
-  createKernelAccountClient,
-  createZeroDevPaymasterClient,
-  getUserOperationGasPrice,
-} from '@zerodev/sdk';
-import { getEntryPoint, KERNEL_V3_3 } from '@zerodev/sdk/constants';
 import { type Chain, createPublicClient, createWalletClient, type Hash, type Hex, http } from 'viem';
 import { type PrivateKeyAccount, privateKeyToAccount } from 'viem/accounts';
 import type { E2ETestEnvironment } from './e2e-test-environment.js';
+import { createGeoZeroDev7702WalletClient } from './zero-dev.js';
 
 type SendTransactionParameters = {
   account?: unknown;
@@ -47,34 +41,13 @@ async function createZeroDevEoaWalletClient({
     chain,
     transport: http(rpcUrl),
   });
-  const entryPoint = getEntryPoint('0.7');
-  const kernelAccount = await createKernelAccount(publicClient, {
-    eip7702Account: account,
-    entryPoint,
-    kernelVersion: KERNEL_V3_3,
-  });
-  const paymaster = createZeroDevPaymasterClient({
-    chain,
-    transport: http(zeroDevRpcUrl),
-  });
 
-  return createKernelAccountClient({
-    account: kernelAccount,
+  return (await createGeoZeroDev7702WalletClient({
+    signer: account,
     chain,
-    bundlerTransport: http(zeroDevRpcUrl),
-    client: publicClient,
-    paymaster: {
-      getPaymasterStubData(userOperation) {
-        return paymaster.sponsorUserOperation({ userOperation, shouldConsume: false });
-      },
-      getPaymasterData(userOperation) {
-        return paymaster.sponsorUserOperation({ userOperation });
-      },
-    },
-    userOperation: {
-      estimateFeesPerGas: async ({ bundlerClient }) => getUserOperationGasPrice(bundlerClient),
-    },
-  }) as E2EWalletClient;
+    publicClient,
+    zeroDevRpcUrl,
+  })) as E2EWalletClient;
 }
 
 export async function createE2EWalletSetup(e2e: E2ETestEnvironment): Promise<E2EWalletSetup> {

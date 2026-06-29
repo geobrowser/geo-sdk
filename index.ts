@@ -89,3 +89,9 @@ export {
  */
 export { ContentIds, NetworkIds, SystemIds } from './src/system-ids.js';
 export * from './src/types.js';
+export {
+  type CreateGeoZeroDev7702WalletClientParams,
+  createGeoZeroDev7702WalletClient,
+  type GeoZeroDev7702WalletClient,
+  type GeoZeroDevPublicClient,
+} from './src/zero-dev.js';

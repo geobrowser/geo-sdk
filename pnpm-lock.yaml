@@ -11,6 +11,9 @@ importers:
       '@geoprotocol/grc-20':
         specifier: ^0.4.1
         version: 0.4.1
+      '@zerodev/sdk':
+        specifier: ^5.5.10
+        version: 5.5.10(viem@2.37.6(typescript@5.9.2))
       effect:
         specifier: ^3.17.13
         version: 3.17.13
@@ -42,9 +45,6 @@ importers:
       '@types/uuid':
         specifier: ^11.0.0
         version: 11.0.0
-      '@zerodev/sdk':
-        specifier: ^5.5.10
-        version: 5.5.10(viem@2.37.6(typescript@5.9.2))
       typescript:
         specifier: ^5.9.2
         version: 5.9.2
