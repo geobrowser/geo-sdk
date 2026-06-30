@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.0-beta.6
+
+### Patch Changes
+
+- 7d07394: Add exported system type IDs for System, Space, Proposal, EOA Space, and DAO Space.
+
 ## 0.20.0-beta.5
 
 ### Patch Changes

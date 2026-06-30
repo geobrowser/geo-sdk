@@ -10,6 +10,7 @@
     "dao-voting-duration-seconds",
     "new-testnet-zerodev",
     "public-lands-cover",
-    "ranks-create-update"
+    "ranks-create-update",
+    "system-type-ids"
   ]
 }
