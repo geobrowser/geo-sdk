@@ -2,6 +2,13 @@ import { Id } from '../../id.js';
 
 export const ENTITY_ID_PROPERTY = Id('1a1fff3357824c3393c7c3a5f3592b60');
 
+/** System types */
+export const SYSTEM_TYPE = Id('2ff7ea098b9e50bc9be78a0cafa268d0');
+export const SYSTEM_SPACE_TYPE = Id('f4ce7263ed1456c5aafe8b74428ce812');
+export const PROPOSAL_TYPE = Id('1cb9d5bac73052a7bc731f2c3ff5a330');
+export const EOA_SPACE_TYPE = Id('09d28123178f5828b85a81979389c746');
+export const DAO_SPACE_TYPE = Id('afd76215db115cba81b9e7f77f865805');
+
 export const PROPERTY = Id('808a04ceb21c4d888ad12e240613e5ca');
 export const SCHEMA_TYPE = Id('e7d737c536764c609fa16aa64a8c90ad');
 export const PROPERTIES = Id('01412f8381894ab1836565c7fd358cc1');
