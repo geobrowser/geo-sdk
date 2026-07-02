@@ -2,4 +2,6 @@
 "@geoprotocol/geo-sdk": patch
 ---
 
-Update DAO proposal action encoding to use `toAddress` and `toSpaceId`, targeting DAO spaces by ID with `address(0)` for SDK-built actions. DAO proposal helpers no longer accept DAO contract address params.
+Adapt DAO proposal helpers to the latest DAO contracts. SDK-built proposals now target DAO spaces by `daoSpaceId`/`spaceId`, so callers should remove `daoSpaceAddress` from `proposeEdit`, member/editor proposal helpers, and `proposeUpdateVotingSettings` calls.
+
+For low-level custom proposal actions, replace `{ to, value, data }` with `{ toAddress, toSpaceId, value, data }`. Use the zero address when targeting a DAO by `toSpaceId`, or use the zero bytes16 space ID when targeting a contract address directly.
