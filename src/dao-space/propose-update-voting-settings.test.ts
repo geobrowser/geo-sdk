@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { TESTNET } from '../../contracts.js';
 import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
-import { PROPOSAL_CREATED_ACTION } from './constants.js';
+import { PROPOSAL_CREATED_ACTION, ZERO_ADDRESS } from './constants.js';
 import { proposeUpdateVotingSettings } from './propose-update-voting-settings.js';
 
 describe('proposeUpdateVotingSettings', () => {
@@ -71,7 +71,8 @@ describe('proposeUpdateVotingSettings', () => {
           type: 'tuple[]',
           name: 'actions',
           components: [
-            { type: 'address', name: 'to' },
+            { type: 'address', name: 'toAddress' },
+            { type: 'bytes16', name: 'toSpaceId' },
             { type: 'uint256', name: 'value' },
             { type: 'bytes', name: 'data' },
           ],
@@ -91,7 +92,8 @@ describe('proposeUpdateVotingSettings', () => {
 
     expect(action).toBe(PROPOSAL_CREATED_ACTION);
     expect(votingMode).toBe(0);
-    expect(updateSettingsAction.to).toBe(validDaoSpaceAddress);
+    expect(updateSettingsAction.toAddress).toBe(ZERO_ADDRESS);
+    expect(updateSettingsAction.toSpaceId).toBe(validSpaceId);
     expect(decodedAction.functionName).toBe('updateVotingSettings');
     expect(decodedAction.args?.[0]).toEqual({
       partialPercentageSupportThreshold: 6000000n,
