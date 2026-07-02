@@ -136,7 +136,7 @@ type TestContext = WalletSetup & {
 };
 
 type DaoContext = TestContext & {
-  daoSpaceAddress: Hex;
+  daoContractAddress: Hex;
   daoSpaceId: string;
   daoSpaceIdHex: Hex;
   daoSpaceEntityId: string;
@@ -699,16 +699,16 @@ async function getDaoContext(): Promise<DaoContext> {
       calldata: daoSpace.calldata,
     });
 
-    const daoSpaceAddress = await findRegisteredSpaceAddress(
+    const daoContractAddress = await findRegisteredSpaceAddress(
       context.publicClient,
       daoCreateTx.receipt.logs,
       daoSpace.to,
     );
-    if (!daoSpaceAddress) {
+    if (!daoContractAddress) {
       throw new Error('Could not find DAO space address in creation logs');
     }
 
-    const daoSpaceIdHex = await getSpaceIdHex(context.publicClient, daoSpaceAddress);
+    const daoSpaceIdHex = await getSpaceIdHex(context.publicClient, daoContractAddress);
     expect(daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
     const daoSpaceId = hexToUuid(daoSpaceIdHex);
     await waitForEntityName(daoSpace.spaceEntityId, daoSpaceId, daoName);
@@ -716,7 +716,7 @@ async function getDaoContext(): Promise<DaoContext> {
 
     return {
       ...context,
-      daoSpaceAddress,
+      daoContractAddress,
       daoSpaceId,
       daoSpaceIdHex,
       daoSpaceEntityId: daoSpace.spaceEntityId,
@@ -730,7 +730,6 @@ async function createAddMemberProposal(context: DaoContext, label: string) {
   const proposal = geo.daoSpaces.proposeAddMember({
     authorSpaceId: context.spaceIdHex,
     spaceId: context.daoSpaceIdHex,
-    daoSpaceAddress: context.daoSpaceAddress,
     newMemberSpaceId: context.spaceIdHex,
   });
   await sendTransactionAndWait(context, {
@@ -1242,7 +1241,7 @@ describe.sequential('new API e2e surface', () => {
     async () => {
       const dao = await getDaoContext();
 
-      expect(dao.daoSpaceAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
+      expect(dao.daoContractAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
       expect(dao.daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
       expect(await readSpaceTopicId(dao.daoSpaceId)).toBe(dao.daoSpaceEntityId);
     },
@@ -1260,7 +1259,6 @@ describe.sequential('new API e2e surface', () => {
         name: 'E2E new API DAO propose edit',
         ops: daoEntity.ops,
         author: dao.authorSpaceId,
-        daoSpaceAddress: dao.daoSpaceAddress,
         callerSpaceId: dao.spaceIdHex,
         daoSpaceId: dao.daoSpaceIdHex,
         votingMode: 'FAST',
@@ -1296,7 +1294,6 @@ describe.sequential('new API e2e surface', () => {
       const proposal = geo.daoSpaces.proposeRemoveMember({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         memberToRemoveSpaceId: dao.spaceIdHex,
       });
       await sendTransactionAndWait(dao, {
@@ -1322,7 +1319,6 @@ describe.sequential('new API e2e surface', () => {
       const proposal = geo.daoSpaces.proposeAddEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         newEditorSpaceId: dao.spaceIdHex,
       });
       await sendTransactionAndWait(dao, {
@@ -1350,7 +1346,6 @@ describe.sequential('new API e2e surface', () => {
         geo.daoSpaces.proposeAddEditor({
           authorSpaceId: dao.spaceIdHex,
           spaceId: dao.daoSpaceIdHex,
-          daoSpaceAddress: dao.daoSpaceAddress,
           newEditorSpaceId: dao.spaceIdHex,
           votingMode: 'FAST' as 'SLOW',
         }),
@@ -1366,7 +1361,6 @@ describe.sequential('new API e2e surface', () => {
       const proposal = geo.daoSpaces.proposeRemoveEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         editorToRemoveSpaceId: dao.spaceIdHex,
       });
       await sendTransactionAndWait(dao, {
@@ -1416,7 +1410,6 @@ describe.sequential('new API e2e surface', () => {
       const proposal = geo.daoSpaces.proposeUpdateVotingSettings({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         votingSettings: {
           partialPercentageSupportThreshold: 50,
           universalPercentageSupportThreshold: 90,

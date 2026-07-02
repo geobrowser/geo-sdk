@@ -67,8 +67,6 @@ export type ProposeEditParams = {
   name: string;
   ops: Op[];
   author: Id | string;
-  /** @deprecated DAO proposal actions now target `daoSpaceId`; this field is ignored. */
-  daoSpaceAddress?: `0x${string}`;
   callerSpaceId: string;
   daoSpaceId: string;
   votingMode?: VotingMode;
@@ -94,8 +92,6 @@ export type ExecuteProposalParams = {
 type DaoSpaceRoleProposalBaseParams = {
   authorSpaceId: string;
   spaceId: string;
-  /** @deprecated DAO proposal actions now target `spaceId`; this field is ignored. */
-  daoSpaceAddress?: `0x${string}`;
   votingMode?: VotingMode;
   proposalId?: string;
 };
@@ -222,18 +218,18 @@ async function resolveProposalVersion(
   const publicClient = createPublicClient({
     transport: http(rpcUrl),
   });
-  const daoSpaceAddress = await publicClient.readContract({
+  const resolvedDaoSpaceAddress = await publicClient.readContract({
     address: params.spaceRegistryAddress,
     abi: SpaceRegistryAbi,
     functionName: 'spaceIdToAddress',
     args: [params.daoSpaceId],
   });
-  if (daoSpaceAddress.toLowerCase() === ZERO_ADDRESS) {
+  if (resolvedDaoSpaceAddress.toLowerCase() === ZERO_ADDRESS) {
     throw new Error(`Could not resolve DAO space address for daoSpaceId ${params.daoSpaceId}`);
   }
 
   const latestVersion = await publicClient.readContract({
-    address: daoSpaceAddress,
+    address: resolvedDaoSpaceAddress,
     abi: DaoSpaceAbi,
     functionName: 'latestProposalVersion',
     args: [params.proposalId],

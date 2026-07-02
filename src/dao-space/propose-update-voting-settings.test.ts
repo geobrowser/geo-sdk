@@ -9,7 +9,6 @@ import { proposeUpdateVotingSettings } from './propose-update-voting-settings.js
 describe('proposeUpdateVotingSettings', () => {
   const validAuthorSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validSpaceId = '0xabcdef12345678901234567890abcdef' as const;
-  const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
   const validVotingSettings = {
     partialPercentageSupportThreshold: 60,
     universalPercentageSupportThreshold: 90,
@@ -24,7 +23,6 @@ describe('proposeUpdateVotingSettings', () => {
     const result = proposeUpdateVotingSettings({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       votingSettings: validVotingSettings,
     });
 
@@ -37,7 +35,6 @@ describe('proposeUpdateVotingSettings', () => {
     const { to } = proposeUpdateVotingSettings({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       votingSettings: validVotingSettings,
     });
 
@@ -48,7 +45,6 @@ describe('proposeUpdateVotingSettings', () => {
     const result = proposeUpdateVotingSettings({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       votingSettings: validVotingSettings,
     });
     const decodedEnter = decodeFunctionData({
@@ -111,7 +107,6 @@ describe('proposeUpdateVotingSettings', () => {
       proposeUpdateVotingSettings({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         votingSettings: validVotingSettings,
         votingMode: 'FAST' as never,
       }),
@@ -123,7 +118,6 @@ describe('proposeUpdateVotingSettings', () => {
       proposeUpdateVotingSettings({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         votingSettings: {
           ...validVotingSettings,
           universalPercentageSupportThreshold: 101,
@@ -135,7 +129,6 @@ describe('proposeUpdateVotingSettings', () => {
       proposeUpdateVotingSettings({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         votingSettings: {
           ...validVotingSettings,
           quorum: -1,

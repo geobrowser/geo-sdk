@@ -281,26 +281,26 @@ it.skip('should create a DAO space and propose an edit', async () => {
   // Find the DAO space address from the transaction logs
   // The Initialized event is emitted by the new DAO space proxy
   // We find it by looking for logs from addresses other than the factory
-  const daoSpaceAddress = receipt.logs.find(log => log.address.toLowerCase() !== to.toLowerCase())?.address as Hex;
+  const daoContractAddress = receipt.logs.find(log => log.address.toLowerCase() !== to.toLowerCase())?.address as Hex;
 
-  if (!daoSpaceAddress) {
+  if (!daoContractAddress) {
     throw new Error('Could not find DAO space address in transaction logs');
   }
 
-  console.log('daoSpaceAddress:', daoSpaceAddress);
+  console.log('daoContractAddress:', daoContractAddress);
 
   // Get the DAO space ID from the registry
   const daoSpaceIdHex = (await publicClient.readContract({
     address: TESTNET.SPACE_REGISTRY_ADDRESS,
     abi: SpaceRegistryAbi,
     functionName: 'addressToSpaceId',
-    args: [daoSpaceAddress],
+    args: [daoContractAddress],
   })) as Hex;
 
   console.log('daoSpaceIdHex:', daoSpaceIdHex);
 
   const hasDaoSpace = await personalSpace.hasSpace({
-    address: daoSpaceAddress,
+    address: daoContractAddress,
   });
   if (!hasDaoSpace) {
     throw new Error('DAO space was not registered in the Space Registry');
@@ -328,7 +328,6 @@ it.skip('should create a DAO space and propose an edit', async () => {
     name: 'Add new entity to DAO space',
     ops,
     author: personalSpaceId,
-    daoSpaceAddress,
     callerSpaceId: spaceIdHex,
     daoSpaceId: daoSpaceIdHex,
     votingMode: 'FAST', // Fast path since we're the only editor and threshold is 1

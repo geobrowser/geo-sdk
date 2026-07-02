@@ -6,14 +6,12 @@ import { proposeAddMember } from './propose-add-member.js';
 describe('proposeAddMember', () => {
   const validAuthorSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validSpaceId = '0xabcdef12345678901234567890abcdef' as const;
-  const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
   const validNewMemberSpaceId = '0x11111111111111111111111111111111' as const;
 
   it('should return correct structure', () => {
     const result = proposeAddMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newMemberSpaceId: validNewMemberSpaceId,
     });
 
@@ -26,7 +24,6 @@ describe('proposeAddMember', () => {
     const { to } = proposeAddMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newMemberSpaceId: validNewMemberSpaceId,
     });
 
@@ -37,7 +34,6 @@ describe('proposeAddMember', () => {
     const { calldata } = proposeAddMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newMemberSpaceId: validNewMemberSpaceId,
     });
 
@@ -49,7 +45,6 @@ describe('proposeAddMember', () => {
     const { proposalId } = proposeAddMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newMemberSpaceId: validNewMemberSpaceId,
     });
 
@@ -62,7 +57,6 @@ describe('proposeAddMember', () => {
     const { proposalId } = proposeAddMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newMemberSpaceId: validNewMemberSpaceId,
       proposalId: customProposalId,
     });
@@ -74,7 +68,6 @@ describe('proposeAddMember', () => {
     const result = proposeAddMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newMemberSpaceId: validNewMemberSpaceId,
     });
 
@@ -85,7 +78,6 @@ describe('proposeAddMember', () => {
     const result = proposeAddMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newMemberSpaceId: validNewMemberSpaceId,
       votingMode: 'FAST',
     });
@@ -97,14 +89,12 @@ describe('proposeAddMember', () => {
     const result1 = proposeAddMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newMemberSpaceId: validNewMemberSpaceId,
     });
 
     const result2 = proposeAddMember({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newMemberSpaceId: validNewMemberSpaceId,
     });
 
@@ -116,7 +106,6 @@ describe('proposeAddMember', () => {
       proposeAddMember({
         authorSpaceId: '0xinvalid' as `0x${string}`,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         newMemberSpaceId: validNewMemberSpaceId,
       }),
     ).toThrow('authorSpaceId must be bytes16 hex');
@@ -127,7 +116,6 @@ describe('proposeAddMember', () => {
       proposeAddMember({
         authorSpaceId: validAuthorSpaceId,
         spaceId: '0xtooshort' as `0x${string}`,
-        daoSpaceAddress: validDaoSpaceAddress,
         newMemberSpaceId: validNewMemberSpaceId,
       }),
     ).toThrow('spaceId must be bytes16 hex');
@@ -138,7 +126,6 @@ describe('proposeAddMember', () => {
       proposeAddMember({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         newMemberSpaceId: '0xinvalid' as `0x${string}`,
       }),
     ).toThrow('newMemberSpaceId must be bytes16 hex');
