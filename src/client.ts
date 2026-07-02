@@ -167,8 +167,6 @@ export type ProposalResult = CalldataResult & {
 };
 
 export type ProposeEditParams = PublishEditParams & {
-  /** @deprecated DAO proposal actions now target `daoSpaceId`; this field is ignored. */
-  daoSpaceAddress?: `0x${string}`;
   callerSpaceId: string;
   daoSpaceId: string;
   votingMode?: VotingMode;
@@ -185,8 +183,6 @@ export type ProposeEditResult = PublishEditResult &
 export type DaoSpaceRoleProposalBaseParams = {
   authorSpaceId: string;
   spaceId: string;
-  /** @deprecated DAO proposal actions now target `spaceId`; this field is ignored. */
-  daoSpaceAddress?: `0x${string}`;
   votingMode?: VotingMode;
   proposalId?: string;
 };

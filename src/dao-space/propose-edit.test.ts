@@ -11,7 +11,6 @@ describe('proposeEdit', () => {
   // Valid test values
   const validCallerSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validDaoSpaceId = '0xabcdef12345678901234567890abcdef' as const;
-  const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
   const validAuthor = generate();
   const localNetwork = defineGeoNetworkConfig({
     id: 'LOCAL',
@@ -40,7 +39,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
     });
@@ -60,7 +58,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
     });
@@ -75,7 +72,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
     });
@@ -91,7 +87,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
     });
@@ -106,7 +101,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
     });
@@ -122,7 +116,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
     });
@@ -138,7 +131,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: customProposalId,
@@ -155,7 +147,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
       proposalId: customProposalId,
@@ -178,7 +169,6 @@ describe('proposeEdit', () => {
         name: 'Test Edit',
         ops,
         author: validAuthor,
-        daoSpaceAddress: validDaoSpaceAddress,
         callerSpaceId: validCallerSpaceId,
         daoSpaceId: validDaoSpaceId,
         proposalId: customProposalId,
@@ -196,7 +186,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
     });
@@ -212,7 +201,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
       votingMode: 'SLOW',
@@ -229,7 +217,6 @@ describe('proposeEdit', () => {
         name: 'Test Edit',
         ops,
         author: validAuthor,
-        daoSpaceAddress: validDaoSpaceAddress,
         callerSpaceId: '0xinvalid' as `0x${string}`,
         daoSpaceId: validDaoSpaceId,
       }),
@@ -244,7 +231,6 @@ describe('proposeEdit', () => {
         name: 'Test Edit',
         ops,
         author: validAuthor,
-        daoSpaceAddress: validDaoSpaceAddress,
         callerSpaceId: '0eed5491b917cf58b33ac81255fe7ae9' as `0x${string}`,
         daoSpaceId: validDaoSpaceId,
       }),
@@ -259,7 +245,6 @@ describe('proposeEdit', () => {
         name: 'Test Edit',
         ops,
         author: validAuthor,
-        daoSpaceAddress: validDaoSpaceAddress,
         callerSpaceId: validCallerSpaceId,
         daoSpaceId: '0xtooshort' as `0x${string}`,
       }),
@@ -274,7 +259,6 @@ describe('proposeEdit', () => {
         name: 'Test Edit',
         ops,
         author: validAuthor,
-        daoSpaceAddress: validDaoSpaceAddress,
         callerSpaceId: validCallerSpaceId,
         daoSpaceId: validDaoSpaceId,
         proposalId: '0xinvalidproposalid' as `0x${string}`,
@@ -289,7 +273,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
     });
@@ -298,7 +281,6 @@ describe('proposeEdit', () => {
       name: 'Test Edit',
       ops,
       author: validAuthor,
-      daoSpaceAddress: validDaoSpaceAddress,
       callerSpaceId: validCallerSpaceId,
       daoSpaceId: validDaoSpaceId,
     });

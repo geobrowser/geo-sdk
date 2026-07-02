@@ -133,7 +133,6 @@ describe('geo DAO proposal client', () => {
     const result = geo.daoSpaces.proposeAddMember({
       authorSpaceId: CALLER_SPACE_ID,
       spaceId: DAO_SPACE_ID,
-      daoSpaceAddress: DAO_SPACE_ADDRESS,
       newMemberSpaceId: MEMBER_SPACE_ID,
       proposalId: PROPOSAL_ID,
       votingMode: 'SLOW',
@@ -437,14 +436,12 @@ describe('geo DAO proposal client', () => {
     const addMember = geo.daoSpaces.proposeAddMember({
       authorSpaceId: CALLER_SPACE_ID,
       spaceId: DAO_SPACE_ID,
-      daoSpaceAddress: DAO_SPACE_ADDRESS,
       newMemberSpaceId: MEMBER_SPACE_ID,
       proposalId: PROPOSAL_ID,
     });
     const addEditor = geo.daoSpaces.proposeAddEditor({
       authorSpaceId: CALLER_SPACE_ID,
       spaceId: DAO_SPACE_ID,
-      daoSpaceAddress: DAO_SPACE_ADDRESS,
       newEditorSpaceId: MEMBER_SPACE_ID,
       proposalId: PROPOSAL_ID,
     });
@@ -477,7 +474,6 @@ describe('geo DAO proposal client', () => {
     const result = geo.daoSpaces.proposeUpdateVotingSettings({
       authorSpaceId: CALLER_SPACE_ID,
       spaceId: DAO_SPACE_ID,
-      daoSpaceAddress: DAO_SPACE_ADDRESS,
       proposalId: PROPOSAL_ID,
       votingSettings: VALID_VOTING_SETTINGS,
     });
@@ -517,7 +513,6 @@ describe('geo DAO proposal client', () => {
       geo.daoSpaces.proposeUpdateVotingSettings({
         authorSpaceId: CALLER_SPACE_ID,
         spaceId: DAO_SPACE_ID,
-        daoSpaceAddress: DAO_SPACE_ADDRESS,
         proposalId: PROPOSAL_ID,
         votingSettings: {
           ...VALID_VOTING_SETTINGS,
@@ -530,7 +525,6 @@ describe('geo DAO proposal client', () => {
       geo.daoSpaces.proposeUpdateVotingSettings({
         authorSpaceId: CALLER_SPACE_ID,
         spaceId: DAO_SPACE_ID,
-        daoSpaceAddress: DAO_SPACE_ADDRESS,
         proposalId: PROPOSAL_ID,
         votingSettings: {
           ...VALID_VOTING_SETTINGS,
@@ -543,7 +537,6 @@ describe('geo DAO proposal client', () => {
       geo.daoSpaces.proposeUpdateVotingSettings({
         authorSpaceId: CALLER_SPACE_ID,
         spaceId: DAO_SPACE_ID,
-        daoSpaceAddress: DAO_SPACE_ADDRESS,
         proposalId: PROPOSAL_ID,
         votingSettings: {
           ...VALID_VOTING_SETTINGS,
@@ -560,14 +553,13 @@ describe('geo DAO proposal client', () => {
       geo.daoSpaces.proposeAddEditor({
         authorSpaceId: CALLER_SPACE_ID,
         spaceId: DAO_SPACE_ID,
-        daoSpaceAddress: DAO_SPACE_ADDRESS,
         newEditorSpaceId: MEMBER_SPACE_ID,
         votingMode: 'FAST' as never,
       }),
     ).toThrow('proposeAddEditor only supports SLOW voting mode');
   });
 
-  it('creates DAO role proposal actions without daoSpaceAddress', () => {
+  it('creates DAO role proposal actions targeted by space ID', () => {
     const geo = createGeoClient({ network: customNetwork() });
 
     const result = geo.daoSpaces.proposeAddMember({
@@ -589,7 +581,6 @@ describe('geo DAO proposal client', () => {
       geo.daoSpaces.proposeAddMember({
         authorSpaceId: CALLER_SPACE_ID,
         spaceId: DAO_SPACE_ID,
-        daoSpaceAddress: DAO_SPACE_ADDRESS,
         newMemberSpaceId: MEMBER_SPACE_ID,
         proposalId: PROPOSAL_ID,
         votingMode: 'MAYBE' as never,

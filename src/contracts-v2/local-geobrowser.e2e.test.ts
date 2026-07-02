@@ -151,7 +151,6 @@ describeLocal('local-geobrowser contracts v2 calldata', () => {
     const updateSettings = geo.daoSpaces.proposeUpdateVotingSettings({
       authorSpaceId: editorSpaceId,
       spaceId: daoSpaceId,
-      daoSpaceAddress: deployments.daoSpace,
       proposalId,
       votingSettings,
     });
