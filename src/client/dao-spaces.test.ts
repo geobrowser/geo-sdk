@@ -13,9 +13,12 @@ import {
   PROPOSAL_UPDATED_ACTION,
   PROPOSAL_VOTED_ACTION,
   VOTE_OPTION_VALUES,
+  ZERO_ADDRESS,
+  ZERO_SPACE_ID,
 } from '../dao-space/constants.js';
 import { defineGeoNetworkConfig } from '../networks.js';
 import * as Ops from '../ops/index.js';
+import { createProposal } from './dao-spaces.js';
 
 vi.mock('viem', async importOriginal => {
   const actual = await importOriginal<typeof import('viem')>();
@@ -102,7 +105,8 @@ function decodeProposalPayload(data: `0x${string}`) {
         type: 'tuple[]',
         name: 'actions',
         components: [
-          { type: 'address', name: 'to' },
+          { type: 'address', name: 'toAddress' },
+          { type: 'bytes16', name: 'toSpaceId' },
           { type: 'uint256', name: 'value' },
           { type: 'bytes', name: 'data' },
         ],
@@ -147,8 +151,53 @@ describe('geo DAO proposal client', () => {
     expect(proposalId).toBe(PROPOSAL_ID);
     expect(votingMode).toBe(0);
     expect(actions).toHaveLength(1);
-    expect(actions[0]?.to).toBe(DAO_SPACE_ADDRESS);
+    expect(actions[0]?.toAddress).toBe(ZERO_ADDRESS);
+    expect(actions[0]?.toSpaceId).toBe(DAO_SPACE_ID);
     expect(actions[0]?.value).toBe(0n);
+  });
+
+  it('supports low-level direct-address proposal actions with an empty toSpaceId', () => {
+    const result = createProposal(
+      { network: customNetwork() },
+      {
+        fromSpaceId: CALLER_SPACE_ID,
+        daoSpaceId: DAO_SPACE_ID,
+        proposalId: PROPOSAL_ID,
+        actions: [
+          {
+            toAddress: DAO_SPACE_ADDRESS,
+            toSpaceId: ZERO_SPACE_ID,
+            value: 0n,
+            data: '0x',
+          },
+        ],
+      },
+    );
+    const { actions } = decodeProposalPayload(decodeEnter(result.calldata).data);
+
+    expect(actions[0]?.toAddress).toBe(DAO_SPACE_ADDRESS);
+    expect(actions[0]?.toSpaceId).toBe(ZERO_SPACE_ID);
+  });
+
+  it('rejects proposal actions that target both an address and a space ID', () => {
+    expect(() =>
+      createProposal(
+        { network: customNetwork() },
+        {
+          fromSpaceId: CALLER_SPACE_ID,
+          daoSpaceId: DAO_SPACE_ID,
+          proposalId: PROPOSAL_ID,
+          actions: [
+            {
+              toAddress: DAO_SPACE_ADDRESS,
+              toSpaceId: DAO_SPACE_ID,
+              value: 0n,
+              data: '0x',
+            },
+          ],
+        },
+      ),
+    ).toThrow('actions[0] must target either toAddress or toSpaceId, not both');
   });
 
   it('encodes proposal vote and execute calldata for the configured registry', () => {
@@ -217,7 +266,6 @@ describe('geo DAO proposal client', () => {
       name: 'Test Edit',
       ops,
       author: AUTHOR_ID,
-      daoSpaceAddress: DAO_SPACE_ADDRESS,
       callerSpaceId: CALLER_SPACE_ID,
       daoSpaceId: DAO_SPACE_ID,
       proposalId: PROPOSAL_ID,
@@ -246,7 +294,8 @@ describe('geo DAO proposal client', () => {
     expect(result.proposalId).toBe(PROPOSAL_ID);
     expect(result.versionId).toBe(1);
     expect(decoded.action).toBe(PROPOSAL_CREATED_ACTION);
-    expect(editAction.to).toBe(DAO_SPACE_ADDRESS);
+    expect(editAction.toAddress).toBe(ZERO_ADDRESS);
+    expect(editAction.toSpaceId).toBe(DAO_SPACE_ID);
     expect(editCall.functionName).toBe('ping');
     expect(editCall.args?.[0]).toBe(EDITS_PUBLISHED_ACTION);
     expect(editCall.args?.[1]).toBe(EMPTY_TOPIC);
@@ -267,7 +316,6 @@ describe('geo DAO proposal client', () => {
       name: 'Update Proposal Version',
       ops,
       author: AUTHOR_ID,
-      daoSpaceAddress: DAO_SPACE_ADDRESS,
       callerSpaceId: CALLER_SPACE_ID,
       daoSpaceId: DAO_SPACE_ID,
       proposalId: PROPOSAL_ID,
@@ -282,7 +330,8 @@ describe('geo DAO proposal client', () => {
     expect(decoded.action).toBe(PROPOSAL_UPDATED_ACTION);
     expect(decoded.topic).toBe(bytes16ToBytes32LeftAligned(PROPOSAL_ID));
     expect(proposalId).toBe(PROPOSAL_ID);
-    expect(actions[0]?.to).toBe(DAO_SPACE_ADDRESS);
+    expect(actions[0]?.toAddress).toBe(ZERO_ADDRESS);
+    expect(actions[0]?.toSpaceId).toBe(DAO_SPACE_ID);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -296,7 +345,6 @@ describe('geo DAO proposal client', () => {
         name: 'Update Proposal Version',
         ops,
         author: AUTHOR_ID,
-        daoSpaceAddress: DAO_SPACE_ADDRESS,
         callerSpaceId: CALLER_SPACE_ID,
         daoSpaceId: DAO_SPACE_ID,
         proposalId: PROPOSAL_ID,
@@ -316,7 +364,6 @@ describe('geo DAO proposal client', () => {
         name: 'Test Edit',
         ops,
         author: AUTHOR_ID,
-        daoSpaceAddress: DAO_SPACE_ADDRESS,
         callerSpaceId: CALLER_SPACE_ID,
         daoSpaceId: DAO_SPACE_ID,
         proposalId: PROPOSAL_ID,
@@ -327,7 +374,7 @@ describe('geo DAO proposal client', () => {
   });
 
   it('resolves the next proposal version from RPC before uploading', async () => {
-    const readContract = vi.fn().mockResolvedValue(1);
+    const readContract = vi.fn().mockResolvedValueOnce(DAO_SPACE_ADDRESS).mockResolvedValueOnce(1);
     vi.mocked(createPublicClient).mockReturnValueOnce({ readContract } as never);
     const fetch = mockUploadFetch();
     const geo = createGeoClient({ network: customNetwork({ rpcUrl: 'http://localhost:8545' }), fetch });
@@ -337,7 +384,6 @@ describe('geo DAO proposal client', () => {
       name: 'Update Proposal Version',
       ops,
       author: AUTHOR_ID,
-      daoSpaceAddress: DAO_SPACE_ADDRESS,
       callerSpaceId: CALLER_SPACE_ID,
       daoSpaceId: DAO_SPACE_ID,
       proposalId: PROPOSAL_ID,
@@ -345,6 +391,13 @@ describe('geo DAO proposal client', () => {
     });
 
     expect(result.versionId).toBe(2);
+    expect(readContract).toHaveBeenCalledWith(
+      expect.objectContaining({
+        address: SPACE_REGISTRY_ADDRESS,
+        functionName: 'spaceIdToAddress',
+        args: [DAO_SPACE_ID],
+      }),
+    );
     expect(readContract).toHaveBeenCalledWith(
       expect.objectContaining({
         address: DAO_SPACE_ADDRESS,
@@ -356,7 +409,7 @@ describe('geo DAO proposal client', () => {
   });
 
   it('rejects mismatched explicit proposal versions before uploading when RPC is configured', async () => {
-    const readContract = vi.fn().mockResolvedValue(1);
+    const readContract = vi.fn().mockResolvedValueOnce(DAO_SPACE_ADDRESS).mockResolvedValueOnce(1);
     vi.mocked(createPublicClient).mockReturnValueOnce({ readContract } as never);
     const fetch = mockUploadFetch();
     const geo = createGeoClient({ network: customNetwork({ rpcUrl: 'http://localhost:8545' }), fetch });
@@ -367,7 +420,6 @@ describe('geo DAO proposal client', () => {
         name: 'Update Proposal Version',
         ops,
         author: AUTHOR_ID,
-        daoSpaceAddress: DAO_SPACE_ADDRESS,
         callerSpaceId: CALLER_SPACE_ID,
         daoSpaceId: DAO_SPACE_ID,
         proposalId: PROPOSAL_ID,
@@ -411,7 +463,8 @@ describe('geo DAO proposal client', () => {
     });
 
     expect(addMember.to).toBe(SPACE_REGISTRY_ADDRESS);
-    expect(addMemberAction.to).toBe(DAO_SPACE_ADDRESS);
+    expect(addMemberAction.toAddress).toBe(ZERO_ADDRESS);
+    expect(addMemberAction.toSpaceId).toBe(DAO_SPACE_ID);
     expect(addMemberCall.functionName).toBe('addMember');
     expect(addMemberCall.args?.[0]).toBe(MEMBER_SPACE_ID);
     expect(memberVotingMode).toBe(0);
@@ -443,7 +496,8 @@ describe('geo DAO proposal client', () => {
     expect(result.to).toBe(SPACE_REGISTRY_ADDRESS);
     expect(decoded.action).toBe(PROPOSAL_CREATED_ACTION);
     expect(votingMode).toBe(0);
-    expect(action.to).toBe(DAO_SPACE_ADDRESS);
+    expect(action.toAddress).toBe(ZERO_ADDRESS);
+    expect(action.toSpaceId).toBe(DAO_SPACE_ID);
     expect(updateSettingsCall.functionName).toBe('updateVotingSettings');
     expect(updateSettingsCall.args?.[0]).toEqual({
       partialPercentageSupportThreshold: 6000000n,
@@ -513,17 +567,19 @@ describe('geo DAO proposal client', () => {
     ).toThrow('proposeAddEditor only supports SLOW voting mode');
   });
 
-  it('requires daoSpaceAddress for DAO role proposal actions', () => {
+  it('creates DAO role proposal actions without daoSpaceAddress', () => {
     const geo = createGeoClient({ network: customNetwork() });
 
-    expect(() =>
-      geo.daoSpaces.proposeAddMember({
-        authorSpaceId: CALLER_SPACE_ID,
-        spaceId: DAO_SPACE_ID,
-        newMemberSpaceId: MEMBER_SPACE_ID,
-        proposalId: PROPOSAL_ID,
-      } as never),
-    ).toThrow('daoSpaceAddress is required');
+    const result = geo.daoSpaces.proposeAddMember({
+      authorSpaceId: CALLER_SPACE_ID,
+      spaceId: DAO_SPACE_ID,
+      newMemberSpaceId: MEMBER_SPACE_ID,
+      proposalId: PROPOSAL_ID,
+    });
+    const { actions } = decodeProposalPayload(decodeEnter(result.calldata).data);
+
+    expect(actions[0]?.toAddress).toBe(ZERO_ADDRESS);
+    expect(actions[0]?.toSpaceId).toBe(DAO_SPACE_ID);
   });
 
   it('rejects unknown voting modes at runtime', () => {

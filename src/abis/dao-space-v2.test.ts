@@ -28,6 +28,8 @@ const PROPOSAL_PARAMETERS_FIELD_NAMES = [
   'executeBy',
 ];
 
+const DAO_SPACE_ACTION_FIELD_NAMES = ['toAddress', 'toSpaceId', 'value', 'data'];
+
 function functionAbi(abi: readonly unknown[], name: string) {
   const item = abi.find(
     entry =>
@@ -86,9 +88,13 @@ describe('contracts v2 DAO ABI fragments', () => {
     expect(componentNames(getLatestProposalInformation.outputs?.[2]?.components ?? [])).toEqual(
       PROPOSAL_PARAMETERS_FIELD_NAMES,
     );
+    expect(componentNames(getLatestProposalInformation.outputs?.[4]?.components ?? [])).toEqual(
+      DAO_SPACE_ACTION_FIELD_NAMES,
+    );
     expect(componentNames(getProposalInformation.outputs?.[2]?.components ?? [])).toEqual(
       PROPOSAL_PARAMETERS_FIELD_NAMES,
     );
+    expect(componentNames(getProposalInformation.outputs?.[4]?.components ?? [])).toEqual(DAO_SPACE_ACTION_FIELD_NAMES);
     expect(functionAbi(DaoSpaceAbi, 'latestProposalVersion')).toBeDefined();
     expect(functionAbi(DaoSpaceAbi, 'MINIMUM_EXECUTION_GRACE_PERIOD')).toBeDefined();
   });

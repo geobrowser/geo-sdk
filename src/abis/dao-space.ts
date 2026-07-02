@@ -380,8 +380,13 @@ export const abi = [
         components: [
           {
             internalType: 'address',
-            name: 'to',
+            name: 'toAddress',
             type: 'address',
+          },
+          {
+            internalType: 'bytes16',
+            name: 'toSpaceId',
+            type: 'bytes16',
           },
           {
             internalType: 'uint256',
@@ -483,8 +488,13 @@ export const abi = [
         components: [
           {
             internalType: 'address',
-            name: 'to',
+            name: 'toAddress',
             type: 'address',
+          },
+          {
+            internalType: 'bytes16',
+            name: 'toSpaceId',
+            type: 'bytes16',
           },
           {
             internalType: 'uint256',
