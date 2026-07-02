@@ -46,11 +46,6 @@ export type ProposeEditParams = {
   /** The author's personal space ID. */
   author: Id | string;
   /**
-   * The DAO space contract address.
-   * This is the target of the ping() call in the proposal.
-   */
-  daoSpaceAddress: `0x${string}`;
-  /**
    * The proposer's space ID (bytes16 hex).
    * This is the fromSpaceId in the enter() call.
    */
@@ -209,10 +204,6 @@ export type ProposeRemoveMemberParams = {
    */
   spaceId: string;
   /**
-   * The DAO space contract address. This is the target of the role action.
-   */
-  daoSpaceAddress: `0x${string}`;
-  /**
    * The space ID of the member to remove (bytes16 hex, with or without 0x prefix).
    */
   memberToRemoveSpaceId: string;
@@ -250,10 +241,6 @@ export type ProposeAddMemberParams = {
    * This is the toSpaceId in the enter() call.
    */
   spaceId: string;
-  /**
-   * The DAO space contract address. This is the target of the role action.
-   */
-  daoSpaceAddress: `0x${string}`;
   /**
    * The space ID of the new member to add (bytes16 hex).
    */
@@ -293,10 +280,6 @@ export type ProposeRemoveEditorParams = {
    */
   spaceId: string;
   /**
-   * The DAO space contract address. This is the target of the role action.
-   */
-  daoSpaceAddress: `0x${string}`;
-  /**
    * The space ID of the editor to remove (bytes16 hex, with or without 0x prefix).
    */
   editorToRemoveSpaceId: string;
@@ -332,10 +315,6 @@ export type ProposeAddEditorParams = {
    */
   spaceId: string;
   /**
-   * The DAO space contract address. This is the target of the role action.
-   */
-  daoSpaceAddress: `0x${string}`;
-  /**
    * The space ID of the new editor to add (bytes16 hex).
    */
   newEditorSpaceId: string;
@@ -370,10 +349,6 @@ export type ProposeUpdateVotingSettingsParams = {
    * This is the toSpaceId in the enter() call.
    */
   spaceId: string;
-  /**
-   * The DAO space contract address. This is the target of the updateVotingSettings action.
-   */
-  daoSpaceAddress: `0x${string}`;
   /** New voting settings for the DAO space. */
   votingSettings: VotingSettingsInput;
   /** Updating voting settings only supports SLOW voting. */

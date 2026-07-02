@@ -6,14 +6,12 @@ import { proposeAddEditor } from './propose-add-editor.js';
 describe('proposeAddEditor', () => {
   const validAuthorSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validSpaceId = '0xabcdef12345678901234567890abcdef' as const;
-  const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
   const validNewEditorSpaceId = '0x11111111111111111111111111111111' as const;
 
   it('should return correct structure', () => {
     const result = proposeAddEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newEditorSpaceId: validNewEditorSpaceId,
     });
 
@@ -26,7 +24,6 @@ describe('proposeAddEditor', () => {
     const { to } = proposeAddEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newEditorSpaceId: validNewEditorSpaceId,
     });
 
@@ -37,7 +34,6 @@ describe('proposeAddEditor', () => {
     const { calldata } = proposeAddEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newEditorSpaceId: validNewEditorSpaceId,
     });
 
@@ -49,7 +45,6 @@ describe('proposeAddEditor', () => {
     const { proposalId } = proposeAddEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newEditorSpaceId: validNewEditorSpaceId,
     });
 
@@ -62,7 +57,6 @@ describe('proposeAddEditor', () => {
     const { proposalId } = proposeAddEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newEditorSpaceId: validNewEditorSpaceId,
       proposalId: customProposalId,
     });
@@ -74,7 +68,6 @@ describe('proposeAddEditor', () => {
     const result = proposeAddEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newEditorSpaceId: validNewEditorSpaceId,
     });
 
@@ -86,7 +79,6 @@ describe('proposeAddEditor', () => {
       proposeAddEditor({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         newEditorSpaceId: validNewEditorSpaceId,
         votingMode: 'FAST' as never,
       }),
@@ -97,14 +89,12 @@ describe('proposeAddEditor', () => {
     const result1 = proposeAddEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newEditorSpaceId: validNewEditorSpaceId,
     });
 
     const result2 = proposeAddEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       newEditorSpaceId: validNewEditorSpaceId,
     });
 
@@ -116,7 +106,6 @@ describe('proposeAddEditor', () => {
       proposeAddEditor({
         authorSpaceId: '0xinvalid' as `0x${string}`,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         newEditorSpaceId: validNewEditorSpaceId,
       }),
     ).toThrow('authorSpaceId must be bytes16 hex');
@@ -127,7 +116,6 @@ describe('proposeAddEditor', () => {
       proposeAddEditor({
         authorSpaceId: validAuthorSpaceId,
         spaceId: '0xtooshort' as `0x${string}`,
-        daoSpaceAddress: validDaoSpaceAddress,
         newEditorSpaceId: validNewEditorSpaceId,
       }),
     ).toThrow('spaceId must be bytes16 hex');
@@ -138,7 +126,6 @@ describe('proposeAddEditor', () => {
       proposeAddEditor({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         newEditorSpaceId: '0xinvalid' as `0x${string}`,
       }),
     ).toThrow('newEditorSpaceId must be bytes16 hex');

@@ -58,6 +58,16 @@ export const EMPTY_TOPIC = '0x00000000000000000000000000000000000000000000000000
 export const EMPTY_SIGNATURE = '0x' as const;
 
 /**
+ * Empty address used for proposal actions that target a space by ID.
+ */
+export const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as const;
+
+/**
+ * Empty bytes16 value used for proposal actions that target a direct address.
+ */
+export const ZERO_SPACE_ID = '0x00000000000000000000000000000000' as const;
+
+/**
  * Regex for bytes16 hex: 0x prefix + 32 hex characters (16 bytes)
  */
 export const BYTES16_HEX_REGEX = /^0x[0-9a-fA-F]{32}$/;

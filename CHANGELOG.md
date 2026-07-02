@@ -250,7 +250,6 @@
     name: "Add new entity",
     ops,
     author: "0x1234...",
-    daoSpaceAddress: "0xDAOSpaceContractAddress...",
     callerSpaceId: "0xCallerBytes16SpaceId...",
     daoSpaceId: "0xDAOBytes16SpaceId...",
   });

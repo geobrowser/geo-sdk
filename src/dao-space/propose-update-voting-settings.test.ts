@@ -3,13 +3,12 @@ import { describe, expect, it } from 'vitest';
 
 import { TESTNET } from '../../contracts.js';
 import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
-import { PROPOSAL_CREATED_ACTION } from './constants.js';
+import { PROPOSAL_CREATED_ACTION, ZERO_ADDRESS } from './constants.js';
 import { proposeUpdateVotingSettings } from './propose-update-voting-settings.js';
 
 describe('proposeUpdateVotingSettings', () => {
   const validAuthorSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validSpaceId = '0xabcdef12345678901234567890abcdef' as const;
-  const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
   const validVotingSettings = {
     partialPercentageSupportThreshold: 60,
     universalPercentageSupportThreshold: 90,
@@ -24,7 +23,6 @@ describe('proposeUpdateVotingSettings', () => {
     const result = proposeUpdateVotingSettings({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       votingSettings: validVotingSettings,
     });
 
@@ -37,7 +35,6 @@ describe('proposeUpdateVotingSettings', () => {
     const { to } = proposeUpdateVotingSettings({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       votingSettings: validVotingSettings,
     });
 
@@ -48,7 +45,6 @@ describe('proposeUpdateVotingSettings', () => {
     const result = proposeUpdateVotingSettings({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       votingSettings: validVotingSettings,
     });
     const decodedEnter = decodeFunctionData({
@@ -71,7 +67,8 @@ describe('proposeUpdateVotingSettings', () => {
           type: 'tuple[]',
           name: 'actions',
           components: [
-            { type: 'address', name: 'to' },
+            { type: 'address', name: 'toAddress' },
+            { type: 'bytes16', name: 'toSpaceId' },
             { type: 'uint256', name: 'value' },
             { type: 'bytes', name: 'data' },
           ],
@@ -91,7 +88,8 @@ describe('proposeUpdateVotingSettings', () => {
 
     expect(action).toBe(PROPOSAL_CREATED_ACTION);
     expect(votingMode).toBe(0);
-    expect(updateSettingsAction.to).toBe(validDaoSpaceAddress);
+    expect(updateSettingsAction.toAddress).toBe(ZERO_ADDRESS);
+    expect(updateSettingsAction.toSpaceId).toBe(validSpaceId);
     expect(decodedAction.functionName).toBe('updateVotingSettings');
     expect(decodedAction.args?.[0]).toEqual({
       partialPercentageSupportThreshold: 6000000n,
@@ -109,7 +107,6 @@ describe('proposeUpdateVotingSettings', () => {
       proposeUpdateVotingSettings({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         votingSettings: validVotingSettings,
         votingMode: 'FAST' as never,
       }),
@@ -121,7 +118,6 @@ describe('proposeUpdateVotingSettings', () => {
       proposeUpdateVotingSettings({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         votingSettings: {
           ...validVotingSettings,
           universalPercentageSupportThreshold: 101,
@@ -133,7 +129,6 @@ describe('proposeUpdateVotingSettings', () => {
       proposeUpdateVotingSettings({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         votingSettings: {
           ...validVotingSettings,
           quorum: -1,

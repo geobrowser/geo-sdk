@@ -1,6 +1,6 @@
 import type { Op } from '@geoprotocol/grc-20';
 import { v4 as uuidv4 } from 'uuid';
-import { createPublicClient, encodeAbiParameters, encodeFunctionData, http, toHex } from 'viem';
+import { createPublicClient, encodeAbiParameters, encodeFunctionData, http, isAddress, toHex } from 'viem';
 import { DaoSpaceAbi, SpaceRegistryAbi } from '../abis/index.js';
 import { SPACE_TYPE } from '../core/ids/system.js';
 import {
@@ -16,6 +16,8 @@ import {
   PROPOSAL_UPDATED_ACTION,
   PROPOSAL_VOTED_ACTION,
   VOTE_OPTION_VALUES,
+  ZERO_ADDRESS,
+  ZERO_SPACE_ID,
 } from '../dao-space/constants.js';
 import type { VoteOption, VotingMode } from '../dao-space/types.js';
 import {
@@ -46,7 +48,8 @@ export type CreateDaoSpaceParams = Omit<
 };
 
 export type ProposalAction = {
-  to: `0x${string}`;
+  toAddress: `0x${string}`;
+  toSpaceId: `0x${string}`;
   value: bigint;
   data: `0x${string}`;
 };
@@ -64,7 +67,6 @@ export type ProposeEditParams = {
   name: string;
   ops: Op[];
   author: Id | string;
-  daoSpaceAddress: `0x${string}`;
   callerSpaceId: string;
   daoSpaceId: string;
   votingMode?: VotingMode;
@@ -90,7 +92,6 @@ export type ExecuteProposalParams = {
 type DaoSpaceRoleProposalBaseParams = {
   authorSpaceId: string;
   spaceId: string;
-  daoSpaceAddress: `0x${string}`;
   votingMode?: VotingMode;
   proposalId?: string;
 };
@@ -144,12 +145,36 @@ function createRoleProposal(context: GeoClientContext, params: DaoSpaceRolePropo
   });
 }
 
-function requireDaoSpaceAddress(daoSpaceAddress: `0x${string}` | undefined): `0x${string}` {
-  if (!daoSpaceAddress) {
-    throw new Error('daoSpaceAddress is required for DAO role proposal actions');
-  }
+function isZeroAddress(address: `0x${string}`): boolean {
+  return address.toLowerCase() === ZERO_ADDRESS;
+}
 
-  return daoSpaceAddress;
+function isZeroSpaceId(spaceId: `0x${string}`): boolean {
+  return spaceId.toLowerCase() === ZERO_SPACE_ID;
+}
+
+function normalizeProposalActions(actions: ProposalAction[]) {
+  return actions.map((action, index) => {
+    if (!isAddress(action.toAddress, { strict: false })) {
+      throw new Error(`actions[${index}].toAddress must be a valid address`);
+    }
+
+    const toSpaceId = bytes16Id(action.toSpaceId, `actions[${index}].toSpaceId`);
+    const targetsAddress = !isZeroAddress(action.toAddress);
+    const targetsSpace = !isZeroSpaceId(toSpaceId);
+
+    if (targetsAddress && targetsSpace) {
+      throw new Error(`actions[${index}] must target either toAddress or toSpaceId, not both`);
+    }
+    if (!targetsAddress && !targetsSpace) {
+      throw new Error(`actions[${index}] must target either toAddress or toSpaceId`);
+    }
+
+    return {
+      ...action,
+      toSpaceId,
+    };
+  });
 }
 
 function validateProposalVersion(versionId: number | undefined, fallback = 1): number {
@@ -164,7 +189,8 @@ function validateProposalVersion(versionId: number | undefined, fallback = 1): n
 async function resolveProposalVersion(
   context: GeoClientContext,
   params: {
-    daoSpaceAddress: `0x${string}`;
+    spaceRegistryAddress: `0x${string}`;
+    daoSpaceId: `0x${string}`;
     proposalId: `0x${string}`;
     updateProposal?: boolean;
     versionId?: number;
@@ -192,8 +218,18 @@ async function resolveProposalVersion(
   const publicClient = createPublicClient({
     transport: http(rpcUrl),
   });
+  const resolvedDaoSpaceAddress = await publicClient.readContract({
+    address: params.spaceRegistryAddress,
+    abi: SpaceRegistryAbi,
+    functionName: 'spaceIdToAddress',
+    args: [params.daoSpaceId],
+  });
+  if (resolvedDaoSpaceAddress.toLowerCase() === ZERO_ADDRESS) {
+    throw new Error(`Could not resolve DAO space address for daoSpaceId ${params.daoSpaceId}`);
+  }
+
   const latestVersion = await publicClient.readContract({
-    address: params.daoSpaceAddress,
+    address: resolvedDaoSpaceAddress,
     abi: DaoSpaceAbi,
     functionName: 'latestProposalVersion',
     args: [params.proposalId],
@@ -217,6 +253,7 @@ function encodeCreateProposal(params: CreateProposalParams & { spaceRegistryAddr
   if (votingMode !== 'FAST' && votingMode !== 'SLOW') {
     throw new Error('votingMode must be "FAST" or "SLOW"');
   }
+  const actions = normalizeProposalActions(params.actions);
 
   const data = encodeAbiParameters(
     [
@@ -226,13 +263,14 @@ function encodeCreateProposal(params: CreateProposalParams & { spaceRegistryAddr
         type: 'tuple[]',
         name: 'actions',
         components: [
-          { type: 'address', name: 'to' },
+          { type: 'address', name: 'toAddress' },
+          { type: 'bytes16', name: 'toSpaceId' },
           { type: 'uint256', name: 'value' },
           { type: 'bytes', name: 'data' },
         ],
       },
     ],
-    [proposalId, votingMode === 'FAST' ? 1 : 0, params.actions],
+    [proposalId, votingMode === 'FAST' ? 1 : 0, actions],
   );
 
   const calldata = encodeFunctionData({
@@ -255,14 +293,15 @@ function encodeCreateProposal(params: CreateProposalParams & { spaceRegistryAddr
   };
 }
 
-function encodePublishEditProposalAction(daoSpaceAddress: `0x${string}`, cid: string): ProposalAction {
+function encodePublishEditProposalAction(daoSpaceId: string, cid: string): ProposalAction {
   const ipfsError = validateIpfsUri(cid);
   if (ipfsError) {
     throw new Error(ipfsError);
   }
 
   return {
-    to: daoSpaceAddress,
+    toAddress: ZERO_ADDRESS,
+    toSpaceId: bytes16Id(daoSpaceId, 'daoSpaceId'),
     value: 0n,
     data: encodeFunctionData({
       abi: DaoSpaceAbi,
@@ -283,12 +322,13 @@ function encodePublishEditProposalAction(daoSpaceAddress: `0x${string}`, cid: st
 }
 
 function encodeDaoRoleAction(
-  daoSpaceAddress: `0x${string}`,
+  daoSpaceId: string,
   functionName: 'addEditor' | 'removeEditor' | 'addMember' | 'removeMember',
   spaceId: string,
 ): ProposalAction {
   return {
-    to: daoSpaceAddress,
+    toAddress: ZERO_ADDRESS,
+    toSpaceId: bytes16Id(daoSpaceId, 'daoSpaceId'),
     value: 0n,
     data: encodeFunctionData({
       abi: DaoSpaceAbi,
@@ -298,10 +338,7 @@ function encodeDaoRoleAction(
   };
 }
 
-function encodeUpdateVotingSettingsAction(
-  daoSpaceAddress: `0x${string}`,
-  votingSettings: VotingSettingsInput,
-): ProposalAction {
+function encodeUpdateVotingSettingsAction(daoSpaceId: string, votingSettings: VotingSettingsInput): ProposalAction {
   const validationError = validateVotingSettingsInput(votingSettings);
   if (validationError) {
     throw new Error(validationError);
@@ -310,7 +347,8 @@ function encodeUpdateVotingSettingsAction(
   const contractVotingSettings = toContractVotingSettings(votingSettings);
 
   return {
-    to: daoSpaceAddress,
+    toAddress: ZERO_ADDRESS,
+    toSpaceId: bytes16Id(daoSpaceId, 'daoSpaceId'),
     value: 0n,
     data: encodeFunctionData({
       abi: DaoSpaceAbi,
@@ -425,7 +463,6 @@ export async function create(context: GeoClientContext, params: CreateDaoSpacePa
  * const tx = geo.daoSpaces.proposeAddMember({
  *   authorSpaceId,
  *   spaceId: daoSpaceId,
- *   daoSpaceAddress,
  *   newMemberSpaceId,
  * });
  * ```
@@ -456,7 +493,6 @@ export function createProposal(context: GeoClientContext, params: CreateProposal
  *   name: 'Update entity',
  *   ops,
  *   author: authorSpaceId,
- *   daoSpaceAddress,
  *   callerSpaceId: authorSpaceId,
  *   daoSpaceId,
  * });
@@ -479,11 +515,12 @@ export async function proposeEdit(context: GeoClientContext, params: ProposeEdit
     proposalId: params.proposalId,
     votingMode: params.votingMode ?? 'FAST',
     updateProposal: params.updateProposal,
-    actions: [encodePublishEditProposalAction(params.daoSpaceAddress, VALIDATION_CID)],
+    actions: [encodePublishEditProposalAction(params.daoSpaceId, VALIDATION_CID)],
     spaceRegistryAddress,
   });
   const versionId = await resolveProposalVersion(context, {
-    daoSpaceAddress: params.daoSpaceAddress,
+    spaceRegistryAddress,
+    daoSpaceId: bytes16Id(params.daoSpaceId, 'daoSpaceId'),
     proposalId: validated.proposalId,
     updateProposal: params.updateProposal,
     versionId: params.versionId,
@@ -501,7 +538,7 @@ export async function proposeEdit(context: GeoClientContext, params: ProposeEdit
     proposalId: validated.proposalId,
     votingMode: params.votingMode ?? 'FAST',
     updateProposal: params.updateProposal,
-    actions: [encodePublishEditProposalAction(params.daoSpaceAddress, cid)],
+    actions: [encodePublishEditProposalAction(params.daoSpaceId, cid)],
     spaceRegistryAddress,
   });
 
@@ -516,25 +553,20 @@ export async function proposeEdit(context: GeoClientContext, params: ProposeEdit
 /**
  * Builds calldata for a DAO proposal that adds a member space.
  *
- * `daoSpaceAddress` is required because the proposal action calls the DAO
- * space contract directly.
+ * The proposal action targets the DAO by `spaceId`, so callers do not need to
+ * pass the DAO contract address.
  *
  * @example
  * ```ts
  * const tx = geo.daoSpaces.proposeAddMember({
  *   authorSpaceId,
  *   spaceId: daoSpaceId,
- *   daoSpaceAddress,
  *   newMemberSpaceId: memberSpaceId,
  * });
  * ```
  */
 export function proposeAddMember(context: GeoClientContext, params: ProposeAddMemberParams) {
-  return createRoleProposal(
-    context,
-    params,
-    actions.addMember(requireDaoSpaceAddress(params.daoSpaceAddress), params.newMemberSpaceId),
-  );
+  return createRoleProposal(context, params, actions.addMember(params.spaceId, params.newMemberSpaceId));
 }
 
 /**
@@ -545,17 +577,12 @@ export function proposeAddMember(context: GeoClientContext, params: ProposeAddMe
  * const tx = geo.daoSpaces.proposeRemoveMember({
  *   authorSpaceId,
  *   spaceId: daoSpaceId,
- *   daoSpaceAddress,
  *   memberToRemoveSpaceId,
  * });
  * ```
  */
 export function proposeRemoveMember(context: GeoClientContext, params: ProposeRemoveMemberParams) {
-  return createRoleProposal(
-    context,
-    params,
-    actions.removeMember(requireDaoSpaceAddress(params.daoSpaceAddress), params.memberToRemoveSpaceId),
-  );
+  return createRoleProposal(context, params, actions.removeMember(params.spaceId, params.memberToRemoveSpaceId));
 }
 
 /**
@@ -568,7 +595,6 @@ export function proposeRemoveMember(context: GeoClientContext, params: ProposeRe
  * const tx = geo.daoSpaces.proposeAddEditor({
  *   authorSpaceId,
  *   spaceId: daoSpaceId,
- *   daoSpaceAddress,
  *   newEditorSpaceId: editorSpaceId,
  * });
  * ```
@@ -579,11 +605,7 @@ export function proposeAddEditor(context: GeoClientContext, params: ProposeAddEd
     throw new Error('proposeAddEditor only supports SLOW voting mode');
   }
 
-  return createRoleProposal(
-    context,
-    params,
-    actions.addEditor(requireDaoSpaceAddress(params.daoSpaceAddress), params.newEditorSpaceId),
-  );
+  return createRoleProposal(context, params, actions.addEditor(params.spaceId, params.newEditorSpaceId));
 }
 
 /**
@@ -596,7 +618,6 @@ export function proposeAddEditor(context: GeoClientContext, params: ProposeAddEd
  * const tx = geo.daoSpaces.proposeRemoveEditor({
  *   authorSpaceId,
  *   spaceId: daoSpaceId,
- *   daoSpaceAddress,
  *   editorToRemoveSpaceId,
  * });
  * ```
@@ -607,11 +628,7 @@ export function proposeRemoveEditor(context: GeoClientContext, params: ProposeRe
     throw new Error('proposeRemoveEditor only supports SLOW voting mode');
   }
 
-  return createRoleProposal(
-    context,
-    params,
-    actions.removeEditor(requireDaoSpaceAddress(params.daoSpaceAddress), params.editorToRemoveSpaceId),
-  );
+  return createRoleProposal(context, params, actions.removeEditor(params.spaceId, params.editorToRemoveSpaceId));
 }
 
 /**
@@ -627,7 +644,6 @@ export function proposeRemoveEditor(context: GeoClientContext, params: ProposeRe
  * const tx = geo.daoSpaces.proposeUpdateVotingSettings({
  *   authorSpaceId,
  *   spaceId: daoSpaceId,
- *   daoSpaceAddress,
  *   votingSettings: {
  *     partialPercentageSupportThreshold: 50,
  *     universalPercentageSupportThreshold: 90,
@@ -646,11 +662,7 @@ export function proposeUpdateVotingSettings(context: GeoClientContext, params: P
     throw new Error('proposeUpdateVotingSettings only supports SLOW voting mode');
   }
 
-  return createRoleProposal(
-    context,
-    params,
-    actions.updateVotingSettings(requireDaoSpaceAddress(params.daoSpaceAddress), params.votingSettings),
-  );
+  return createRoleProposal(context, params, actions.updateVotingSettings(params.spaceId, params.votingSettings));
 }
 
 /**
@@ -781,20 +793,16 @@ export function executeProposal(context: GeoClientContext, params: ExecutePropos
  *
  * @example
  * ```ts
- * const action = actions.addEditor(daoSpaceAddress, editorSpaceId);
+ * const action = actions.addEditor(daoSpaceId, editorSpaceId);
  * ```
  *
  * @internal
  */
 export const actions = {
   publishEdit: encodePublishEditProposalAction,
-  addEditor: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
-    encodeDaoRoleAction(daoSpaceAddress, 'addEditor', spaceId),
-  removeEditor: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
-    encodeDaoRoleAction(daoSpaceAddress, 'removeEditor', spaceId),
-  addMember: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
-    encodeDaoRoleAction(daoSpaceAddress, 'addMember', spaceId),
-  removeMember: (daoSpaceAddress: `0x${string}`, spaceId: string) =>
-    encodeDaoRoleAction(daoSpaceAddress, 'removeMember', spaceId),
+  addEditor: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'addEditor', spaceId),
+  removeEditor: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeEditor', spaceId),
+  addMember: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'addMember', spaceId),
+  removeMember: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeMember', spaceId),
   updateVotingSettings: encodeUpdateVotingSettingsAction,
 };

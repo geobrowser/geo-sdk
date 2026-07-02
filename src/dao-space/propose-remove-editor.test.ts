@@ -8,7 +8,6 @@ describe('proposeRemoveEditor', () => {
   // Valid test values
   const validAuthorSpaceId = '0x0eed5491b917cf58b33ac81255fe7ae9' as const;
   const validSpaceId = '0xabcdef12345678901234567890abcdef' as const;
-  const validDaoSpaceAddress = '0x1234567890123456789012345678901234567890' as const;
 
   const validEditorToRemove = '0x11111111111111111111111111111111' as const;
 
@@ -16,7 +15,6 @@ describe('proposeRemoveEditor', () => {
     const result = proposeRemoveEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: validEditorToRemove,
     });
 
@@ -29,7 +27,6 @@ describe('proposeRemoveEditor', () => {
     const { to } = proposeRemoveEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: validEditorToRemove,
     });
 
@@ -40,7 +37,6 @@ describe('proposeRemoveEditor', () => {
     const { calldata } = proposeRemoveEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: validEditorToRemove,
     });
 
@@ -52,7 +48,6 @@ describe('proposeRemoveEditor', () => {
     const { proposalId } = proposeRemoveEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: validEditorToRemove,
     });
 
@@ -65,7 +60,6 @@ describe('proposeRemoveEditor', () => {
     const { proposalId } = proposeRemoveEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: validEditorToRemove,
       proposalId: customProposalId,
     });
@@ -77,7 +71,6 @@ describe('proposeRemoveEditor', () => {
     const result = proposeRemoveEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: validEditorToRemove,
     });
 
@@ -89,7 +82,6 @@ describe('proposeRemoveEditor', () => {
       proposeRemoveEditor({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         editorToRemoveSpaceId: validEditorToRemove,
         votingMode: 'FAST' as never,
       }),
@@ -100,7 +92,6 @@ describe('proposeRemoveEditor', () => {
     const params = {
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: validEditorToRemove,
     } as const;
 
@@ -116,7 +107,6 @@ describe('proposeRemoveEditor', () => {
     const result1 = proposeRemoveEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: validEditorToRemove,
       proposalId: sharedProposalId,
     });
@@ -124,7 +114,6 @@ describe('proposeRemoveEditor', () => {
     const result2 = proposeRemoveEditor({
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: otherEditor,
       proposalId: sharedProposalId,
     });
@@ -136,7 +125,6 @@ describe('proposeRemoveEditor', () => {
     const result = proposeRemoveEditor({
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: 'abcdef12345678901234567890abcdef',
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: '11111111111111111111111111111111',
     });
 
@@ -149,7 +137,6 @@ describe('proposeRemoveEditor', () => {
     const withPrefix = proposeRemoveEditor({
       authorSpaceId: '0x0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: '0xabcdef12345678901234567890abcdef',
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: '0x11111111111111111111111111111111',
       proposalId,
     });
@@ -157,7 +144,6 @@ describe('proposeRemoveEditor', () => {
     const withoutPrefix = proposeRemoveEditor({
       authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
       spaceId: 'abcdef12345678901234567890abcdef',
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: '11111111111111111111111111111111',
       proposalId,
     });
@@ -169,7 +155,6 @@ describe('proposeRemoveEditor', () => {
     const params = {
       authorSpaceId: validAuthorSpaceId,
       spaceId: validSpaceId,
-      daoSpaceAddress: validDaoSpaceAddress,
       editorToRemoveSpaceId: validEditorToRemove,
     } as const;
 
@@ -184,7 +169,6 @@ describe('proposeRemoveEditor', () => {
       proposeRemoveEditor({
         authorSpaceId: 'invalid',
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         editorToRemoveSpaceId: validEditorToRemove,
       }),
     ).toThrow('authorSpaceId must be bytes16 hex');
@@ -195,7 +179,6 @@ describe('proposeRemoveEditor', () => {
       proposeRemoveEditor({
         authorSpaceId: validAuthorSpaceId,
         spaceId: 'tooshort',
-        daoSpaceAddress: validDaoSpaceAddress,
         editorToRemoveSpaceId: validEditorToRemove,
       }),
     ).toThrow('spaceId must be bytes16 hex');
@@ -206,7 +189,6 @@ describe('proposeRemoveEditor', () => {
       proposeRemoveEditor({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         editorToRemoveSpaceId: 'badid',
       }),
     ).toThrow('editorToRemoveSpaceId must be bytes16 hex');
@@ -217,7 +199,6 @@ describe('proposeRemoveEditor', () => {
       proposeRemoveEditor({
         authorSpaceId: validAuthorSpaceId,
         spaceId: validSpaceId,
-        daoSpaceAddress: validDaoSpaceAddress,
         editorToRemoveSpaceId: validEditorToRemove,
         proposalId: 'badproposalid',
       }),
