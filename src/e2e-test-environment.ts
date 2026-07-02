@@ -196,8 +196,10 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
 
   const rpcUrl = process.env.GEO_E2E_RPC_URL ?? requireNetworkRpcUrl(GeoTestnetConfig);
   const zeroDevRpcUrl = process.env.GEO_E2E_ZERODEV_RPC_URL;
+  const apiOrigin = process.env.GEO_E2E_API_ORIGIN ?? GeoTestnetConfig.apiOrigin;
   const network = defineGeoNetworkConfig({
     ...GeoTestnetConfig,
+    apiOrigin,
     chain: GeoTestnetConfig.chain ? { ...GeoTestnetConfig.chain, rpcUrl } : undefined,
   });
 
@@ -207,7 +209,7 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
     privateKey: requireHexPrivateKey(process.env.GEO_E2E_PRIVATE_KEY ?? process.env.PRIVATE_KEY, 'PRIVATE_KEY'),
     rpcUrl,
     zeroDevRpcUrl,
-    apiOrigin: network.apiOrigin,
+    apiOrigin,
     chain: createChain(network, rpcUrl),
     contracts: {
       SPACE_REGISTRY_ADDRESS: requireNetworkContract(network, 'SPACE_REGISTRY_ADDRESS'),

@@ -119,6 +119,13 @@ type SpaceTopicQueryResponse = {
   }>;
 };
 
+type IndexerMetaResponse = {
+  metas: Array<{
+    id: string;
+    blockNumber: string;
+  }>;
+};
+
 class GraphQlRequestError extends Error {
   constructor(readonly errors: unknown) {
     super(`GraphQL errors: ${JSON.stringify(errors)}`);
@@ -281,6 +288,13 @@ function spaceTopicQuery(spaceId: string) {
   }`;
 }
 
+const INDEXER_META_QUERY = `query metas {
+  metas {
+    id
+    blockNumber
+  }
+}`;
+
 async function queryGraph<T>(query: string): Promise<T> {
   const response = await geo.api.graphql<T>(query);
   if (response.errors) {
@@ -291,6 +305,88 @@ async function queryGraph<T>(query: string): Promise<T> {
   }
 
   return response.data;
+}
+
+async function readIndexerMetas() {
+  return (await queryGraph<IndexerMetaResponse>(INDEXER_META_QUERY)).metas;
+}
+
+async function waitForIndexerBlock(blockNumber: bigint) {
+  const deadline = Date.now() + INDEXER_TIMEOUT_MS;
+  let lastMetas: IndexerMetaResponse['metas'] | undefined;
+  let lastError: unknown;
+
+  while (Date.now() < deadline) {
+    try {
+      lastMetas = await readIndexerMetas();
+      lastError = undefined;
+      const pipeline = lastMetas.find(meta => meta.id === 'hermes_pipeline');
+      if (pipeline && BigInt(pipeline.blockNumber) >= blockNumber) {
+        return lastMetas;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    await sleep(3_000);
+  }
+
+  throw new Error(
+    [
+      `Timed out waiting for API indexer ${e2e.apiOrigin} to process block ${blockNumber.toString()}.`,
+      `Last metas: ${JSON.stringify(lastMetas)}.`,
+      `Last error: ${String(lastError)}`,
+    ].join(' '),
+  );
+}
+
+let indexerAlignmentPromise: Promise<void> | undefined;
+async function ensureIndexerTracksConfiguredRegistry(context: TestContext) {
+  indexerAlignmentPromise ??= (async () => {
+    const previousTopicId = await readSpaceTopicId(context.spaceId);
+    const canaryTopicId = generate();
+    const setTopic = geo.personalSpaces.setTopic({
+      spaceId: context.spaceId,
+      topicId: canaryTopicId,
+    });
+    const { receipt } = await sendTransactionAndWait(context, {
+      label: 'indexer alignment canary topic update',
+      to: setTopic.to,
+      calldata: setTopic.calldata,
+    });
+    const metas = await waitForIndexerBlock(receipt.blockNumber);
+    const indexedTopicId = await readSpaceTopicId(context.spaceId);
+
+    if (indexedTopicId !== canaryTopicId) {
+      throw new Error(
+        [
+          `Configured API ${e2e.apiOrigin} is not indexing actions from configured SPACE_REGISTRY_ADDRESS ${e2e.contracts.SPACE_REGISTRY_ADDRESS}.`,
+          `A TOPIC_SET canary emitted at block ${receipt.blockNumber.toString()} with topic ${canaryTopicId}, and the API indexed past that block (${JSON.stringify(metas)}), but the API still returned topic ${indexedTopicId}.`,
+          'Set GEO_E2E_API_ORIGIN to an API that indexes the configured contracts, or update the testnet indexer before running indexer-backed e2e tests.',
+        ].join(' '),
+      );
+    }
+
+    if (previousTopicId && previousTopicId !== canaryTopicId) {
+      const restoreTopic = geo.personalSpaces.setTopic({
+        spaceId: context.spaceId,
+        topicId: previousTopicId,
+      });
+      const restore = await sendTransactionAndWait(context, {
+        label: 'indexer alignment canary topic restore',
+        to: restoreTopic.to,
+        calldata: restoreTopic.calldata,
+      });
+      await waitForIndexerBlock(restore.receipt.blockNumber);
+      const restoredTopicId = await readSpaceTopicId(context.spaceId);
+      if (restoredTopicId !== previousTopicId) {
+        throw new Error(
+          `Configured API ${e2e.apiOrigin} indexed the canary topic but did not index the restore topic ${previousTopicId}. Last indexed topic: ${restoredTopicId}.`,
+        );
+      }
+    }
+  })();
+
+  return indexerAlignmentPromise;
 }
 
 async function waitFor<T>(label: string, read: () => Promise<T>, predicate: (value: T) => boolean): Promise<T> {
@@ -651,6 +747,8 @@ async function getTestContext(): Promise<TestContext> {
 }
 
 async function publishOps(context: TestContext, name: string, ops: Op[], spaceId = context.spaceId) {
+  await ensureIndexerTracksConfiguredRegistry(context);
+
   const publish = await geo.personalSpaces.publishEdit({
     name,
     spaceId,
@@ -678,6 +776,7 @@ async function createIndexedEntity(context: TestContext, name = uniqueName('E2E 
 async function getDaoContext(): Promise<DaoContext> {
   daoContextPromise ??= (async () => {
     const context = await getTestContext();
+    await ensureIndexerTracksConfiguredRegistry(context);
     const daoName = uniqueName('E2E New DAO Space');
     const daoSpace = await geo.daoSpaces.create({
       name: daoName,
@@ -774,6 +873,7 @@ describe.sequential('new API e2e surface', () => {
     'geo.personalSpaces.setTopic updates the indexed space topic and restores the previous topic',
     async () => {
       const context = await getTestContext();
+      await ensureIndexerTracksConfiguredRegistry(context);
       const previousTopicId = await readSpaceTopicId(context.spaceId);
       let randomTopicId = generate();
       if (previousTopicId && randomTopicId === previousTopicId) {
