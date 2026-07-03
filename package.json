@@ -47,7 +47,6 @@
     "fflate": "^0.8.2",
     "fractional-indexing-jittered": "^1.0.0",
     "image-size": "^2.0.2",
-    "permissionless": "^0.2.35",
     "uuid": "^13.0.0",
     "@zerodev/sdk": "^5.5.10",
     "viem": "^2.37.6"

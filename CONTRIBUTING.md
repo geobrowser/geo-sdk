@@ -24,13 +24,13 @@ Integration tests are skipped by default. They require environment variables in 
 
 ### EOA wallet tests
 
-The e2e surfaces run against the built-in Geo testnet config by default. Set `GEO_E2E_ZERODEV_RPC_URL` to use a ZeroDev-sponsored EOA, or omit it to use a funded plain EOA.
+The e2e surfaces run against the built-in Geo testnet config by default and use the config's Geo-sponsored wallet RPC. Set `GEO_E2E_ZERODEV_RPC_URL` only when you need to override the default sponsorship project, or unset sponsorship in a custom network and fund the EOA directly.
 
 1. Generate a private key and write it to `.env`:
    ```bash
    pnpm create-private-key
    ```
-2. To use ZeroDev sponsorship, add a ZeroDev RPC URL to `.env`:
+2. Optional: override the default sponsorship RPC URL in `.env`:
    ```bash
    GEO_E2E_ZERODEV_RPC_URL=https://rpc.zerodev.app/api/v3/<project-id>/chain/55516
    ```

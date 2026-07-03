@@ -157,6 +157,7 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
         ? local.deployments.daoSpaceFactory
         : (INDEXED_LOCAL_GEOBROWSER_DAO_FACTORIES[spaceRegistryAddress.toLowerCase()] ??
           local.deployments.daoSpaceFactory));
+    const zeroDevRpcUrl = process.env.GEO_LOCAL_GEOBROWSER_ZERODEV_RPC_URL;
     const network = defineGeoNetworkConfig({
       id: 'LOCAL_GEOBROWSER',
       name: 'Local Geobrowser',
@@ -170,6 +171,7 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
         SPACE_REGISTRY_ADDRESS: spaceRegistryAddress,
         DAO_SPACE_FACTORY_ADDRESS: daoSpaceFactoryAddress,
       },
+      sponsorship: zeroDevRpcUrl ? { rpcUrl: zeroDevRpcUrl } : undefined,
     });
 
     return {
@@ -182,7 +184,7 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
         'GEO_LOCAL_GEOBROWSER_PRIVATE_KEY',
       ),
       rpcUrl,
-      zeroDevRpcUrl: process.env.GEO_LOCAL_GEOBROWSER_ZERODEV_RPC_URL,
+      zeroDevRpcUrl,
       apiOrigin,
       chain: createChain(network, rpcUrl),
       contracts: {
@@ -199,6 +201,7 @@ export function createE2ETestEnvironment(): E2ETestEnvironment {
   const network = defineGeoNetworkConfig({
     ...GeoTestnetConfig,
     chain: GeoTestnetConfig.chain ? { ...GeoTestnetConfig.chain, rpcUrl } : undefined,
+    sponsorship: zeroDevRpcUrl ? { rpcUrl: zeroDevRpcUrl } : GeoTestnetConfig.sponsorship,
   });
 
   return {

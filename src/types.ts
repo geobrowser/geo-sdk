@@ -1,8 +1,4 @@
 import { EmbeddingSubType, type Op } from '@geoprotocol/grc-20';
-import type { SafeSmartAccountImplementation } from 'permissionless/accounts';
-import type { SmartAccountClient } from 'permissionless/clients';
-import type { Address, Chain, HttpTransport } from 'viem';
-import type { SmartAccountImplementation } from 'viem/account-abstraction';
 import type { Id } from './id.js';
 
 export type Network = 'TESTNET';
@@ -33,6 +29,9 @@ export type GeoNetworkConfig = {
   name: string;
   apiOrigin: string;
   chain?: GeoChainConfig;
+  sponsorship?: {
+    rpcUrl: string;
+  };
   contracts?: GeoContractAddresses;
 };
 
@@ -301,27 +300,6 @@ export type CreateImageParams =
       id?: Id | string;
       network?: Network | undefined;
     };
-
-type SafeSmartAccount = SafeSmartAccountImplementation<'0.7'> & {
-  address: Address;
-  getNonce: NonNullable<SmartAccountImplementation['getNonce']>;
-  isDeployed: () => Promise<boolean>;
-  type: 'smart';
-};
-
-export type GeoSmartAccount = SmartAccountClient<
-  HttpTransport<undefined, false>,
-  Chain,
-  object &
-    SafeSmartAccount & {
-      address: Address;
-      getNonce: NonNullable<SmartAccountImplementation['getNonce']>;
-      isDeployed: () => Promise<boolean>;
-      type: 'smart';
-    },
-  undefined,
-  undefined
->;
 
 export type GraphUri = `graph://${string}`;
 

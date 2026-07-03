@@ -71,29 +71,22 @@ await walletClient.sendTransaction({ to: tx.to, data: tx.calldata });
 
 ### Sponsored EIP-7702 Transactions
 
-Use the experimental ZeroDev helper when you want a Privy-backed EOA, local EOA,
-or other ZeroDev-compatible signer to send sponsored transactions while keeping
-the EOA address as the account identity.
+Use `createGeoWalletClient` when you want a Privy-backed EOA, local EOA, or
+other supported signer to send Geo-sponsored transactions while keeping the EOA
+address as the account identity.
 
 ```ts
 import {
   GeoTestnetConfig,
   createGeoClient,
-  createGeoZeroDev7702WalletClient,
+  createGeoWalletClient,
 } from "@geoprotocol/geo-sdk";
 
 const geo = createGeoClient({ network: GeoTestnetConfig });
-const chain = GeoTestnetConfig.chain;
-const zeroDevRpcUrl = process.env.GEO_ZERODEV_RPC_URL;
 
-if (!chain || !zeroDevRpcUrl) {
-  throw new Error("Geo testnet chain and ZeroDev RPC URL are required");
-}
-
-const walletClient = await createGeoZeroDev7702WalletClient({
+const walletClient = await createGeoWalletClient({
   signer, // Privy viem wallet client, EIP-1193 provider, or local account
-  chain,
-  zeroDevRpcUrl,
+  network: GeoTestnetConfig,
 });
 
 const tx = await geo.personalSpaces.publishEdit({
@@ -106,9 +99,9 @@ const tx = await geo.personalSpaces.publishEdit({
 await walletClient.sendTransaction({ to: tx.to, data: tx.calldata });
 ```
 
-The ZeroDev RPC URL is credential-like if the project sponsors gas. Store it in
-environment variables or app configuration, and scope the ZeroDev gas policy once
-the integration is validated.
+`GeoTestnetConfig` includes Geo's default sponsorship RPC URL. Use
+`defineGeoNetworkConfig` when you want to use a custom chain RPC URL or your own
+sponsorship project.
 
 ### Imports
 
@@ -892,24 +885,30 @@ await walletClient.sendTransaction({
 });
 ```
 
-## Full Publishing Flow With A Smart Account
+## Full Publishing Flow With A Sponsored Wallet
 
-This example publishes an edit to an existing personal space using a Geo smart account.
+This example publishes an edit to an existing personal space using a sponsored
+Geo wallet client.
 
 ```ts
 import { createPublicClient, http, type Hex } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 import {
   GeoTestnetConfig,
   Ops,
   createGeoClient,
-  getSmartAccountWalletClient,
+  createGeoWalletClient,
 } from "@geoprotocol/geo-sdk";
 import { SpaceRegistryAbi } from "@geoprotocol/geo-sdk/abis";
 
 const privateKey = `0x${privateKeyFromGeoWallet}` as `0x${string}`;
+const signer = privateKeyToAccount(privateKey);
 const geo = createGeoClient({ network: GeoTestnetConfig });
-const smartAccount = await getSmartAccountWalletClient({ privateKey });
-const accountAddress = smartAccount.account.address;
+const walletClient = await createGeoWalletClient({
+  signer,
+  network: GeoTestnetConfig,
+});
+const accountAddress = signer.address;
 
 const hasSpace = await geo.personalSpaces.hasSpace({
   address: accountAddress,
@@ -950,7 +949,7 @@ const tx = await geo.personalSpaces.publishEdit({
   ops,
 });
 
-const txHash = await smartAccount.sendTransaction({
+const txHash = await walletClient.sendTransaction({
   to: tx.to,
   data: tx.calldata,
 });
@@ -969,7 +968,7 @@ import { privateKeyToAccount } from "viem/accounts";
 import {
   GeoTestnetConfig,
   createGeoClient,
-  getWalletClient,
+  createGeoWalletClient,
 } from "@geoprotocol/geo-sdk";
 import { SpaceRegistryAbi } from "@geoprotocol/geo-sdk/abis";
 
@@ -977,8 +976,9 @@ const privateKey = "0xTODO" as `0x${string}`;
 const account = privateKeyToAccount(privateKey);
 const geo = createGeoClient({ network: GeoTestnetConfig });
 
-const walletClient = await getWalletClient({
-  privateKey,
+const walletClient = await createGeoWalletClient({
+  signer: account,
+  network: GeoTestnetConfig,
 });
 
 const rpcUrl = GeoTestnetConfig.chain?.rpcUrl;
@@ -1083,22 +1083,17 @@ const between = Position.generateBetween(first, null);
 const sorted = Position.sort([between, null, first]);
 ```
 
-### Wallet Helpers
+### Wallet Client
 
-The Geo Genesis browser uses a smart account associated with your account. You can use the same account from code by exporting your private key from https://www.geobrowser.io/export-wallet.
+`createGeoWalletClient` is the default way to submit transactions with the SDK.
+It uses Geo's sponsored transaction config from the network by default.
 
 ```ts
-import {
-  getSmartAccountWalletClient,
-  getWalletClient,
-} from "@geoprotocol/geo-sdk";
+import { GeoTestnetConfig, createGeoWalletClient } from "@geoprotocol/geo-sdk";
 
-const smartAccountWalletClient = await getSmartAccountWalletClient({
-  privateKey,
-});
-
-const eoaWalletClient = await getWalletClient({
-  privateKey,
+const walletClient = await createGeoWalletClient({
+  signer,
+  network: GeoTestnetConfig,
 });
 ```
 

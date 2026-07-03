@@ -1,5 +1,5 @@
 import type { CreateRelation, Op } from '@geoprotocol/grc-20';
-import { createPublicClient, type Hex, http } from 'viem';
+import { createPublicClient, createWalletClient, type Hex, http } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { expect, it } from 'vitest';
 
@@ -13,10 +13,11 @@ import { createRelation } from './graph/create-relation.js';
 import { deleteEntity } from './graph/delete-entity.js';
 import { updateEntity } from './graph/update-entity.js';
 import { toGrcId } from './id-utils.js';
+import { GeoTestnetConfig } from './networks.js';
 import * as personalSpace from './personal-space/index.js';
-import { getWalletClient, TESTNET_RPC_URL } from './smart-wallet.js';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Hex;
+const TESTNET_RPC_URL = GeoTestnetConfig.chain?.rpcUrl;
 
 const replyToGrcId = toGrcId(REPLY_TO_PROPERTY);
 
@@ -37,6 +38,30 @@ function hexToUuid(hex: Hex): string {
   return hex.slice(2, 34).toLowerCase();
 }
 
+function createTestnetWalletClient(privateKey: `0x${string}`) {
+  if (!GeoTestnetConfig.chain || !TESTNET_RPC_URL) {
+    throw new Error('GeoTestnetConfig is missing chain RPC configuration.');
+  }
+
+  return createWalletClient({
+    account: privateKeyToAccount(privateKey),
+    chain: {
+      id: GeoTestnetConfig.chain.id,
+      name: GeoTestnetConfig.chain.name,
+      nativeCurrency: {
+        name: 'Ethereum',
+        symbol: 'ETH',
+        decimals: 18,
+      },
+      rpcUrls: {
+        default: { http: [TESTNET_RPC_URL] },
+        public: { http: [TESTNET_RPC_URL] },
+      },
+    },
+    transport: http(TESTNET_RPC_URL),
+  });
+}
+
 it.skip('should create a space and publish an edit', async () => {
   const privateKey = process.env.PRIVATE_KEY;
   if (!privateKey) {
@@ -48,9 +73,7 @@ it.skip('should create a space and publish an edit', async () => {
   console.log('address', address);
 
   // Get wallet client for testnet
-  const walletClient = await getWalletClient({
-    privateKey: addressPrivateKey,
-  });
+  const walletClient = createTestnetWalletClient(addressPrivateKey);
 
   const account = walletClient.account;
   if (!account) {
@@ -73,7 +96,6 @@ it.skip('should create a space and publish an edit', async () => {
     const { to, calldata } = personalSpace.createSpace();
 
     const createSpaceTxHash = await walletClient.sendTransaction({
-      // @ts-expect-error - viem type mismatch for account
       account: walletClient.account,
       to,
       value: 0n,
@@ -146,7 +168,6 @@ it.skip('should create a space and publish an edit', async () => {
   console.log('editId', editId);
 
   const publishTxHash = await walletClient.sendTransaction({
-    // @ts-expect-error - viem type mismatch for account
     account: walletClient.account,
     chain: walletClient.chain ?? null,
     to,
@@ -181,9 +202,7 @@ it.skip('should create a DAO space and propose an edit', async () => {
   console.log('address', address);
 
   // Get wallet client for testnet
-  const walletClient = await getWalletClient({
-    privateKey: addressPrivateKey,
-  });
+  const walletClient = createTestnetWalletClient(addressPrivateKey);
 
   const account = walletClient.account;
   if (!account) {
@@ -206,7 +225,6 @@ it.skip('should create a DAO space and propose an edit', async () => {
     const { to, calldata } = personalSpace.createSpace();
 
     const createSpaceTxHash = await walletClient.sendTransaction({
-      // @ts-expect-error - viem type mismatch for account
       account: walletClient.account,
       to,
       value: 0n,
@@ -257,7 +275,6 @@ it.skip('should create a DAO space and propose an edit', async () => {
   console.log('to:', to);
 
   const createDaoSpaceTxHash = await walletClient.sendTransaction({
-    // @ts-expect-error - viem type mismatch for account
     account: walletClient.account,
     to,
     value: 0n,
@@ -339,7 +356,6 @@ it.skip('should create a DAO space and propose an edit', async () => {
   console.log('proposalId:', proposalId.slice(2));
 
   const proposeTxHash = await walletClient.sendTransaction({
-    // @ts-expect-error - viem type mismatch for account
     account: walletClient.account,
     chain: walletClient.chain ?? null,
     to: proposalTo,
@@ -373,9 +389,7 @@ it.skip('should create an entity and then delete it', async () => {
   console.log('address', address);
 
   // Get wallet client for testnet
-  const walletClient = await getWalletClient({
-    privateKey: addressPrivateKey,
-  });
+  const walletClient = createTestnetWalletClient(addressPrivateKey);
 
   const account = walletClient.account;
   if (!account) {
@@ -398,7 +412,6 @@ it.skip('should create an entity and then delete it', async () => {
     const { to, calldata } = personalSpace.createSpace();
 
     const createSpaceTxHash = await walletClient.sendTransaction({
-      // @ts-expect-error - viem type mismatch for account
       account: walletClient.account,
       to,
       value: 0n,
@@ -453,7 +466,6 @@ it.skip('should create an entity and then delete it', async () => {
   console.log('create editId', createEditId);
 
   const createTxHash = await walletClient.sendTransaction({
-    // @ts-expect-error - viem type mismatch for account
     account: walletClient.account,
     chain: walletClient.chain ?? null,
     to: createTo,
@@ -508,7 +520,6 @@ it.skip('should create an entity and then delete it', async () => {
   console.log('delete editId', deleteEditId);
 
   const deleteTxHash = await walletClient.sendTransaction({
-    // @ts-expect-error - viem type mismatch for account
     account: walletClient.account,
     chain: walletClient.chain ?? null,
     to: deleteTo,
@@ -539,9 +550,7 @@ it.skip('should create an entity, comment on it, and comment on the comment with
 
   console.log('address', address);
 
-  const walletClient = await getWalletClient({
-    privateKey: addressPrivateKey,
-  });
+  const walletClient = createTestnetWalletClient(addressPrivateKey);
 
   const account = walletClient.account;
   if (!account) {
@@ -563,7 +572,6 @@ it.skip('should create an entity, comment on it, and comment on the comment with
     const { to, calldata } = personalSpace.createSpace();
 
     const createSpaceTxHash = await walletClient.sendTransaction({
-      // @ts-expect-error - viem type mismatch for account
       account: walletClient.account,
       to,
       value: 0n,
@@ -621,7 +629,6 @@ it.skip('should create an entity, comment on it, and comment on the comment with
   console.log('cid1', cid1);
 
   const tx1Hash = await walletClient.sendTransaction({
-    // @ts-expect-error - viem type mismatch for account
     account: walletClient.account,
     chain: walletClient.chain ?? null,
     to: to1,
@@ -673,7 +680,6 @@ it.skip('should create an entity, comment on it, and comment on the comment with
   console.log('cid2', cid2);
 
   const tx2Hash = await walletClient.sendTransaction({
-    // @ts-expect-error - viem type mismatch for account
     account: walletClient.account,
     chain: walletClient.chain ?? null,
     to: to2,
