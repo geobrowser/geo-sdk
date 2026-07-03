@@ -113,6 +113,31 @@ describe('createGeoWalletClient', () => {
     );
   });
 
+  it('lets rpcUrl override the network chain RPC URL', async () => {
+    await createGeoWalletClient({
+      signer,
+      network: GeoTestnetConfig,
+      rpcUrl: 'https://rpc.example.com',
+    });
+
+    const expectedChain = expect.objectContaining({
+      rpcUrls: {
+        default: { http: ['https://rpc.example.com'] },
+        public: { http: ['https://rpc.example.com'] },
+      },
+    });
+
+    expect(createPublicClient).toHaveBeenCalledWith({
+      chain: expectedChain,
+      transport: { mockTransport: true, url: 'https://rpc.example.com' },
+    });
+    expect(createZeroDevPaymasterClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chain: expectedChain,
+      }),
+    );
+  });
+
   it('throws when the network has no chain config', async () => {
     const network = defineGeoNetworkConfig({
       id: 'NO_CHAIN',
