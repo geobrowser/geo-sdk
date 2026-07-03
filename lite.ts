@@ -1,14 +1,14 @@
 /**
  * Lightweight entry point that re-exports everything from the SDK that does
- * NOT depend on viem or permissionless.
+ * NOT depend on viem.
  *
  * Use `@geoprotocol/geo-sdk/lite` instead of `@geoprotocol/geo-sdk` when you
  * only need constants, types, and utility functions. This avoids pulling
- * viem (2,600+ modules) and permissionless (200+ modules) into the bundler's
- * compilation graph, dramatically improving dev server startup times.
+ * viem (2,600+ modules) into the bundler's compilation graph, dramatically
+ * improving dev server startup times.
  *
  * The full barrel (`@geoprotocol/geo-sdk`) is unchanged and still available
- * for code that needs daoSpace, personalSpace, encodings, or smart-wallet
+ * for code that needs daoSpace, personalSpace, encodings, or wallet
  * functionality.
  */
 export { Account } from './src/account.js';

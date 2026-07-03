@@ -1,7 +1,7 @@
 import { type Chain, createPublicClient, createWalletClient, type Hash, type Hex, http } from 'viem';
 import { type PrivateKeyAccount, privateKeyToAccount } from 'viem/accounts';
 import type { E2ETestEnvironment } from './e2e-test-environment.js';
-import { createGeoZeroDev7702WalletClient } from './zero-dev.js';
+import { createGeoWalletClient } from './wallet.js';
 
 type SendTransactionParameters = {
   account?: unknown;
@@ -26,27 +26,26 @@ export type E2EWalletSetup = {
   usesUserOperations: boolean;
 };
 
-async function createZeroDevEoaWalletClient({
+async function createSponsoredEoaWalletClient({
   account,
   chain,
+  network,
   rpcUrl,
-  zeroDevRpcUrl,
 }: {
   account: PrivateKeyAccount;
   chain: Chain;
+  network: E2ETestEnvironment['network'];
   rpcUrl: string;
-  zeroDevRpcUrl: string;
 }): Promise<E2EWalletClient> {
   const publicClient = createPublicClient({
     chain,
     transport: http(rpcUrl),
   });
 
-  return (await createGeoZeroDev7702WalletClient({
+  return (await createGeoWalletClient({
     signer: account,
-    chain,
+    network,
     publicClient,
-    zeroDevRpcUrl,
   })) as E2EWalletClient;
 }
 
@@ -57,12 +56,12 @@ export async function createE2EWalletSetup(e2e: E2ETestEnvironment): Promise<E2E
     transport: http(e2e.rpcUrl),
   });
 
-  if (e2e.zeroDevRpcUrl) {
-    const walletClient = await createZeroDevEoaWalletClient({
+  if (e2e.network.sponsorship) {
+    const walletClient = await createSponsoredEoaWalletClient({
       account,
       chain: e2e.chain,
+      network: e2e.network,
       rpcUrl: e2e.rpcUrl,
-      zeroDevRpcUrl: e2e.zeroDevRpcUrl,
     });
 
     return {
@@ -77,8 +76,8 @@ export async function createE2EWalletSetup(e2e: E2ETestEnvironment): Promise<E2E
   if (balance === 0n) {
     throw new Error(
       [
-        `EOA ${account.address} has no testnet ETH and GEO_E2E_ZERODEV_RPC_URL is not set.`,
-        'Set GEO_E2E_ZERODEV_RPC_URL to use ZeroDev sponsorship, or fund this EOA to run without ZeroDev.',
+        `EOA ${account.address} has no testnet ETH and Geo sponsorship is not configured.`,
+        'Use a network with sponsorship, set GEO_E2E_ZERODEV_RPC_URL, or fund this EOA.',
       ].join(' '),
     );
   }

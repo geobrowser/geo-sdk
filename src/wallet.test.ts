@@ -8,7 +8,8 @@ import { getEntryPoint, KERNEL_V3_3 } from '@zerodev/sdk/constants';
 import type { Signer } from '@zerodev/sdk/types';
 import { createPublicClient } from 'viem';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createGeoZeroDev7702WalletClient } from './zero-dev.js';
+import { defineGeoNetworkConfig, GeoTestnetConfig } from './networks.js';
+import { createGeoWalletClient } from './wallet.js';
 
 vi.mock('@zerodev/sdk', () => ({
   createKernelAccount: vi.fn().mockResolvedValue({ mockKernelAccount: true }),
@@ -32,40 +33,37 @@ vi.mock('viem', () => ({
   http: vi.fn().mockImplementation(url => ({ mockTransport: true, url })),
 }));
 
-describe('createGeoZeroDev7702WalletClient', () => {
-  const chain = {
-    id: 55516,
-    name: 'Geo Testnet',
-    nativeCurrency: {
-      name: 'GEO',
-      symbol: 'GEO',
-      decimals: 18,
-    },
-    rpcUrls: {
-      default: {
-        http: ['https://rpc.example.com'],
-      },
-    },
-  };
+describe('createGeoWalletClient', () => {
+  const signer = { address: '0x0000000000000000000000000000000000000002' } as unknown as Signer;
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('creates a ZeroDev 7702 Kernel client from a signer', async () => {
-    const signer = { address: '0x0000000000000000000000000000000000000002' } as unknown as Signer;
-    const zeroDevRpcUrl = 'https://zerodev.example.com';
-
-    const walletClient = await createGeoZeroDev7702WalletClient({
+  it('creates a Geo wallet client from the network config', async () => {
+    const walletClient = await createGeoWalletClient({
       signer,
-      chain,
-      zeroDevRpcUrl,
+      network: GeoTestnetConfig,
     });
+
+    const expectedChain = {
+      id: 55516,
+      name: 'Geo Testnet',
+      nativeCurrency: {
+        name: 'Ethereum',
+        symbol: 'ETH',
+        decimals: 18,
+      },
+      rpcUrls: {
+        default: { http: ['https://rpc-geo-testnet-irdc0cgb0w.t.conduit.xyz'] },
+        public: { http: ['https://rpc-geo-testnet-irdc0cgb0w.t.conduit.xyz'] },
+      },
+    };
 
     expect(walletClient).toEqual({ mockKernelAccountClient: true });
     expect(createPublicClient).toHaveBeenCalledWith({
-      chain,
-      transport: { mockTransport: true, url: 'https://rpc.example.com' },
+      chain: expectedChain,
+      transport: { mockTransport: true, url: 'https://rpc-geo-testnet-irdc0cgb0w.t.conduit.xyz' },
     });
     expect(getEntryPoint).toHaveBeenCalledWith('0.7');
     expect(createKernelAccount).toHaveBeenCalledWith(
@@ -77,16 +75,80 @@ describe('createGeoZeroDev7702WalletClient', () => {
       },
     );
     expect(createZeroDevPaymasterClient).toHaveBeenCalledWith({
-      chain,
-      transport: { mockTransport: true, url: zeroDevRpcUrl },
+      chain: expectedChain,
+      transport: {
+        mockTransport: true,
+        url: 'https://rpc.zerodev.app/api/v3/d26c96b9-7ee9-4d78-b139-954470b696e5/chain/55516',
+      },
     });
+    expect(createKernelAccountClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        chain: expectedChain,
+        bundlerTransport: {
+          mockTransport: true,
+          url: 'https://rpc.zerodev.app/api/v3/d26c96b9-7ee9-4d78-b139-954470b696e5/chain/55516',
+        },
+      }),
+    );
+  });
+
+  it('lets sponsorship override the network default', async () => {
+    await createGeoWalletClient({
+      signer,
+      network: GeoTestnetConfig,
+      sponsorship: {
+        rpcUrl: 'https://zerodev.example.com',
+      },
+    });
+
+    expect(createZeroDevPaymasterClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        transport: { mockTransport: true, url: 'https://zerodev.example.com' },
+      }),
+    );
+    expect(createKernelAccountClient).toHaveBeenCalledWith(
+      expect.objectContaining({
+        bundlerTransport: { mockTransport: true, url: 'https://zerodev.example.com' },
+      }),
+    );
+  });
+
+  it('throws when the network has no chain config', async () => {
+    const network = defineGeoNetworkConfig({
+      id: 'NO_CHAIN',
+      name: 'No Chain',
+      apiOrigin: 'https://api.example.com',
+      sponsorship: {
+        rpcUrl: 'https://zerodev.example.com',
+      },
+    });
+
+    await expect(createGeoWalletClient({ signer, network })).rejects.toThrow(
+      'Geo network "No Chain" is missing chain config',
+    );
+  });
+
+  it('throws when no sponsorship RPC URL is available', async () => {
+    const network = defineGeoNetworkConfig({
+      id: 'NO_SPONSORSHIP',
+      name: 'No Sponsorship',
+      apiOrigin: 'https://api.example.com',
+      chain: {
+        id: 123,
+        name: 'No Sponsorship',
+        rpcUrl: 'https://rpc.example.com',
+      },
+    });
+
+    await expect(createGeoWalletClient({ signer, network })).rejects.toThrow(
+      'Geo network "No Sponsorship" is missing a sponsorship RPC URL',
+    );
   });
 
   it('uses ZeroDev sponsorship for stub and final paymaster data', async () => {
-    await createGeoZeroDev7702WalletClient({
-      signer: { address: '0x0000000000000000000000000000000000000002' } as unknown as Signer,
-      chain,
-      zeroDevRpcUrl: 'https://zerodev.example.com',
+    await createGeoWalletClient({
+      signer,
+      network: GeoTestnetConfig,
     });
 
     const kernelClientParams = vi.mocked(createKernelAccountClient).mock.calls[0]?.[0];
