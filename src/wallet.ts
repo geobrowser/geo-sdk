@@ -17,10 +17,6 @@ export type CreateGeoWalletClientParams = {
   signer: Signer;
   network: GeoNetworkConfig;
   publicClient?: GeoWalletPublicClient;
-  rpcUrl?: string;
-  sponsorship?: {
-    rpcUrl: string;
-  };
 };
 
 export type GeoWalletClient = KernelAccountClient;
@@ -33,26 +29,20 @@ function requireGeoChain(network: GeoNetworkConfig): NonNullable<GeoNetworkConfi
   return network.chain;
 }
 
-function requireGeoChainRpcUrl(
-  network: GeoNetworkConfig,
-  chain: NonNullable<GeoNetworkConfig['chain']>,
-  rpcUrl: string | undefined,
-): string {
-  const resolvedRpcUrl = rpcUrl ?? chain.rpcUrl;
-  if (!resolvedRpcUrl) {
+function requireGeoChainRpcUrl(network: GeoNetworkConfig, chain: NonNullable<GeoNetworkConfig['chain']>): string {
+  if (!chain.rpcUrl) {
     throw new Error(`Geo network "${network.name}" is missing a chain RPC URL`);
   }
 
-  return resolvedRpcUrl;
+  return chain.rpcUrl;
 }
 
-function requireGeoSponsorshipRpcUrl(network: GeoNetworkConfig, sponsorship: { rpcUrl: string } | undefined): string {
-  const sponsorshipRpcUrl = sponsorship?.rpcUrl ?? network.sponsorship?.rpcUrl;
-  if (!sponsorshipRpcUrl) {
+function requireGeoSponsorshipRpcUrl(network: GeoNetworkConfig): string {
+  if (!network.sponsorship?.rpcUrl) {
     throw new Error(`Geo network "${network.name}" is missing a sponsorship RPC URL`);
   }
 
-  return sponsorshipRpcUrl;
+  return network.sponsorship.rpcUrl;
 }
 
 function createViemChain(chain: NonNullable<GeoNetworkConfig['chain']>, rpcUrl: string): Chain {
@@ -74,19 +64,17 @@ function createViemChain(chain: NonNullable<GeoNetworkConfig['chain']>, rpcUrl: 
 /**
  * Creates a Geo wallet client that sends sponsored EIP-7702 user operations.
  *
- * Geo's built-in network configs provide the default sponsorship endpoint for
- * the network. Pass `sponsorship.rpcUrl` to use your own sponsorship project.
+ * Geo's built-in network configs provide the default sponsorship endpoint for the network.
+ * Use `defineGeoNetworkConfig` to pass custom chain or sponsorship RPC URLs.
  */
 export async function createGeoWalletClient({
   signer,
   network,
   publicClient,
-  rpcUrl,
-  sponsorship,
 }: CreateGeoWalletClientParams): Promise<GeoWalletClient> {
   const geoChain = requireGeoChain(network);
-  const chainRpcUrl = requireGeoChainRpcUrl(network, geoChain, rpcUrl);
-  const sponsorshipRpcUrl = requireGeoSponsorshipRpcUrl(network, sponsorship);
+  const chainRpcUrl = requireGeoChainRpcUrl(network, geoChain);
+  const sponsorshipRpcUrl = requireGeoSponsorshipRpcUrl(network);
   const chain = createViemChain(geoChain, chainRpcUrl);
   const client =
     publicClient ??

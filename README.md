@@ -99,8 +99,8 @@ const tx = await geo.personalSpaces.publishEdit({
 await walletClient.sendTransaction({ to: tx.to, data: tx.calldata });
 ```
 
-`GeoTestnetConfig` includes Geo's default sponsorship RPC URL. Pass
-`sponsorship.rpcUrl` to `createGeoWalletClient` when you want to use your own
+`GeoTestnetConfig` includes Geo's default sponsorship RPC URL. Use
+`defineGeoNetworkConfig` when you want to use a custom chain RPC URL or your own
 sponsorship project.
 
 ### Imports

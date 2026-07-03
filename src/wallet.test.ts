@@ -92,13 +92,17 @@ describe('createGeoWalletClient', () => {
     );
   });
 
-  it('lets sponsorship override the network default', async () => {
-    await createGeoWalletClient({
-      signer,
-      network: GeoTestnetConfig,
+  it('uses sponsorship from a custom network config', async () => {
+    const network = defineGeoNetworkConfig({
+      ...GeoTestnetConfig,
       sponsorship: {
         rpcUrl: 'https://zerodev.example.com',
       },
+    });
+
+    await createGeoWalletClient({
+      signer,
+      network,
     });
 
     expect(createZeroDevPaymasterClient).toHaveBeenCalledWith(
@@ -113,11 +117,19 @@ describe('createGeoWalletClient', () => {
     );
   });
 
-  it('lets rpcUrl override the network chain RPC URL', async () => {
+  it('uses the chain RPC URL from a custom network config', async () => {
+    const network = defineGeoNetworkConfig({
+      ...GeoTestnetConfig,
+      chain: {
+        id: 55516,
+        name: 'Geo Testnet',
+        rpcUrl: 'https://rpc.example.com',
+      },
+    });
+
     await createGeoWalletClient({
       signer,
-      network: GeoTestnetConfig,
-      rpcUrl: 'https://rpc.example.com',
+      network,
     });
 
     const expectedChain = expect.objectContaining({
