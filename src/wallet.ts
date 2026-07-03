@@ -66,6 +66,16 @@ function createViemChain(chain: NonNullable<GeoNetworkConfig['chain']>, rpcUrl: 
  *
  * Geo's built-in network configs provide the default sponsorship endpoint for the network.
  * Use `defineGeoNetworkConfig` to pass custom chain or sponsorship RPC URLs.
+ *
+ * @example
+ * ```ts
+ * import { GeoTestnetConfig, createGeoWalletClient } from '@geoprotocol/geo-sdk';
+ *
+ * const walletClient = await createGeoWalletClient({
+ *   signer,
+ *   network: GeoTestnetConfig,
+ * });
+ * ```
  */
 export async function createGeoWalletClient({
   signer,
