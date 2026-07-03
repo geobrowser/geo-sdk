@@ -1097,6 +1097,8 @@ const walletClient = await createGeoWalletClient({
 });
 ```
 
+Be careful with private keys. Do not commit them to version control.
+
 ## Legacy API
 
 The legacy namespaces remain exported for compatibility, but new code should prefer `Ops` and `createGeoClient`.
