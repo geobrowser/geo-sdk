@@ -32,27 +32,12 @@ The e2e surfaces run against the built-in Geo testnet config by default and use 
    ```
 2. Optional: override the default sponsorship RPC URL in `.env`:
    ```bash
-   GEO_E2E_ZERODEV_RPC_URL=https://rpc.zerodev.app/api/v3/<project-id>/chain/55516
+   GEO_E2E_ZERODEV_RPC_URL=https://rpc.zerodev.app/api/v3/<project-id>/chain/55516?selfFunded=true
    ```
    The ZeroDev project must allow requests from your local public IP or CI egress IP. Domain allowlists do not help Node-based e2e tests.
 3. Run the e2e suite:
    ```bash
    pnpm test:e2e
-   ```
-
-### Smart account test (`src/smart-account-flow-test.test.ts`)
-
-Uses a Safe smart account with Pimlico paymaster to publish an edit to an existing personal space. No testnet ETH is needed since gas is sponsored.
-
-1. Add your Privy private key to `.env`:
-   ```
-   PRIVY_PRIVATE_KEY=<your-privy-private-key>
-   ```
-   You can export it from https://www.geobrowser.io/export-wallet. The key can be with or without the `0x` prefix.
-2. The smart account derived from this key must already have a personal space on testnet.
-3. Unskip the test and run it:
-   ```bash
-   pnpm test -- -t "should publish an edit to personal space via smart account"
    ```
 
 ## Creating a new changeset in a PR

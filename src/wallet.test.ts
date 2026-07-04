@@ -78,7 +78,7 @@ describe('createGeoWalletClient', () => {
       chain: expectedChain,
       transport: {
         mockTransport: true,
-        url: 'https://rpc.zerodev.app/api/v3/d26c96b9-7ee9-4d78-b139-954470b696e5/chain/55516',
+        url: 'https://rpc.zerodev.app/api/v3/d26c96b9-7ee9-4d78-b139-954470b696e5/chain/55516?selfFunded=true',
       },
     });
     expect(createKernelAccountClient).toHaveBeenCalledWith(
@@ -86,7 +86,7 @@ describe('createGeoWalletClient', () => {
         chain: expectedChain,
         bundlerTransport: {
           mockTransport: true,
-          url: 'https://rpc.zerodev.app/api/v3/d26c96b9-7ee9-4d78-b139-954470b696e5/chain/55516',
+          url: 'https://rpc.zerodev.app/api/v3/d26c96b9-7ee9-4d78-b139-954470b696e5/chain/55516?selfFunded=true',
         },
       }),
     );

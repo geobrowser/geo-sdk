@@ -5,7 +5,7 @@ export const TESTNET_API_ORIGIN = 'https://testnet-api-v2.geobrowser.io';
 
 const GEO_TESTNET_RPC_URL = 'https://rpc-geo-testnet-irdc0cgb0w.t.conduit.xyz';
 const GEO_TESTNET_SPONSORSHIP_RPC_URL =
-  'https://rpc.zerodev.app/api/v3/d26c96b9-7ee9-4d78-b139-954470b696e5/chain/55516';
+  'https://rpc.zerodev.app/api/v3/d26c96b9-7ee9-4d78-b139-954470b696e5/chain/55516?selfFunded=true';
 
 function asContractAddresses(contracts: Record<string, string | undefined>): GeoContractAddresses {
   return contracts as GeoContractAddresses;
