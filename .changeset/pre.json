@@ -12,6 +12,7 @@
     "new-testnet-zerodev",
     "public-lands-cover",
     "ranks-create-update",
+    "self-funded-paymaster",
     "system-type-ids"
   ]
 }

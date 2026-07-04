@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.0-beta.8
+
+### Patch Changes
+
+- 9b309a8: Switch the default Geo testnet sponsorship RPC URL to the self-funded ZeroDev paymaster route.
+
 ## 0.20.0-beta.7
 
 ### Patch Changes
