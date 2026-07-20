@@ -129,6 +129,7 @@ export async function uploadImageCore(
 ) {
   const formData = new FormData();
   let blob: Blob;
+  let fetchedContentType: string | undefined;
   if ('blob' in params) {
     blob = params.blob;
   } else {
@@ -141,6 +142,8 @@ export async function uploadImageCore(
     if (!responseOk(response)) {
       throw new IpfsUploadError(`Could not fetch image from ${params.url}: ${await responseErrorMessage(response)}`);
     }
+    fetchedContentType =
+      (typeof response.headers?.get === 'function' && response.headers.get('content-type')) || undefined;
     blob = await response.blob();
   }
 
@@ -151,6 +154,15 @@ export async function uploadImageCore(
   try {
     dimensions = imageSize(buffer);
   } catch (_error) {}
+
+  // A URL fetch can succeed with a non-image body (e.g. an HTML error page
+  // served with status 200). Uploading it would silently publish a broken
+  // image, so reject unless the content type or the bytes identify an image.
+  if ('url' in params && !dimensions && !fetchedContentType?.startsWith('image/')) {
+    throw new IpfsUploadError(
+      `Content fetched from ${params.url} is not an image (content type: ${fetchedContentType ?? 'unknown'})`,
+    );
+  }
 
   const cid = await Micro.runPromise(
     uploadFile({

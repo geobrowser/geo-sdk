@@ -69,4 +69,44 @@ describe('ipfs-core response validation', () => {
       }),
     ).rejects.toThrow('Could not fetch image');
   });
+
+  it('rejects source fetches that return a non-image body with status 200', async () => {
+    const fetch = vi.fn(
+      async () =>
+        new Response('<html><body>Bad Request</body></html>', {
+          status: 200,
+          headers: { 'content-type': 'text/html' },
+        }),
+    );
+
+    await expect(
+      uploadImageCore({
+        url: 'https://example.test/image.png',
+        apiOrigin: 'https://example.test',
+        fetch,
+      }),
+    ).rejects.toThrow('is not an image');
+  });
+
+  it('accepts an image/* content type even when dimensions cannot be read', async () => {
+    const fetch = vi.fn(async (url: string | URL | Request) => {
+      if (String(url).endsWith('/image.svg')) {
+        return new Response('<svg xmlns="http://www.w3.org/2000/svg"/>', {
+          status: 200,
+          headers: { 'content-type': 'image/svg+xml' },
+        });
+      }
+      return new Response(JSON.stringify({ cid: 'ipfs://QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG' }), {
+        status: 200,
+      });
+    });
+
+    const result = await uploadImageCore({
+      url: 'https://example.test/image.svg',
+      apiOrigin: 'https://example.test',
+      fetch,
+    });
+
+    expect(result.cid).toBe('ipfs://QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG');
+  });
 });
