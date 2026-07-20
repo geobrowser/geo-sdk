@@ -9,8 +9,9 @@ import type { Op } from '@geoprotocol/grc-20';
 import { createRelation } from '../../graph/create-relation.js';
 import { updateEntity } from '../../graph/update-entity.js';
 import { Id } from '../../id.js';
-import { generate } from '../../id-utils.js';
+import { assertValid, generate } from '../../id-utils.js';
 import { SystemIds } from '../../system-ids.js';
+import type { CreateResult } from '../../types.js';
 import { BLOCKS, DATA_BLOCK, DATA_SOURCE_TYPE_RELATION_TYPE, NAME_PROPERTY, TYPES_PROPERTY } from '../ids/system.js';
 
 type DataBlockSourceType = 'QUERY' | 'COLLECTION' | 'GEO';
@@ -31,27 +32,35 @@ type DataBlockParams = {
   sourceType: DataBlockSourceType;
   position?: string;
   name?: string;
+  id?: Id | string;
 };
 
 /**
- * Returns the ops to create an entity representing a Data Block.
+ * Returns the id and ops to create an entity representing a Data Block.
+ *
+ * Pass a stable `id` to make re-runs deterministic: a script that derives the
+ * block id can check for the block's existence and skip re-publishing instead
+ * of minting a duplicate. The returned id is also what a view or column
+ * configuration on the block must reference.
  *
  * @example
  * ```ts
- * const ops = DataBlock.make({
+ * const { id, ops } = DataBlock.make({
  *   fromId: 'from-id',
  *   sourceType: 'COLLECTION',
  *   // optional
  *   position: 'position-string',
  *   name: 'name',
+ *   id: blockId, // optional and will be generated if not provided
  * });
  * ```
  *
- * @param param args {@link TextBlockParams}
- * @returns ops – The ops for the Data Block entity: {@link Op}[]
+ * @param param args {@link DataBlockParams}
+ * @returns – {@link CreateResult}
  */
-export function make({ fromId, sourceType, position, name }: DataBlockParams): Op[] {
-  const newBlockId = generate();
+export function make({ fromId, sourceType, position, name, id: providedId }: DataBlockParams): CreateResult {
+  if (providedId) assertValid(providedId, '`id` in `DataBlock.make`');
+  const newBlockId = providedId ? Id(providedId) : generate();
 
   const ops: Op[] = [];
   const { ops: dataBlockTypeOps } = createRelation({
@@ -90,5 +99,5 @@ export function make({ fromId, sourceType, position, name }: DataBlockParams): O
     ops.push(...nameOps);
   }
 
-  return ops;
+  return { id: newBlockId, ops };
 }
