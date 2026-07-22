@@ -7,10 +7,11 @@ import type { CreateResult, DeleteEntityParams } from '../types.js';
  * in the specified space.
  *
  * Unlike the other op builders, this is async and requires a `spaceId`. That is
- * intentional: there is no single "delete entity" op in GRC-20, so the SDK must
- * first fetch the entity's current values and relations from the graph (hence
- * async) and deletion is scoped to one space's data (hence `spaceId`) — the ops
- * unset those values and delete those relations in that space only.
+ * intentional: GRC-20 does define a "delete entity" op, but it is not yet
+ * supported by the Indexer, so the SDK must first fetch the entity's current
+ * values and relations from the graph (hence async) and deletion is scoped to
+ * one space's data (hence `spaceId`) — the ops unset those values and delete
+ * those relations in that space only.
  *
  * @example
  * ```ts
