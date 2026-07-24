@@ -1,7 +1,7 @@
 import { TESTNET } from '../contracts.js';
 import type { GeoContractAddresses, GeoNetworkConfig, Networkish } from './types.js';
 
-export const TESTNET_API_ORIGIN = 'https://testnet-api-v2.geobrowser.io';
+export const TESTNET_API_ORIGIN = 'https://api-testnet.geobrowser.io';
 
 const GEO_TESTNET_RPC_URL = 'https://rpc-geo-testnet-irdc0cgb0w.t.conduit.xyz';
 const GEO_TESTNET_SPONSORSHIP_RPC_URL =
