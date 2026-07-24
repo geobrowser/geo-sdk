@@ -164,7 +164,7 @@ describe('deleteEntity', () => {
     await deleteEntity({ id: entityId, spaceId });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://testnet-api-v2.geobrowser.io/graphql',
+      'https://api-testnet.geobrowser.io/graphql',
       expect.objectContaining({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
