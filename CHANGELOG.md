@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.1
+
+### Patch Changes
+
+- Republish 0.20.0 as 0.20.1 because the 0.20.0 npm package was incomplete.
+
 ## 0.20.0
 
 ### Minor Changes
