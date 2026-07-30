@@ -13,6 +13,15 @@ import {
 } from '../ids/system.js';
 import { make } from './data.js';
 
+it('preserves the legacy array return contract', () => {
+  const ops = make({
+    fromId: Id('5871e8f7b71948979c4dcf7c518d32ef'),
+    sourceType: 'QUERY',
+  });
+
+  expect(Array.isArray(ops)).toBe(true);
+});
+
 it('should generate ops for a data block entity', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
   const ops = make({
@@ -90,6 +99,26 @@ it('should generate ops for a data block entity with a name', () => {
   if (nameValue?.value.type === 'text') {
     expect(nameValue.value.value).toBe('test-name');
   }
+});
+
+it('should use a provided block id for deterministic re-runs', () => {
+  const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
+  const blockId = Id('a1b2c3d4e5f64789a0b1c2d3e4f50617');
+  const ops = make({
+    fromId,
+    sourceType: 'QUERY',
+    id: blockId,
+  });
+
+  const typeRelOp = ops[0] as CreateRelation;
+  expect(typeRelOp.from).toEqual(toGrcId(blockId));
+  const blocksRelOp = ops[2] as CreateRelation;
+  expect(blocksRelOp.to).toEqual(toGrcId(blockId));
+});
+
+it('should throw on an invalid provided id', () => {
+  const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
+  expect(() => make({ fromId, sourceType: 'QUERY', id: 'not-a-valid-id' })).toThrow();
 });
 
 it('should generate ops for a COLLECTION data source type', () => {

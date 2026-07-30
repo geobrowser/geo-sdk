@@ -3,6 +3,7 @@
  * in TypeScript.
  *
  * @since 0.0.6
+ * @deprecated Use `Ops.dataBlocks.create(...)`.
  */
 export * as DataBlock from './core/blocks/data.js';
 
@@ -11,5 +12,6 @@ export * as DataBlock from './core/blocks/data.js';
  * in TypeScript.
  *
  * @since 0.0.6
+ * @deprecated Use `Ops.textBlocks.create(...)`.
  */
 export * as TextBlock from './core/blocks/text.js';

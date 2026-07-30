@@ -355,6 +355,25 @@ const { ops } = Ops.relations.create({
 });
 ```
 
+### Blocks
+
+Create text and data blocks with generated or stable IDs:
+
+```ts
+import { Ops } from "@geoprotocol/geo-sdk";
+
+const { id: textBlockId, ops: textBlockOps } = Ops.textBlocks.create({
+  fromId: pageId,
+  text: "# Heading",
+});
+
+const { id: dataBlockId, ops: dataBlockOps } = Ops.dataBlocks.create({
+  fromId: pageId,
+  sourceType: "QUERY",
+  id: stableDataBlockId,
+});
+```
+
 ### Images
 
 Image creation goes through `geo.images.create(...)`. The configured client uploads the image, detects dimensions when possible, and returns the image entity ops.
@@ -1103,6 +1122,8 @@ The legacy namespaces remain exported for compatibility, but new code should pre
 | `Graph.deleteEntity(...)`  | `geo.entities.delete(...)`                                                           |
 | `Graph.createImage(...)`   | `geo.images.create(...)`                                                             |
 | `Graph.createComment(...)` | `geo.comments.create(...)` or `Ops.comments.create(...)` with supplied reply context |
+| `TextBlock.make(...)`      | `Ops.textBlocks.create(...)`                                                         |
+| `DataBlock.make(...)`      | `Ops.dataBlocks.create(...)`                                                         |
 | `Ipfs.publishEdit(...)`    | `geo.personalSpaces.publishEdit(...)` or `geo.daoSpaces.proposeEdit(...)`            |
 | `Ipfs.uploadImage(...)`    | `geo.storage.uploadImage(...)`                                                       |
 | `Ipfs.uploadCSV(...)`      | `geo.storage.uploadCSV(...)`                                                         |
