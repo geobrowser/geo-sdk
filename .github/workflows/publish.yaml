@@ -15,10 +15,24 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
 
+      # Pinned explicitly rather than via node-version-file: package.json has no
+      # `engines.node` or `volta.node`, so setup-node logged "Could not determine
+      # node version ... Falling back" and silently used whatever the runner
+      # shipped. Trusted publishing depends on the npm version, so this must not
+      # drift with the runner image.
       - uses: actions/setup-node@v4
         with:
-          node-version-file: 'package.json'
+          node-version: '24'
           cache: 'pnpm'
+
+      # Trusted publishing (OIDC) requires npm >= 11.5.1. The version bundled
+      # with the runner's Node is not guaranteed to meet that, and when it does
+      # not, `npm publish` fails with a bare ENEEDAUTH that looks like a missing
+      # token rather than an unsupported client.
+      - name: Ensure npm supports trusted publishing
+        run: |
+          npm install -g npm@latest
+          echo "npm $(npm --version) / node $(node --version)"
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
