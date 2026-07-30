@@ -138,4 +138,46 @@ describe('Ops', () => {
     );
     expect(Ops.proposalReviews.update(updateParams)).toEqual(updateProposalReview(updateParams));
   });
+
+  it('creates text and data blocks with referenceable ids', () => {
+    const fromId = generate();
+    const textBlockId = generate();
+    const dataBlockId = generate();
+
+    const textBlock = Ops.textBlocks.create({
+      id: textBlockId,
+      fromId,
+      text: '# Heading',
+    });
+    const dataBlock = Ops.dataBlocks.create({
+      id: dataBlockId,
+      fromId,
+      sourceType: 'QUERY',
+    });
+
+    expect(textBlock.id).toBe(textBlockId);
+    expect((textBlock.ops[0] as CreateRelation).from).toEqual(toGrcId(textBlockId));
+    expect((textBlock.ops[2] as CreateRelation).to).toEqual(toGrcId(textBlockId));
+    expect(dataBlock.id).toBe(dataBlockId);
+    expect((dataBlock.ops[0] as CreateRelation).from).toEqual(toGrcId(dataBlockId));
+    expect((dataBlock.ops[2] as CreateRelation).to).toEqual(toGrcId(dataBlockId));
+  });
+
+  it('returns generated block ids used by the ops', () => {
+    const fromId = generate();
+    const textBlock = Ops.textBlocks.create({ fromId, text: '# Heading' });
+    const dataBlock = Ops.dataBlocks.create({ fromId, sourceType: 'QUERY' });
+
+    expect((textBlock.ops[0] as CreateRelation).from).toEqual(toGrcId(textBlock.id));
+    expect((textBlock.ops[2] as CreateRelation).to).toEqual(toGrcId(textBlock.id));
+    expect((dataBlock.ops[0] as CreateRelation).from).toEqual(toGrcId(dataBlock.id));
+    expect((dataBlock.ops[2] as CreateRelation).to).toEqual(toGrcId(dataBlock.id));
+  });
+
+  it('rejects invalid block ids', () => {
+    const fromId = generate();
+
+    expect(() => Ops.textBlocks.create({ id: 'invalid', fromId, text: 'Text' })).toThrow('Invalid id');
+    expect(() => Ops.dataBlocks.create({ id: 'invalid', fromId, sourceType: 'QUERY' })).toThrow('Invalid id');
+  });
 });

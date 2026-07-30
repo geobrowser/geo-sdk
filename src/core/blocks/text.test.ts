@@ -5,9 +5,18 @@ import { toGrcId } from '../../id-utils.js';
 import { BLOCKS, MARKDOWN_CONTENT, TEXT_BLOCK, TYPES_PROPERTY } from '../ids/system.js';
 import { make } from './text.js';
 
+it('preserves the legacy array return contract', () => {
+  const ops = make({
+    fromId: Id('5871e8f7b71948979c4dcf7c518d32ef'),
+    text: 'test-text',
+  });
+
+  expect(Array.isArray(ops)).toBe(true);
+});
+
 it('should generate ops for a text block entity', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
-  const { ops } = make({
+  const ops = make({
     fromId,
     text: 'test-text',
     position: 'test-position',
@@ -48,7 +57,7 @@ it('should generate ops for a text block entity', () => {
 
 it('should generate ops for a text block without position', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
-  const { ops } = make({
+  const ops = make({
     fromId,
     text: 'markdown content here',
   });
@@ -61,30 +70,15 @@ it('should generate ops for a text block without position', () => {
   expect(blocksRelOp.position).toBeUndefined();
 });
 
-it('should return the created block id, matching the ops', () => {
-  const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
-  const { id, ops } = make({
-    fromId,
-    text: 'test-text',
-  });
-
-  expect(id).toBeTruthy();
-  const typeRelOp = ops[0] as CreateRelation;
-  expect(typeRelOp.from).toEqual(toGrcId(id));
-  const blocksRelOp = ops[2] as CreateRelation;
-  expect(blocksRelOp.to).toEqual(toGrcId(id));
-});
-
 it('should use a provided block id for deterministic re-runs', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
   const blockId = Id('a1b2c3d4e5f64789a0b1c2d3e4f50617');
-  const { id, ops } = make({
+  const ops = make({
     fromId,
     text: 'test-text',
     id: blockId,
   });
 
-  expect(id).toBe(blockId);
   const typeRelOp = ops[0] as CreateRelation;
   expect(typeRelOp.from).toEqual(toGrcId(blockId));
   const blocksRelOp = ops[2] as CreateRelation;
@@ -101,14 +95,14 @@ it('should encode a dashed provided id to the same bytes as its dashless form', 
   const dashed = make({ fromId, text: 't', id: 'a1b2c3d4-e5f6-4789-a0b1-c2d3e4f50617' });
   const dashless = make({ fromId, text: 't', id: 'a1b2c3d4e5f64789a0b1c2d3e4f50617' });
 
-  const dashedTypeRel = dashed.ops[0] as CreateRelation;
-  const dashlessTypeRel = dashless.ops[0] as CreateRelation;
+  const dashedTypeRel = dashed[0] as CreateRelation;
+  const dashlessTypeRel = dashless[0] as CreateRelation;
   expect(dashedTypeRel.from).toEqual(dashlessTypeRel.from);
 });
 
 it('should handle empty text', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
-  const { ops } = make({
+  const ops = make({
     fromId,
     text: '',
     position: 'a',
@@ -135,7 +129,7 @@ This is a paragraph.
 
 - Item 1
 - Item 2`;
-  const { ops } = make({
+  const ops = make({
     fromId,
     text: multilineText,
     position: 'b',

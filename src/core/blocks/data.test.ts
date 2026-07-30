@@ -13,9 +13,18 @@ import {
 } from '../ids/system.js';
 import { make } from './data.js';
 
+it('preserves the legacy array return contract', () => {
+  const ops = make({
+    fromId: Id('5871e8f7b71948979c4dcf7c518d32ef'),
+    sourceType: 'QUERY',
+  });
+
+  expect(Array.isArray(ops)).toBe(true);
+});
+
 it('should generate ops for a data block entity', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
-  const { ops } = make({
+  const ops = make({
     fromId,
     sourceType: 'QUERY',
     position: 'test-position',
@@ -47,7 +56,7 @@ it('should generate ops for a data block entity', () => {
 
 it('should generate ops for a data block entity with a name', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
-  const { ops } = make({
+  const ops = make({
     fromId,
     sourceType: 'QUERY',
     position: 'test-position',
@@ -92,30 +101,15 @@ it('should generate ops for a data block entity with a name', () => {
   }
 });
 
-it('should return the created block id, matching the ops', () => {
-  const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
-  const { id, ops } = make({
-    fromId,
-    sourceType: 'QUERY',
-  });
-
-  expect(id).toBeTruthy();
-  const typeRelOp = ops[0] as CreateRelation;
-  expect(typeRelOp.from).toEqual(toGrcId(id));
-  const blocksRelOp = ops[2] as CreateRelation;
-  expect(blocksRelOp.to).toEqual(toGrcId(id));
-});
-
 it('should use a provided block id for deterministic re-runs', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
   const blockId = Id('a1b2c3d4e5f64789a0b1c2d3e4f50617');
-  const { id, ops } = make({
+  const ops = make({
     fromId,
     sourceType: 'QUERY',
     id: blockId,
   });
 
-  expect(id).toBe(blockId);
   const typeRelOp = ops[0] as CreateRelation;
   expect(typeRelOp.from).toEqual(toGrcId(blockId));
   const blocksRelOp = ops[2] as CreateRelation;
@@ -129,7 +123,7 @@ it('should throw on an invalid provided id', () => {
 
 it('should generate ops for a COLLECTION data source type', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
-  const { ops } = make({
+  const ops = make({
     fromId,
     sourceType: 'COLLECTION',
     position: 'a',
@@ -143,7 +137,7 @@ it('should generate ops for a COLLECTION data source type', () => {
 
 it('should generate ops for a GEO data source type', () => {
   const fromId = Id('5871e8f7b71948979c4dcf7c518d32ef');
-  const { ops } = make({
+  const ops = make({
     fromId,
     sourceType: 'GEO',
     position: 'a',
