@@ -32,7 +32,7 @@ The e2e surfaces run against the built-in Geo testnet config by default and use 
    ```
 2. Optional: override the default sponsorship RPC URL in `.env`:
    ```bash
-   GEO_E2E_ZERODEV_RPC_URL=https://rpc.zerodev.app/api/v3/<project-id>/chain/55516?selfFunded=true
+   GEO_E2E_ZERODEV_RPC_URL=https://rpc.zerodev.app/api/v3/<project-id>/chain/55516?provider=ULTRA_RELAY
    ```
    The ZeroDev project must allow requests from your local public IP or CI egress IP. Domain allowlists do not help Node-based e2e tests.
 3. Run the e2e suite:
