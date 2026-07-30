@@ -6,7 +6,7 @@ on:
 jobs:
   publish:
     name: Publish
-    if: github.actor == 'nikgraf' || github.actor == 'yanivtal'
+    if: github.actor == 'nikgraf' || github.actor == 'yanivtal' || github.actor == 'ohohoreilly'
     runs-on: ubuntu-latest
     permissions:
       contents: write
