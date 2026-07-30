@@ -17,6 +17,7 @@ import {
   PROPOSAL_CREATED_ACTION,
   PROPOSAL_VOTED_ACTION,
   VOTE_OPTION_VALUES,
+  ZERO_ADDRESS,
 } from '../dao-space/constants.js';
 import { getCreateDaoSpaceCalldata } from '../encodings/get-create-dao-space-calldata.js';
 import { defineGeoNetworkConfig } from '../networks.js';
@@ -150,7 +151,6 @@ describeLocal('local-geobrowser contracts v2 calldata', () => {
     const updateSettings = geo.daoSpaces.proposeUpdateVotingSettings({
       authorSpaceId: editorSpaceId,
       spaceId: daoSpaceId,
-      daoSpaceAddress: deployments.daoSpace,
       proposalId,
       votingSettings,
     });
@@ -174,7 +174,8 @@ describeLocal('local-geobrowser contracts v2 calldata', () => {
           type: 'tuple[]',
           name: 'actions',
           components: [
-            { type: 'address', name: 'to' },
+            { type: 'address', name: 'toAddress' },
+            { type: 'bytes16', name: 'toSpaceId' },
             { type: 'uint256', name: 'value' },
             { type: 'bytes', name: 'data' },
           ],
@@ -191,7 +192,8 @@ describeLocal('local-geobrowser contracts v2 calldata', () => {
     expect(proposalAction).toBe(PROPOSAL_CREATED_ACTION);
     expect(proposalTopic).toBe(bytes16ToBytes32LeftAligned(proposalId));
     expect(votingMode).toBe(0);
-    expect(actions[0]?.to).toBe(deployments.daoSpace);
+    expect(actions[0]?.toAddress).toBe(ZERO_ADDRESS);
+    expect(actions[0]?.toSpaceId).toBe(daoSpaceId);
     expect(decodedAction.functionName).toBe('updateVotingSettings');
 
     const { ops } = Ops.entities.create({ name: 'Local v2 edit entity' });
@@ -199,7 +201,6 @@ describeLocal('local-geobrowser contracts v2 calldata', () => {
       name: 'Local v2 edit',
       ops,
       author: authorId,
-      daoSpaceAddress: deployments.daoSpace,
       callerSpaceId: editorSpaceId,
       daoSpaceId,
       proposalId,
@@ -224,7 +225,8 @@ describeLocal('local-geobrowser contracts v2 calldata', () => {
           type: 'tuple[]',
           name: 'actions',
           components: [
-            { type: 'address', name: 'to' },
+            { type: 'address', name: 'toAddress' },
+            { type: 'bytes16', name: 'toSpaceId' },
             { type: 'uint256', name: 'value' },
             { type: 'bytes', name: 'data' },
           ],
@@ -246,7 +248,8 @@ describeLocal('local-geobrowser contracts v2 calldata', () => {
 
     expect(editProposalAction).toBe(PROPOSAL_CREATED_ACTION);
     expect(editVotingMode).toBe(1);
-    expect(editActions[0]?.to).toBe(deployments.daoSpace);
+    expect(editActions[0]?.toAddress).toBe(ZERO_ADDRESS);
+    expect(editActions[0]?.toSpaceId).toBe(daoSpaceId);
     expect(decodedEditAction.functionName).toBe('ping');
     expect(decodedEditAction.args?.[0]).toBe(EDITS_PUBLISHED_ACTION);
     expect(decodedEditAction.args?.[1]).toBe(EMPTY_TOPIC);

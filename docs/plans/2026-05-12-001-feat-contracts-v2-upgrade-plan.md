@@ -415,7 +415,7 @@ The work should first establish a contract-shape fixture and shared tuple compon
 - Happy path: add/remove member helpers wrap DAO role calldata in the confirmed proposal payload.
 - Happy path: add/remove editor helpers wrap DAO role calldata and default to slow voting.
 - Error path: editor add/remove reject `FAST`.
-- Error path: DAO role helpers reject missing `daoSpaceAddress`.
+- Error path: DAO role helpers no longer require a DAO contract address.
 - Error path: invalid author, DAO, target member/editor, or proposal IDs are rejected consistently.
 - Integration: deprecated legacy helpers return the same calldata shape as the new client helper for the same inputs.
 

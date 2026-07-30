@@ -119,6 +119,13 @@ type SpaceTopicQueryResponse = {
   }>;
 };
 
+type IndexerMetaResponse = {
+  metas: Array<{
+    id: string;
+    blockNumber: string;
+  }>;
+};
+
 class GraphQlRequestError extends Error {
   constructor(readonly errors: unknown) {
     super(`GraphQL errors: ${JSON.stringify(errors)}`);
@@ -136,7 +143,7 @@ type TestContext = WalletSetup & {
 };
 
 type DaoContext = TestContext & {
-  daoSpaceAddress: Hex;
+  daoContractAddress: Hex;
   daoSpaceId: string;
   daoSpaceIdHex: Hex;
   daoSpaceEntityId: string;
@@ -281,6 +288,13 @@ function spaceTopicQuery(spaceId: string) {
   }`;
 }
 
+const INDEXER_META_QUERY = `query metas {
+  metas {
+    id
+    blockNumber
+  }
+}`;
+
 async function queryGraph<T>(query: string): Promise<T> {
   const response = await geo.api.graphql<T>(query);
   if (response.errors) {
@@ -291,6 +305,88 @@ async function queryGraph<T>(query: string): Promise<T> {
   }
 
   return response.data;
+}
+
+async function readIndexerMetas() {
+  return (await queryGraph<IndexerMetaResponse>(INDEXER_META_QUERY)).metas;
+}
+
+async function waitForIndexerBlock(blockNumber: bigint) {
+  const deadline = Date.now() + INDEXER_TIMEOUT_MS;
+  let lastMetas: IndexerMetaResponse['metas'] | undefined;
+  let lastError: unknown;
+
+  while (Date.now() < deadline) {
+    try {
+      lastMetas = await readIndexerMetas();
+      lastError = undefined;
+      const pipeline = lastMetas.find(meta => meta.id === 'hermes_pipeline');
+      if (pipeline && BigInt(pipeline.blockNumber) >= blockNumber) {
+        return lastMetas;
+      }
+    } catch (error) {
+      lastError = error;
+    }
+    await sleep(3_000);
+  }
+
+  throw new Error(
+    [
+      `Timed out waiting for API indexer ${e2e.apiOrigin} to process block ${blockNumber.toString()}.`,
+      `Last metas: ${JSON.stringify(lastMetas)}.`,
+      `Last error: ${String(lastError)}`,
+    ].join(' '),
+  );
+}
+
+let indexerAlignmentPromise: Promise<void> | undefined;
+async function ensureIndexerTracksConfiguredRegistry(context: TestContext) {
+  indexerAlignmentPromise ??= (async () => {
+    const previousTopicId = await readSpaceTopicId(context.spaceId);
+    const canaryTopicId = generate();
+    const setTopic = geo.personalSpaces.setTopic({
+      spaceId: context.spaceId,
+      topicId: canaryTopicId,
+    });
+    const { receipt } = await sendTransactionAndWait(context, {
+      label: 'indexer alignment canary topic update',
+      to: setTopic.to,
+      calldata: setTopic.calldata,
+    });
+    const metas = await waitForIndexerBlock(receipt.blockNumber);
+    const indexedTopicId = await readSpaceTopicId(context.spaceId);
+
+    if (indexedTopicId !== canaryTopicId) {
+      throw new Error(
+        [
+          `Configured API ${e2e.apiOrigin} is not indexing actions from configured SPACE_REGISTRY_ADDRESS ${e2e.contracts.SPACE_REGISTRY_ADDRESS}.`,
+          `A TOPIC_SET canary emitted at block ${receipt.blockNumber.toString()} with topic ${canaryTopicId}, and the API indexed past that block (${JSON.stringify(metas)}), but the API still returned topic ${indexedTopicId}.`,
+          'Set GEO_E2E_API_ORIGIN to an API that indexes the configured contracts, or update the testnet indexer before running indexer-backed e2e tests.',
+        ].join(' '),
+      );
+    }
+
+    if (previousTopicId && previousTopicId !== canaryTopicId) {
+      const restoreTopic = geo.personalSpaces.setTopic({
+        spaceId: context.spaceId,
+        topicId: previousTopicId,
+      });
+      const restore = await sendTransactionAndWait(context, {
+        label: 'indexer alignment canary topic restore',
+        to: restoreTopic.to,
+        calldata: restoreTopic.calldata,
+      });
+      await waitForIndexerBlock(restore.receipt.blockNumber);
+      const restoredTopicId = await readSpaceTopicId(context.spaceId);
+      if (restoredTopicId !== previousTopicId) {
+        throw new Error(
+          `Configured API ${e2e.apiOrigin} indexed the canary topic but did not index the restore topic ${previousTopicId}. Last indexed topic: ${restoredTopicId}.`,
+        );
+      }
+    }
+  })();
+
+  return indexerAlignmentPromise;
 }
 
 async function waitFor<T>(label: string, read: () => Promise<T>, predicate: (value: T) => boolean): Promise<T> {
@@ -651,6 +747,8 @@ async function getTestContext(): Promise<TestContext> {
 }
 
 async function publishOps(context: TestContext, name: string, ops: Op[], spaceId = context.spaceId) {
+  await ensureIndexerTracksConfiguredRegistry(context);
+
   const publish = await geo.personalSpaces.publishEdit({
     name,
     spaceId,
@@ -678,6 +776,7 @@ async function createIndexedEntity(context: TestContext, name = uniqueName('E2E 
 async function getDaoContext(): Promise<DaoContext> {
   daoContextPromise ??= (async () => {
     const context = await getTestContext();
+    await ensureIndexerTracksConfiguredRegistry(context);
     const daoName = uniqueName('E2E New DAO Space');
     const daoSpace = await geo.daoSpaces.create({
       name: daoName,
@@ -699,16 +798,16 @@ async function getDaoContext(): Promise<DaoContext> {
       calldata: daoSpace.calldata,
     });
 
-    const daoSpaceAddress = await findRegisteredSpaceAddress(
+    const daoContractAddress = await findRegisteredSpaceAddress(
       context.publicClient,
       daoCreateTx.receipt.logs,
       daoSpace.to,
     );
-    if (!daoSpaceAddress) {
+    if (!daoContractAddress) {
       throw new Error('Could not find DAO space address in creation logs');
     }
 
-    const daoSpaceIdHex = await getSpaceIdHex(context.publicClient, daoSpaceAddress);
+    const daoSpaceIdHex = await getSpaceIdHex(context.publicClient, daoContractAddress);
     expect(daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
     const daoSpaceId = hexToUuid(daoSpaceIdHex);
     await waitForEntityName(daoSpace.spaceEntityId, daoSpaceId, daoName);
@@ -716,7 +815,7 @@ async function getDaoContext(): Promise<DaoContext> {
 
     return {
       ...context,
-      daoSpaceAddress,
+      daoContractAddress,
       daoSpaceId,
       daoSpaceIdHex,
       daoSpaceEntityId: daoSpace.spaceEntityId,
@@ -730,7 +829,6 @@ async function createAddMemberProposal(context: DaoContext, label: string) {
   const proposal = geo.daoSpaces.proposeAddMember({
     authorSpaceId: context.spaceIdHex,
     spaceId: context.daoSpaceIdHex,
-    daoSpaceAddress: context.daoSpaceAddress,
     newMemberSpaceId: context.spaceIdHex,
   });
   await sendTransactionAndWait(context, {
@@ -775,6 +873,7 @@ describe.sequential('new API e2e surface', () => {
     'geo.personalSpaces.setTopic updates the indexed space topic and restores the previous topic',
     async () => {
       const context = await getTestContext();
+      await ensureIndexerTracksConfiguredRegistry(context);
       const previousTopicId = await readSpaceTopicId(context.spaceId);
       let randomTopicId = generate();
       if (previousTopicId && randomTopicId === previousTopicId) {
@@ -1242,7 +1341,7 @@ describe.sequential('new API e2e surface', () => {
     async () => {
       const dao = await getDaoContext();
 
-      expect(dao.daoSpaceAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
+      expect(dao.daoContractAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
       expect(dao.daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
       expect(await readSpaceTopicId(dao.daoSpaceId)).toBe(dao.daoSpaceEntityId);
     },
@@ -1260,7 +1359,6 @@ describe.sequential('new API e2e surface', () => {
         name: 'E2E new API DAO propose edit',
         ops: daoEntity.ops,
         author: dao.authorSpaceId,
-        daoSpaceAddress: dao.daoSpaceAddress,
         callerSpaceId: dao.spaceIdHex,
         daoSpaceId: dao.daoSpaceIdHex,
         votingMode: 'FAST',
@@ -1296,7 +1394,6 @@ describe.sequential('new API e2e surface', () => {
       const proposal = geo.daoSpaces.proposeRemoveMember({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         memberToRemoveSpaceId: dao.spaceIdHex,
       });
       await sendTransactionAndWait(dao, {
@@ -1322,7 +1419,6 @@ describe.sequential('new API e2e surface', () => {
       const proposal = geo.daoSpaces.proposeAddEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         newEditorSpaceId: dao.spaceIdHex,
       });
       await sendTransactionAndWait(dao, {
@@ -1350,7 +1446,6 @@ describe.sequential('new API e2e surface', () => {
         geo.daoSpaces.proposeAddEditor({
           authorSpaceId: dao.spaceIdHex,
           spaceId: dao.daoSpaceIdHex,
-          daoSpaceAddress: dao.daoSpaceAddress,
           newEditorSpaceId: dao.spaceIdHex,
           votingMode: 'FAST' as 'SLOW',
         }),
@@ -1366,7 +1461,6 @@ describe.sequential('new API e2e surface', () => {
       const proposal = geo.daoSpaces.proposeRemoveEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         editorToRemoveSpaceId: dao.spaceIdHex,
       });
       await sendTransactionAndWait(dao, {
@@ -1416,7 +1510,6 @@ describe.sequential('new API e2e surface', () => {
       const proposal = geo.daoSpaces.proposeUpdateVotingSettings({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         votingSettings: {
           partialPercentageSupportThreshold: 50,
           universalPercentageSupportThreshold: 90,

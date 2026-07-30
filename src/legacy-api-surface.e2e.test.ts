@@ -113,7 +113,7 @@ type TestContext = WalletSetup & {
 };
 
 type DaoContext = TestContext & {
-  daoSpaceAddress: Hex;
+  daoContractAddress: Hex;
   daoSpaceId: string;
   daoSpaceIdHex: Hex;
 };
@@ -571,23 +571,23 @@ async function getDaoContext(): Promise<DaoContext> {
       calldata: createdDaoSpace.calldata,
     });
 
-    const daoSpaceAddress = await findRegisteredSpaceAddress(
+    const daoContractAddress = await findRegisteredSpaceAddress(
       context.publicClient,
       daoCreateTx.receipt.logs,
       createdDaoSpace.to,
     );
-    if (!daoSpaceAddress) {
+    if (!daoContractAddress) {
       throw new Error('Could not find DAO space address in creation logs');
     }
 
-    const daoSpaceIdHex = await getSpaceIdHex(context.publicClient, daoSpaceAddress);
+    const daoSpaceIdHex = await getSpaceIdHex(context.publicClient, daoContractAddress);
     expect(daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
     const daoSpaceId = hexToUuid(daoSpaceIdHex);
     await waitForEntityName(createdDaoSpace.spaceEntityId, daoSpaceId, daoName);
 
     return {
       ...context,
-      daoSpaceAddress,
+      daoContractAddress,
       daoSpaceId,
       daoSpaceIdHex,
     };
@@ -600,7 +600,6 @@ async function createLegacyAddMemberProposal(context: DaoContext, label: string)
   const proposal = daoSpace.proposeAddMember({
     authorSpaceId: context.spaceIdHex,
     spaceId: context.daoSpaceIdHex,
-    daoSpaceAddress: context.daoSpaceAddress,
     newMemberSpaceId: context.spaceIdHex,
     network: getLegacyNetwork(),
   });
@@ -1085,7 +1084,7 @@ describe.sequential('legacy deprecated API e2e surface', () => {
     async () => {
       const dao = await getDaoContext();
 
-      expect(dao.daoSpaceAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
+      expect(dao.daoContractAddress.toLowerCase()).not.toBe(ZERO_ADDRESS.toLowerCase());
       expect(dao.daoSpaceIdHex.toLowerCase()).not.toBe(EMPTY_SPACE_ID.toLowerCase());
     },
     TEST_TIMEOUT_MS,
@@ -1102,7 +1101,6 @@ describe.sequential('legacy deprecated API e2e surface', () => {
         name: 'E2E legacy API DAO propose edit',
         ops: daoEntity.ops,
         author: dao.spaceId,
-        daoSpaceAddress: dao.daoSpaceAddress,
         callerSpaceId: dao.spaceIdHex,
         daoSpaceId: dao.daoSpaceIdHex,
         votingMode: 'FAST',
@@ -1139,7 +1137,6 @@ describe.sequential('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeRemoveMember({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         memberToRemoveSpaceId: dao.spaceIdHex,
         network: getLegacyNetwork(),
       });
@@ -1164,7 +1161,6 @@ describe.sequential('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeAddEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         newEditorSpaceId: dao.spaceIdHex,
         network: getLegacyNetwork(),
       });
@@ -1189,7 +1185,6 @@ describe.sequential('legacy deprecated API e2e surface', () => {
       const proposal = daoSpace.proposeRemoveEditor({
         authorSpaceId: dao.spaceIdHex,
         spaceId: dao.daoSpaceIdHex,
-        daoSpaceAddress: dao.daoSpaceAddress,
         editorToRemoveSpaceId: dao.spaceIdHex,
         network: getLegacyNetwork(),
       });

@@ -147,7 +147,8 @@ export type CreateDaoSpaceResult = CalldataResult & {
 };
 
 export type ProposalAction = {
-  to: `0x${string}`;
+  toAddress: `0x${string}`;
+  toSpaceId: `0x${string}`;
   value: bigint;
   data: `0x${string}`;
 };
@@ -166,7 +167,6 @@ export type ProposalResult = CalldataResult & {
 };
 
 export type ProposeEditParams = PublishEditParams & {
-  daoSpaceAddress: `0x${string}`;
   callerSpaceId: string;
   daoSpaceId: string;
   votingMode?: VotingMode;
@@ -183,7 +183,6 @@ export type ProposeEditResult = PublishEditResult &
 export type DaoSpaceRoleProposalBaseParams = {
   authorSpaceId: string;
   spaceId: string;
-  daoSpaceAddress: `0x${string}`;
   votingMode?: VotingMode;
   proposalId?: string;
 };
@@ -626,7 +625,6 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        *   name: 'Publish edit',
        *   ops,
        *   author: authorSpaceId,
-       *   daoSpaceAddress,
        *   callerSpaceId: authorSpaceId,
        *   daoSpaceId,
        * });
@@ -641,7 +639,6 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        * const tx = geo.daoSpaces.proposeAddMember({
        *   authorSpaceId,
        *   spaceId: daoSpaceId,
-       *   daoSpaceAddress,
        *   newMemberSpaceId: memberSpaceId,
        * });
        * ```
@@ -655,7 +652,6 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        * const tx = geo.daoSpaces.proposeRemoveMember({
        *   authorSpaceId,
        *   spaceId: daoSpaceId,
-       *   daoSpaceAddress,
        *   memberToRemoveSpaceId,
        * });
        * ```
@@ -669,7 +665,6 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        * const tx = geo.daoSpaces.proposeAddEditor({
        *   authorSpaceId,
        *   spaceId: daoSpaceId,
-       *   daoSpaceAddress,
        *   newEditorSpaceId: editorSpaceId,
        * });
        * ```
@@ -683,7 +678,6 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        * const tx = geo.daoSpaces.proposeRemoveEditor({
        *   authorSpaceId,
        *   spaceId: daoSpaceId,
-       *   daoSpaceAddress,
        *   editorToRemoveSpaceId,
        * });
        * ```
@@ -697,7 +691,6 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        * const tx = geo.daoSpaces.proposeUpdateVotingSettings({
        *   authorSpaceId,
        *   spaceId: daoSpaceId,
-       *   daoSpaceAddress,
        *   votingSettings,
        * });
        * ```

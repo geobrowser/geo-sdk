@@ -712,7 +712,6 @@ const proposal = await geo.daoSpaces.proposeEdit({
   name: "Update entity name",
   ops,
   author: authorSpaceId,
-  daoSpaceAddress,
   callerSpaceId: authorSpaceId,
   daoSpaceId,
   votingMode: "FAST",
@@ -731,7 +730,6 @@ const updatedProposal = await geo.daoSpaces.proposeEdit({
   name: "Update entity name, revision 2",
   ops,
   author: authorSpaceId,
-  daoSpaceAddress,
   callerSpaceId: authorSpaceId,
   daoSpaceId,
   proposalId,
@@ -741,9 +739,9 @@ const updatedProposal = await geo.daoSpaces.proposeEdit({
 ```
 
 If `updateProposal: true` is set and `versionId` is omitted, the SDK reads
-`latestProposalVersion(...)` from the configured network RPC before uploading
-the edit. Pass `versionId` when you already know the next version or when your
-custom network config has no RPC URL.
+the DAO address from `SpaceRegistry.spaceIdToAddress(...)`, then reads
+`latestProposalVersion(...)` from the configured network RPC before uploading the edit.
+Pass `versionId` when you already know the next version or when your custom network config has no RPC URL.
 
 Manage DAO members and editors:
 
@@ -751,7 +749,6 @@ Manage DAO members and editors:
 const addMember = geo.daoSpaces.proposeAddMember({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   newMemberSpaceId: memberSpaceId,
   votingMode: "FAST",
 });
@@ -759,21 +756,18 @@ const addMember = geo.daoSpaces.proposeAddMember({
 const removeMember = geo.daoSpaces.proposeRemoveMember({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   memberToRemoveSpaceId: memberSpaceId,
 });
 
 const addEditor = geo.daoSpaces.proposeAddEditor({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   newEditorSpaceId: editorSpaceId,
 });
 
 const removeEditor = geo.daoSpaces.proposeRemoveEditor({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   editorToRemoveSpaceId: editorSpaceId,
 });
 ```
@@ -786,7 +780,6 @@ Propose voting-settings changes:
 const updateVoting = geo.daoSpaces.proposeUpdateVotingSettings({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   votingSettings: {
     partialPercentageSupportThreshold: 60,
     universalPercentageSupportThreshold: 95,
@@ -1247,7 +1240,6 @@ const proposal = await daoSpace.proposeEdit({
   name: "Update entity",
   ops,
   author: authorSpaceId,
-  daoSpaceAddress,
   callerSpaceId: authorSpaceId,
   daoSpaceId,
   network: "TESTNET",
@@ -1276,7 +1268,6 @@ Legacy DAO membership helpers:
 daoSpace.proposeAddMember({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   newMemberSpaceId,
   network: "TESTNET",
 });
@@ -1284,7 +1275,6 @@ daoSpace.proposeAddMember({
 daoSpace.proposeRemoveMember({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   memberToRemoveSpaceId,
   network: "TESTNET",
 });
@@ -1292,7 +1282,6 @@ daoSpace.proposeRemoveMember({
 daoSpace.proposeAddEditor({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   newEditorSpaceId,
   network: "TESTNET",
 });
@@ -1300,7 +1289,6 @@ daoSpace.proposeAddEditor({
 daoSpace.proposeRemoveEditor({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   editorToRemoveSpaceId,
   network: "TESTNET",
 });
@@ -1308,7 +1296,6 @@ daoSpace.proposeRemoveEditor({
 daoSpace.proposeUpdateVotingSettings({
   authorSpaceId,
   spaceId: daoSpaceId,
-  daoSpaceAddress,
   votingSettings,
   network: "TESTNET",
 });
