@@ -13,9 +13,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
 
+      # package.json has no `engines.node` or `volta.node`, so node-version-file
+      # never resolved — setup-node logged "Could not determine node version ...
+      # Falling back" and silently used whatever the runner image shipped.
+      # Matches the pin in publish.yaml.
       - uses: actions/setup-node@v4
         with:
-          node-version-file: 'package.json'
+          node-version: '24'
           cache: 'pnpm'
 
       - name: Install dependencies
