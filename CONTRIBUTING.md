@@ -42,14 +42,29 @@ The e2e surfaces run against the built-in Geo testnet config by default and use 
 
 ## Creating a new changeset in a PR
 
+Add a changeset for every user-facing change (not docs or CI):
+
 ```bash
 pnpm changeset
 ```
 
-## Publishing a new version
+Commit the generated `.changeset/` file. Never edit the package version manually.
 
-Publishing is done via two manually triggered GitHub Actions workflows (restricted to nikgraf and yanivtal):
+## Releasing
 
-1. Run the **Bump Version** workflow (Actions tab → Bump Version → Run workflow). This pushes a version branch. Open the link in the workflow summary to create a PR.
-2. Merge the PR.
-3. Run the **Publish** workflow (Actions tab → Publish → Run workflow). This publishes to npm, pushes the `v<version>` git tag, and creates a GitHub release from that tag.
+1. Merge the changesets into `main`.
+2. Run **Bump Version** from GitHub Actions and merge its release PR.
+3. Run **Publish** from GitHub Actions.
+
+Stable releases use npm's `latest` tag. Prereleases use their suffix (`beta`, etc.). Publishing also creates the `v<version>` git tag and GitHub release.
+
+### Prerelease
+
+Before **Bump Version**, enter or exit prerelease mode:
+
+```bash
+pnpm changeset pre enter beta
+pnpm changeset pre exit
+```
+
+Commit `.changeset/pre.json` and merge it into `main`, then use the release steps above.
