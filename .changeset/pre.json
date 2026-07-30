@@ -18,6 +18,7 @@
     "ranks-create-update",
     "self-funded-paymaster",
     "system-type-ids",
-    "testnet-registry-addresses"
+    "testnet-registry-addresses",
+    "yellow-bugs-walk"
   ]
 }

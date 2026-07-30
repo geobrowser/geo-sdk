@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.0-beta.11
+
+### Patch Changes
+
+- df59d5f: for testnet switch from selfFunded RPC to ULTRA_RELAY
+
 ## 0.20.0-beta.10
 
 ### Patch Changes
