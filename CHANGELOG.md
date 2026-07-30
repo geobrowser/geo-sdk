@@ -1,5 +1,16 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.0-beta.9
+
+### Patch Changes
+
+- 9eb3548: `uploadImage` / `Graph.createImage` now throw an `IpfsUploadError` when a source URL fetch returns a non-image body (e.g. an HTML error page served with status 200), instead of silently uploading it to IPFS and publishing a broken image. Content fetched from a URL is accepted when its `content-type` is `image/*` or its bytes parse as an image.
+- 630c562: Use the current Geo testnet GraphQL API hostname in the built-in testnet network configuration.
+- 9eb3548: Document why `deleteEntity` is async and requires a `spaceId`, unlike the other op builders: GRC-20 defines a delete-entity op but the Indexer does not support it yet, so the SDK must fetch the entity's current values and relations first, and deletion is scoped to one space's data.
+- a03db1e: Adapt DAO proposal helpers to the latest DAO contracts. SDK-built proposals now target DAO spaces by `daoSpaceId`/`spaceId`, so callers should remove `daoSpaceAddress` from `proposeEdit`, member/editor proposal helpers, and `proposeUpdateVotingSettings` calls.
+
+  For low-level custom proposal actions, replace `{ to, value, data }` with `{ toAddress, toSpaceId, value, data }`. Use the zero address when targeting a DAO by `toSpaceId`, or use the zero bytes16 space ID when targeting a contract address directly.
+
 ## 0.20.0-beta.8
 
 ### Patch Changes
