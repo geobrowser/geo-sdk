@@ -60,13 +60,20 @@ jobs:
           echo "Publishing $VERSION under dist-tag '$TAG'"
           npm publish --provenance --access public --tag "$TAG"
 
-      - name: Push tags
-        run: git push --follow-tags
+      - name: Create and push release tag
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v${VERSION}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "$TAG"
+          git push origin "$TAG"
 
       - name: Create GitHub Release
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          TAG="@geoprotocol/geo-sdk@${VERSION}"
+          TAG="v${VERSION}"
 
           BODY=$(sed -n "/^## ${VERSION}/,/^## [0-9]/p" CHANGELOG.md | sed '$d')
 
@@ -78,6 +85,6 @@ jobs:
             *)   PRERELEASE= ;;
           esac
 
-          gh release create "$TAG" --title "v${VERSION}" --notes "$BODY" $PRERELEASE
+          gh release create "$TAG" --verify-tag --title "v${VERSION}" --notes "$BODY" $PRERELEASE
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

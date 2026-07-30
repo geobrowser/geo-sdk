@@ -52,4 +52,4 @@ Publishing is done via two manually triggered GitHub Actions workflows (restrict
 
 1. Run the **Bump Version** workflow (Actions tab → Bump Version → Run workflow). This pushes a version branch. Open the link in the workflow summary to create a PR.
 2. Merge the PR.
-3. Run the **Publish** workflow (Actions tab → Publish → Run workflow). This publishes to npm, pushes the git tag, and creates a GitHub release.
+3. Run the **Publish** workflow (Actions tab → Publish → Run workflow). This publishes to npm, pushes the `v<version>` git tag, and creates a GitHub release from that tag.
