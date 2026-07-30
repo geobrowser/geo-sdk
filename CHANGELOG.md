@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.2
+
+### Patch Changes
+
+- d2eb23d: Add `Ops.textBlocks.create` and `Ops.dataBlocks.create`, returning `{ id, ops }` and accepting an optional stable block ID. The existing `TextBlock.make` and `DataBlock.make` helpers remain compatible with their `Op[]` return type and are now deprecated in favor of the new builders.
+
 ## 0.20.1
 
 ### Patch Changes
