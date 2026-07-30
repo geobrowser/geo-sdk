@@ -70,6 +70,14 @@ jobs:
 
           BODY=$(sed -n "/^## ${VERSION}/,/^## [0-9]/p" CHANGELOG.md | sed '$d')
 
-          gh release create "$TAG" --title "v${VERSION}" --notes "$BODY"
+          # Mark prereleases as such, otherwise GitHub promotes them to "Latest"
+          # on the releases page and in the repo sidebar — 0.20.0-beta.10 was
+          # shown as Latest above the stable 0.19.5.
+          case "$VERSION" in
+            *-*) PRERELEASE=--prerelease ;;
+            *)   PRERELEASE= ;;
+          esac
+
+          gh release create "$TAG" --title "v${VERSION}" --notes "$BODY" $PRERELEASE
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
