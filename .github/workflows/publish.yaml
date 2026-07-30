@@ -6,7 +6,7 @@ on:
 jobs:
   publish:
     name: Publish
-    if: github.actor == 'nikgraf' || github.actor == 'yanivtal'
+    if: github.actor == 'nikgraf' || github.actor == 'yanivtal' || github.actor == 'ohohoreilly'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -26,8 +26,25 @@ jobs:
       - name: Build
         run: pnpm build
 
+      # npm applies the `latest` dist-tag by default and does NOT special-case
+      # semver prereleases, so publishing 0.20.0-beta.N without an explicit
+      # --tag would point `latest` at a beta. Derive the tag from the version:
+      # 0.20.0-beta.10 -> beta, 0.20.0 -> latest.
       - name: Publish to npm
-        run: npm publish --provenance --access public
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ -d dist ]; then
+            echo "dist/ present ($(find dist -type f | wc -l) files)"
+          else
+            echo "::error::dist/ is missing — refusing to publish a package with no build output." >&2
+            exit 1
+          fi
+          case "$VERSION" in
+            *-*) TAG="${VERSION#*-}"; TAG="${TAG%%.*}" ;;
+            *)   TAG="latest" ;;
+          esac
+          echo "Publishing $VERSION under dist-tag '$TAG'"
+          npm publish --provenance --access public --tag "$TAG"
 
       - name: Push tags
         run: git push --follow-tags
