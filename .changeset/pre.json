@@ -17,6 +17,7 @@
     "public-lands-cover",
     "ranks-create-update",
     "self-funded-paymaster",
-    "system-type-ids"
+    "system-type-ids",
+    "testnet-registry-addresses"
   ]
 }
