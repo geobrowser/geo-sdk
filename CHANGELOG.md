@@ -1,5 +1,67 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.0
+
+### Minor Changes
+
+- 1966e31: Upgrade DAO-space helpers and encoders to contracts v2, including seven-field voting settings, six-argument DAO factory calldata, version-aware proposal votes/edits, and direct DAO proposal helpers on `geo.daoSpaces`.
+
+### Patch Changes
+
+- 70a28a0: Fix `createRank`/`updateRank` throwing `TypeError: Invalid UUID` for valid Geo IDs that are not RFC 4122 UUIDs. The vote duplicate check now normalizes IDs as plain hex instead of parsing them as UUIDs.
+- 9eb3548: `uploadImage` / `Graph.createImage` now throw an `IpfsUploadError` when a source URL fetch returns a non-image body (e.g. an HTML error page served with status 200), instead of silently uploading it to IPFS and publishing a broken image. Content fetched from a URL is accepted when its `content-type` is `image/*` or its bytes parse as an image.
+- 630c562: Use the current Geo testnet GraphQL API hostname in the built-in testnet network configuration.
+- 9eb3548: Document why `deleteEntity` is async and requires a `spaceId`, unlike the other op builders: GRC-20 defines a delete-entity op but the Indexer does not support it yet, so the SDK must fetch the entity's current values and relations first, and deletion is scoped to one space's data.
+- 7c3b38c: Add `durationInSeconds` for DAO voting settings and keep `durationInDays` as a deprecated compatibility option.
+- 2e46b4e: Make `createGeoWalletClient` the default sponsored wallet helper.
+
+  Before, sponsored transactions used the experimental ZeroDev-specific helper:
+
+  ```ts
+  const walletClient = await createGeoZeroDev7702WalletClient({
+    signer,
+    chain: GeoTestnetConfig.chain,
+    zeroDevRpcUrl: process.env.GEO_ZERODEV_RPC_URL,
+  });
+  ```
+
+  After, use the Geo network config directly. `GeoTestnetConfig` includes the default Geo-sponsored testnet RPC URL:
+
+  ```ts
+  const walletClient = await createGeoWalletClient({
+    signer,
+    network: GeoTestnetConfig,
+  });
+  ```
+
+  The older Safe/Pimlico `getSmartAccountWalletClient`, plain `getWalletClient`, and `TESTNET_RPC_URL` helpers were removed.
+
+- 835df94: Update the built-in Geo testnet config and support ZeroDev-sponsored EOA e2e transactions.
+- a03db1e: Adapt DAO proposal helpers to the latest DAO contracts. SDK-built proposals now target DAO spaces by `daoSpaceId`/`spaceId`, so callers should remove `daoSpaceAddress` from `proposeEdit`, member/editor proposal helpers, and `proposeUpdateVotingSettings` calls.
+
+  For low-level custom proposal actions, replace `{ to, value, data }` with `{ toAddress, toSpaceId, value, data }`. Use the zero address when targeting a DAO by `toSpaceId`, or use the zero bytes16 space ID when targeting a contract address directly.
+
+- 831defb: fix build
+- 54f4f6b: Ranking submissions: extend the ranks module with per-item space, block links, and updates.
+
+  - Rank creation moves to `Ops.ranks.create(...)` (pure op generation), alongside `Ops.properties`/`Ops.types`. **Breaking:** the `Rank.createRank(...)` namespace export is removed.
+  - Every vote now requires a `spaceId` (set as `to_space_id` on the vote relation), so a rank can include the same entity across multiple space perspectives. Item uniqueness is keyed on `(entityId, spaceId)`. **Breaking:** votes previously only took `entityId`.
+  - `Ops.ranks.create(...)` accepts an optional `blockId` to link the rank to a `Ranking Block` via a `Rank → Ranking Block` relation.
+  - Each vote relation now carries a fractional-index `position`, so clients can order votes natively by the relation's `position` field.
+  - New `geo.ranks.update(...)` re-submits a rank: it fetches the rank's current vote relations from the configured Geo API, deletes them and their reified vote entities, then re-emits the new ordered votes — no indexer involvement required. The lower-level `updateRank` op-builder is internal.
+
+- 9b309a8: Switch the default Geo testnet sponsorship RPC URL to the self-funded ZeroDev paymaster route.
+- 7d07394: Add exported system type IDs for System, Space, Proposal, EOA Space, and DAO Space.
+- 6eb04af: Point `TESTNET` at the live SpaceRegistry (`0xCF13491802747e759e1BB8E364bc43045398d1DD`) and
+  DAOSpaceFactory (`0x323aF429B85c954D4a161b2A6281c26DF45b7128`) on chain 55516.
+
+  The previous addresses belonged to an abandoned deployment whose owner key is no longer
+  available, and which has nothing registered in it — `spaceIdToAddress()` returned the zero
+  address for every space. This fails silently: a wrong-but-deployed registry still has bytecode,
+  so contract-code guards pass and transactions succeed emitting no events.
+
+- df59d5f: for testnet switch from selfFunded RPC to ULTRA_RELAY
+
 ## 0.20.0-beta.11
 
 ### Patch Changes
