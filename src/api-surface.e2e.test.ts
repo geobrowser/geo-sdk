@@ -106,7 +106,7 @@ type ProposalVoteQueryResponse = {
 };
 
 type VoteKind = 0 | 1 | 2;
-type VoteType = 0 | 1;
+type VoteType = 0 | 1 | 2;
 
 type ResponseStateQueryResponse = {
   userVotes: Array<{
@@ -128,7 +128,7 @@ type ResponseStateQueryResponse = {
 };
 
 type ExpectedResponseState = {
-  voteType: VoteType | null;
+  voteType: VoteType;
   positive: number;
   negative: number;
 };
@@ -397,15 +397,17 @@ async function ensureIndexerTracksConfiguredRegistry(context: TestContext) {
       to: setTopic.to,
       calldata: setTopic.calldata,
     });
-    const metas = await waitForIndexerBlock(receipt.blockNumber);
-    const indexedTopicId = await readSpaceTopicId(context.spaceId);
-
-    if (indexedTopicId !== canaryTopicId) {
+    await waitForIndexerBlock(receipt.blockNumber);
+    try {
+      await waitForSpaceTopicId(context.spaceId, canaryTopicId);
+    } catch (error) {
+      const [metas, indexedTopicId] = await Promise.all([readIndexerMetas(), readSpaceTopicId(context.spaceId)]);
       throw new Error(
         [
           `Configured API ${e2e.apiOrigin} is not indexing actions from configured SPACE_REGISTRY_ADDRESS ${e2e.contracts.SPACE_REGISTRY_ADDRESS}.`,
-          `A TOPIC_SET canary emitted at block ${receipt.blockNumber.toString()} with topic ${canaryTopicId}, and the API indexed past that block (${JSON.stringify(metas)}), but the API still returned topic ${indexedTopicId}.`,
+          `A TOPIC_SET canary emitted at block ${receipt.blockNumber.toString()} with topic ${canaryTopicId}, and the API indexed through that block (${JSON.stringify(metas)}), but the API still returned topic ${indexedTopicId}.`,
           'Set GEO_E2E_API_ORIGIN to an API that indexes the configured contracts, or update the testnet indexer before running indexer-backed e2e tests.',
+          `Topic wait error: ${String(error)}`,
         ].join(' '),
       );
     }
@@ -421,12 +423,7 @@ async function ensureIndexerTracksConfiguredRegistry(context: TestContext) {
         calldata: restoreTopic.calldata,
       });
       await waitForIndexerBlock(restore.receipt.blockNumber);
-      const restoredTopicId = await readSpaceTopicId(context.spaceId);
-      if (restoredTopicId !== previousTopicId) {
-        throw new Error(
-          `Configured API ${e2e.apiOrigin} indexed the canary topic but did not index the restore topic ${previousTopicId}. Last indexed topic: ${restoredTopicId}.`,
-        );
-      }
+      await waitForSpaceTopicId(context.spaceId, previousTopicId);
     }
   })();
 
@@ -1420,7 +1417,7 @@ describe.sequential('new API e2e surface', () => {
 
         const unvote = geo.responses.unvote(params);
         await sendResponseAndWait(context, 'E2E clear canonical entity vote', unvote, entity.id, 0, {
-          voteType: null,
+          voteType: 2,
           positive: 0,
           negative: 0,
         });
@@ -1455,7 +1452,7 @@ describe.sequential('new API e2e surface', () => {
 
         const unagree = geo.responses.unagree(params);
         await sendResponseAndWait(context, 'E2E clear entity stance', unagree, entity.id, 1, {
-          voteType: null,
+          voteType: 2,
           positive: 0,
           negative: 0,
         });
@@ -1507,7 +1504,7 @@ describe.sequential('new API e2e surface', () => {
 
         const unverify = geo.responses.unverify(params);
         await sendResponseAndWait(context, 'E2E clear entity veracity', unverify, entity.id, 2, {
-          voteType: null,
+          voteType: 2,
           positive: 0,
           negative: 0,
         });
