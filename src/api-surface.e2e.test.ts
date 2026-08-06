@@ -607,20 +607,21 @@ async function waitForEntityResponse(
 let responseEnvironmentPromise: Promise<void> | undefined;
 async function ensureResponseEnvironmentReady(context: TestContext) {
   responseEnvironmentPromise ??= (async () => {
-    const missingActions: string[] = [];
+    const registrations = await Promise.all(
+      REQUIRED_RESPONSE_ACTIONS.map(async action => {
+        const isPermissionless = (await context.publicClient.readContract({
+          address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
+          abi: SpaceRegistryAbi,
+          functionName: 'permissionlessActions',
+          args: [action.hash],
+        })) as boolean;
 
-    for (const action of REQUIRED_RESPONSE_ACTIONS) {
-      const isPermissionless = (await context.publicClient.readContract({
-        address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
-        abi: SpaceRegistryAbi,
-        functionName: 'permissionlessActions',
-        args: [action.hash],
-      })) as boolean;
-
-      if (!isPermissionless) {
-        missingActions.push(action.name);
-      }
-    }
+        return { action, isPermissionless };
+      }),
+    );
+    const missingActions = registrations
+      .filter(({ isPermissionless }) => !isPermissionless)
+      .map(({ action }) => action.name);
 
     if (missingActions.length > 0) {
       throw new Error(
@@ -649,6 +650,23 @@ async function ensureResponseEnvironmentReady(context: TestContext) {
   })();
 
   return responseEnvironmentPromise;
+}
+
+async function sendResponseAndWait(
+  context: TestContext,
+  label: string,
+  response: { to: `0x${string}`; calldata: `0x${string}` },
+  entityId: string,
+  voteKind: VoteKind,
+  expected: ExpectedResponseState,
+) {
+  const { receipt } = await sendTransactionAndWait(context, {
+    label,
+    to: response.to,
+    calldata: response.calldata,
+  });
+  await waitForIndexerBlock(receipt.blockNumber);
+  return waitForEntityResponse(entityId, context.authorSpaceId, context.spaceId, voteKind, expected);
 }
 
 async function waitForSpaceTopicId(spaceId: string, topicId: string) {
@@ -1394,13 +1412,7 @@ describe.sequential('new API e2e surface', () => {
           spaceId: context.spaceId,
           entityId: entity.id,
         });
-        const { receipt } = await sendTransactionAndWait(context, {
-          label: 'E2E canonical upvote entity',
-          to: upvote.to,
-          calldata: upvote.calldata,
-        });
-        await waitForIndexerBlock(receipt.blockNumber);
-        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 0, {
+        await sendResponseAndWait(context, 'E2E canonical upvote entity', upvote, entity.id, 0, {
           voteType: 0,
           positive: 1,
           negative: 0,
@@ -1421,39 +1433,21 @@ describe.sequential('new API e2e surface', () => {
         };
 
         const agree = geo.responses.agree(params);
-        const agreed = await sendTransactionAndWait(context, {
-          label: 'E2E agree with entity',
-          to: agree.to,
-          calldata: agree.calldata,
-        });
-        await waitForIndexerBlock(agreed.receipt.blockNumber);
-        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 1, {
+        await sendResponseAndWait(context, 'E2E agree with entity', agree, entity.id, 1, {
           voteType: 0,
           positive: 1,
           negative: 0,
         });
 
         const disagree = geo.responses.disagree(params);
-        const disagreed = await sendTransactionAndWait(context, {
-          label: 'E2E disagree with entity',
-          to: disagree.to,
-          calldata: disagree.calldata,
-        });
-        await waitForIndexerBlock(disagreed.receipt.blockNumber);
-        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 1, {
+        await sendResponseAndWait(context, 'E2E disagree with entity', disagree, entity.id, 1, {
           voteType: 1,
           positive: 0,
           negative: 1,
         });
 
         const unagree = geo.responses.unagree(params);
-        const unagreed = await sendTransactionAndWait(context, {
-          label: 'E2E clear entity stance',
-          to: unagree.to,
-          calldata: unagree.calldata,
-        });
-        await waitForIndexerBlock(unagreed.receipt.blockNumber);
-        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 1, {
+        await sendResponseAndWait(context, 'E2E clear entity stance', unagree, entity.id, 1, {
           voteType: null,
           positive: 0,
           negative: 0,
@@ -1474,26 +1468,14 @@ describe.sequential('new API e2e surface', () => {
         };
 
         const upvote = geo.responses.upvote(params);
-        const upvoted = await sendTransactionAndWait(context, {
-          label: 'E2E upvote before veracity responses',
-          to: upvote.to,
-          calldata: upvote.calldata,
-        });
-        await waitForIndexerBlock(upvoted.receipt.blockNumber);
-        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 0, {
+        await sendResponseAndWait(context, 'E2E upvote before veracity responses', upvote, entity.id, 0, {
           voteType: 0,
           positive: 1,
           negative: 0,
         });
 
         const verify = geo.responses.verify(params);
-        const verified = await sendTransactionAndWait(context, {
-          label: 'E2E verify entity',
-          to: verify.to,
-          calldata: verify.calldata,
-        });
-        await waitForIndexerBlock(verified.receipt.blockNumber);
-        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 2, {
+        await sendResponseAndWait(context, 'E2E verify entity', verify, entity.id, 2, {
           voteType: 0,
           positive: 1,
           negative: 0,
@@ -1505,13 +1487,7 @@ describe.sequential('new API e2e surface', () => {
         });
 
         const dispute = geo.responses.dispute(params);
-        const disputed = await sendTransactionAndWait(context, {
-          label: 'E2E dispute entity',
-          to: dispute.to,
-          calldata: dispute.calldata,
-        });
-        await waitForIndexerBlock(disputed.receipt.blockNumber);
-        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 2, {
+        await sendResponseAndWait(context, 'E2E dispute entity', dispute, entity.id, 2, {
           voteType: 1,
           positive: 0,
           negative: 1,
@@ -1523,13 +1499,7 @@ describe.sequential('new API e2e surface', () => {
         });
 
         const unverify = geo.responses.unverify(params);
-        const unverified = await sendTransactionAndWait(context, {
-          label: 'E2E clear entity veracity',
-          to: unverify.to,
-          calldata: unverify.calldata,
-        });
-        await waitForIndexerBlock(unverified.receipt.blockNumber);
-        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 2, {
+        await sendResponseAndWait(context, 'E2E clear entity veracity', unverify, entity.id, 2, {
           voteType: null,
           positive: 0,
           negative: 0,

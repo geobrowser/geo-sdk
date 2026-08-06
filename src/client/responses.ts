@@ -85,6 +85,10 @@ function withSpaceRegistry(context: GeoClientContext, params: ClientResponsePara
   };
 }
 
+function respond(context: GeoClientContext, params: ClientResponseParams, action: ResponseAction) {
+  return encodeEntityResponseCalldata(withSpaceRegistry(context, params), action);
+}
+
 export function encodeUpvoteEntityResponseCalldata(params: ResponseCalldataParams) {
   return encodeEntityResponseCalldata(params, RESPONSE_ACTIONS.upvote.hash);
 }
@@ -98,37 +102,37 @@ export function encodeUnvoteEntityResponseCalldata(params: ResponseCalldataParam
 }
 
 export function upvote(context: GeoClientContext, params: ClientResponseParams) {
-  return encodeUpvoteEntityResponseCalldata(withSpaceRegistry(context, params));
+  return respond(context, params, RESPONSE_ACTIONS.upvote.hash);
 }
 
 export function downvote(context: GeoClientContext, params: ClientResponseParams) {
-  return encodeDownvoteEntityResponseCalldata(withSpaceRegistry(context, params));
+  return respond(context, params, RESPONSE_ACTIONS.downvote.hash);
 }
 
 export function unvote(context: GeoClientContext, params: ClientResponseParams) {
-  return encodeUnvoteEntityResponseCalldata(withSpaceRegistry(context, params));
+  return respond(context, params, RESPONSE_ACTIONS.unvote.hash);
 }
 
 export function agree(context: GeoClientContext, params: ClientResponseParams) {
-  return encodeEntityResponseCalldata(withSpaceRegistry(context, params), RESPONSE_ACTIONS.agree.hash);
+  return respond(context, params, RESPONSE_ACTIONS.agree.hash);
 }
 
 export function disagree(context: GeoClientContext, params: ClientResponseParams) {
-  return encodeEntityResponseCalldata(withSpaceRegistry(context, params), RESPONSE_ACTIONS.disagree.hash);
+  return respond(context, params, RESPONSE_ACTIONS.disagree.hash);
 }
 
 export function unagree(context: GeoClientContext, params: ClientResponseParams) {
-  return encodeEntityResponseCalldata(withSpaceRegistry(context, params), RESPONSE_ACTIONS.unagree.hash);
+  return respond(context, params, RESPONSE_ACTIONS.unagree.hash);
 }
 
 export function verify(context: GeoClientContext, params: ClientResponseParams) {
-  return encodeEntityResponseCalldata(withSpaceRegistry(context, params), RESPONSE_ACTIONS.verify.hash);
+  return respond(context, params, RESPONSE_ACTIONS.verify.hash);
 }
 
 export function dispute(context: GeoClientContext, params: ClientResponseParams) {
-  return encodeEntityResponseCalldata(withSpaceRegistry(context, params), RESPONSE_ACTIONS.dispute.hash);
+  return respond(context, params, RESPONSE_ACTIONS.dispute.hash);
 }
 
 export function unverify(context: GeoClientContext, params: ClientResponseParams) {
-  return encodeEntityResponseCalldata(withSpaceRegistry(context, params), RESPONSE_ACTIONS.unverify.hash);
+  return respond(context, params, RESPONSE_ACTIONS.unverify.hash);
 }
