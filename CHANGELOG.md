@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.3
+
+### Patch Changes
+
+- 57f58e0: Add the canonical `geo.responses` namespace for curation, stance, and veracity actions while keeping `geo.entityVotes` as a deprecated compatibility API.
+
 ## 0.20.2
 
 ### Patch Changes
