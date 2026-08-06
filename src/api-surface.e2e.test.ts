@@ -1,9 +1,10 @@
 import type { CreateRelation, Op } from '@geoprotocol/grc-20';
 import type { Hex } from 'viem';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 
 import { createGeoClient, Ops } from '../index.js';
 import { SpaceRegistryAbi } from './abis/index.js';
+import { RESPONSE_ACTIONS } from './client/responses.js';
 import { DESCRIPTION_PROPERTY, RELATION_TYPE, REPLY_TO_PROPERTY } from './core/ids/system.js';
 import { createE2ETestEnvironment, type E2ETestEnvironment } from './e2e-test-environment.js';
 import { createE2EWalletSetup, type E2EPublicClient, type E2EWalletSetup } from './e2e-wallet.js';
@@ -103,15 +104,42 @@ type ProposalVoteQueryResponse = {
   }>;
 };
 
-type VoteQueryResponse = {
-  votes: Array<{
-    voterId: string;
+type VoteKind = 0 | 1 | 2;
+type VoteType = 0 | 1;
+
+type ResponseStateQueryResponse = {
+  userVotes: Array<{
+    userId: string;
     objectId: string;
     objectType: number;
     spaceId: string;
-    vote: number;
+    voteType: VoteType;
+    voteKind: VoteKind;
+  }>;
+  votesCounts: Array<{
+    objectId: string;
+    objectType: number;
+    spaceId: string;
+    voteKind: VoteKind;
+    positive: string | number;
+    negative: string | number;
   }>;
 };
+
+type ExpectedResponseState = {
+  voteType: VoteType | null;
+  positive: number;
+  negative: number;
+};
+
+const REQUIRED_RESPONSE_ACTIONS = [
+  RESPONSE_ACTIONS.agree,
+  RESPONSE_ACTIONS.disagree,
+  RESPONSE_ACTIONS.unagree,
+  RESPONSE_ACTIONS.verify,
+  RESPONSE_ACTIONS.dispute,
+  RESPONSE_ACTIONS.unverify,
+] as const;
 
 type SpaceTopicQueryResponse = {
   spaces: Array<{
@@ -261,22 +289,49 @@ function proposalVoteQuery(proposalId: string, voterId: string, spaceId: string)
   }`;
 }
 
-function entityVoteQuery(entityId: string, voterId: string, spaceId: string) {
-  return `query entityVote {
-    votes(condition: {
-      voterId: ${JSON.stringify(voterId.replaceAll('-', ''))}
+function responseStateQuery(entityId: string, userId: string, spaceId: string, voteKind: VoteKind) {
+  return `query responseState {
+    userVotes(condition: {
+      userId: ${JSON.stringify(userId.replaceAll('-', ''))}
       objectId: ${JSON.stringify(entityId.replaceAll('-', ''))}
       objectType: 0
       spaceId: ${JSON.stringify(spaceId.replaceAll('-', ''))}
+      voteKind: ${voteKind}
     }) {
-      voterId
+      userId
       objectId
       objectType
       spaceId
-      vote
+      voteType
+      voteKind
+    }
+    votesCounts(condition: {
+      objectId: ${JSON.stringify(entityId.replaceAll('-', ''))}
+      objectType: 0
+      spaceId: ${JSON.stringify(spaceId.replaceAll('-', ''))}
+      voteKind: ${voteKind}
+    }) {
+      objectId
+      objectType
+      spaceId
+      voteKind
+      positive
+      negative
     }
   }`;
 }
+
+const RESPONSE_SCHEMA_READINESS_QUERY = `query responseSchemaReadiness {
+  userVotes(first: 1) {
+    voteKind
+    voteType
+  }
+  votesCounts(first: 1) {
+    voteKind
+    positive
+    negative
+  }
+}`;
 
 function spaceTopicQuery(spaceId: string) {
   const normalizedSpaceId = spaceId.replaceAll('-', '').toLowerCase();
@@ -515,20 +570,85 @@ async function waitForProposalVote(
   expect(data.proposalVotes.map(proposalVote => proposalVote.vote)).toContain(vote);
 }
 
-async function waitForEntityVote(
+async function waitForEntityResponse(
   entityId: string,
-  voterId: string,
+  userId: string,
   spaceId: string,
-  predicate: (votes: VoteQueryResponse['votes']) => boolean,
+  voteKind: VoteKind,
+  expected: ExpectedResponseState,
 ) {
   const data = await waitFor(
-    `entity vote for ${entityId}`,
-    () => queryGraph<VoteQueryResponse>(entityVoteQuery(entityId, voterId, spaceId)),
-    value => predicate(value.votes),
+    `entity response kind ${voteKind} for ${entityId}`,
+    () => queryGraph<ResponseStateQueryResponse>(responseStateQuery(entityId, userId, spaceId, voteKind)),
+    value => {
+      const userVote = value.userVotes[0];
+      const count = value.votesCounts[0];
+
+      return (
+        value.userVotes.every(vote => vote.voteKind === voteKind) &&
+        value.votesCounts.every(votesCount => votesCount.voteKind === voteKind) &&
+        (userVote?.voteType ?? null) === expected.voteType &&
+        count !== undefined &&
+        Number(count.positive) === expected.positive &&
+        Number(count.negative) === expected.negative
+      );
+    },
   );
 
-  expect(predicate(data.votes)).toBe(true);
-  return data.votes;
+  expect(data.userVotes.every(vote => vote.voteKind === voteKind)).toBe(true);
+  expect(data.votesCounts.every(votesCount => votesCount.voteKind === voteKind)).toBe(true);
+  expect(data.userVotes[0]?.voteType ?? null).toBe(expected.voteType);
+  expect(Number(data.votesCounts[0]?.positive)).toBe(expected.positive);
+  expect(Number(data.votesCounts[0]?.negative)).toBe(expected.negative);
+
+  return data;
+}
+
+let responseEnvironmentPromise: Promise<void> | undefined;
+async function ensureResponseEnvironmentReady(context: TestContext) {
+  responseEnvironmentPromise ??= (async () => {
+    const missingActions: string[] = [];
+
+    for (const action of REQUIRED_RESPONSE_ACTIONS) {
+      const isPermissionless = (await context.publicClient.readContract({
+        address: e2e.contracts.SPACE_REGISTRY_ADDRESS,
+        abi: SpaceRegistryAbi,
+        functionName: 'permissionlessActions',
+        args: [action.hash],
+      })) as boolean;
+
+      if (!isPermissionless) {
+        missingActions.push(action.name);
+      }
+    }
+
+    if (missingActions.length > 0) {
+      throw new Error(
+        [
+          `Response e2e prerequisites are missing on Geo network ${e2e.network.name} (${e2e.network.id}).`,
+          `SpaceRegistry ${e2e.contracts.SPACE_REGISTRY_ADDRESS} has not enabled: ${missingActions.join(', ')}.`,
+          'A registry owner must call setPermissionlessAction for every missing source-of-truth action before response transactions can be tested.',
+        ].join(' '),
+      );
+    }
+
+    try {
+      await queryGraph<ResponseStateQueryResponse>(RESPONSE_SCHEMA_READINESS_QUERY);
+    } catch (error) {
+      if (error instanceof GraphQlRequestError && error.hasValidationError()) {
+        throw new Error(
+          [
+            `Response e2e prerequisites are missing from API ${e2e.apiOrigin}.`,
+            'The gaia GraphQL schema must expose userVotes.voteKind, userVotes.voteType, votesCounts.voteKind, votesCounts.positive, and votesCounts.negative from PR #872.',
+            `GraphQL validation error: ${String(error)}`,
+          ].join(' '),
+        );
+      }
+      throw error;
+    }
+  })();
+
+  return responseEnvironmentPromise;
 }
 
 async function waitForSpaceTopicId(spaceId: string, topicId: string) {
@@ -1258,83 +1378,171 @@ describe.sequential('new API e2e surface', () => {
     TEST_TIMEOUT_MS,
   );
 
-  it(
-    'geo.entityVotes.upvote submits and indexes an upvote',
-    async () => {
+  describe.sequential('geo.responses', () => {
+    beforeAll(async () => {
       const context = await getTestContext();
-      const entity = await createIndexedEntity(context, uniqueName('E2E New Upvoted Entity'));
-      const upvote = geo.entityVotes.upvote({
-        authorSpaceId: context.authorSpaceId,
-        spaceId: context.spaceId,
-        entityId: entity.id,
-      });
-      await sendTransactionAndWait(context, {
-        label: 'E2E new API upvote entity',
-        to: upvote.to,
-        calldata: upvote.calldata,
-      });
-      await waitForEntityVote(entity.id, context.authorSpaceId, context.spaceId, votes =>
-        votes.some(vote => vote.vote === 0),
-      );
-    },
-    TEST_TIMEOUT_MS,
-  );
+      await ensureResponseEnvironmentReady(context);
+    }, TEST_TIMEOUT_MS);
 
-  it(
-    'geo.entityVotes.downvote submits and indexes a downvote',
-    async () => {
-      const context = await getTestContext();
-      const entity = await createIndexedEntity(context, uniqueName('E2E New Downvoted Entity'));
-      const downvote = geo.entityVotes.downvote({
-        authorSpaceId: context.authorSpaceId,
-        spaceId: context.spaceId,
-        entityId: entity.id,
-      });
-      await sendTransactionAndWait(context, {
-        label: 'E2E new API downvote entity',
-        to: downvote.to,
-        calldata: downvote.calldata,
-      });
-      await waitForEntityVote(entity.id, context.authorSpaceId, context.spaceId, votes =>
-        votes.some(vote => vote.vote === 1),
-      );
-    },
-    TEST_TIMEOUT_MS,
-  );
+    it(
+      'submits and indexes a canonical curation response',
+      async () => {
+        const context = await getTestContext();
+        const entity = await createIndexedEntity(context, uniqueName('E2E New Upvoted Entity'));
+        const upvote = geo.responses.upvote({
+          authorSpaceId: context.authorSpaceId,
+          spaceId: context.spaceId,
+          entityId: entity.id,
+        });
+        const { receipt } = await sendTransactionAndWait(context, {
+          label: 'E2E canonical upvote entity',
+          to: upvote.to,
+          calldata: upvote.calldata,
+        });
+        await waitForIndexerBlock(receipt.blockNumber);
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 0, {
+          voteType: 0,
+          positive: 1,
+          negative: 0,
+        });
+      },
+      TEST_TIMEOUT_MS,
+    );
 
-  it(
-    'geo.entityVotes.withdraw removes an indexed entity vote',
-    async () => {
-      const context = await getTestContext();
-      const entity = await createIndexedEntity(context, uniqueName('E2E New Vote Withdraw Entity'));
-      const upvote = geo.entityVotes.upvote({
-        authorSpaceId: context.authorSpaceId,
-        spaceId: context.spaceId,
-        entityId: entity.id,
-      });
-      await sendTransactionAndWait(context, {
-        label: 'E2E new API upvote before withdraw',
-        to: upvote.to,
-        calldata: upvote.calldata,
-      });
-      await waitForEntityVote(entity.id, context.authorSpaceId, context.spaceId, votes => votes.length > 0);
+    it(
+      'transitions and clears stance independently',
+      async () => {
+        const context = await getTestContext();
+        const entity = await createIndexedEntity(context, uniqueName('E2E New Stance Entity'));
+        const params = {
+          authorSpaceId: context.authorSpaceId,
+          spaceId: context.spaceId,
+          entityId: entity.id,
+        };
 
-      const withdraw = geo.entityVotes.withdraw({
-        authorSpaceId: context.authorSpaceId,
-        spaceId: context.spaceId,
-        entityId: entity.id,
-      });
-      await sendTransactionAndWait(context, {
-        label: 'E2E new API withdraw entity vote',
-        to: withdraw.to,
-        calldata: withdraw.calldata,
-      });
-      await waitForEntityVote(entity.id, context.authorSpaceId, context.spaceId, votes =>
-        votes.some(vote => vote.vote === 2),
-      );
-    },
-    TEST_TIMEOUT_MS,
-  );
+        const agree = geo.responses.agree(params);
+        const agreed = await sendTransactionAndWait(context, {
+          label: 'E2E agree with entity',
+          to: agree.to,
+          calldata: agree.calldata,
+        });
+        await waitForIndexerBlock(agreed.receipt.blockNumber);
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 1, {
+          voteType: 0,
+          positive: 1,
+          negative: 0,
+        });
+
+        const disagree = geo.responses.disagree(params);
+        const disagreed = await sendTransactionAndWait(context, {
+          label: 'E2E disagree with entity',
+          to: disagree.to,
+          calldata: disagree.calldata,
+        });
+        await waitForIndexerBlock(disagreed.receipt.blockNumber);
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 1, {
+          voteType: 1,
+          positive: 0,
+          negative: 1,
+        });
+
+        const unagree = geo.responses.unagree(params);
+        const unagreed = await sendTransactionAndWait(context, {
+          label: 'E2E clear entity stance',
+          to: unagree.to,
+          calldata: unagree.calldata,
+        });
+        await waitForIndexerBlock(unagreed.receipt.blockNumber);
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 1, {
+          voteType: null,
+          positive: 0,
+          negative: 0,
+        });
+      },
+      TEST_TIMEOUT_MS,
+    );
+
+    it(
+      'transitions and clears veracity without changing curation',
+      async () => {
+        const context = await getTestContext();
+        const entity = await createIndexedEntity(context, uniqueName('E2E New Veracity Entity'));
+        const params = {
+          authorSpaceId: context.authorSpaceId,
+          spaceId: context.spaceId,
+          entityId: entity.id,
+        };
+
+        const upvote = geo.responses.upvote(params);
+        const upvoted = await sendTransactionAndWait(context, {
+          label: 'E2E upvote before veracity responses',
+          to: upvote.to,
+          calldata: upvote.calldata,
+        });
+        await waitForIndexerBlock(upvoted.receipt.blockNumber);
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 0, {
+          voteType: 0,
+          positive: 1,
+          negative: 0,
+        });
+
+        const verify = geo.responses.verify(params);
+        const verified = await sendTransactionAndWait(context, {
+          label: 'E2E verify entity',
+          to: verify.to,
+          calldata: verify.calldata,
+        });
+        await waitForIndexerBlock(verified.receipt.blockNumber);
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 2, {
+          voteType: 0,
+          positive: 1,
+          negative: 0,
+        });
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 0, {
+          voteType: 0,
+          positive: 1,
+          negative: 0,
+        });
+
+        const dispute = geo.responses.dispute(params);
+        const disputed = await sendTransactionAndWait(context, {
+          label: 'E2E dispute entity',
+          to: dispute.to,
+          calldata: dispute.calldata,
+        });
+        await waitForIndexerBlock(disputed.receipt.blockNumber);
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 2, {
+          voteType: 1,
+          positive: 0,
+          negative: 1,
+        });
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 0, {
+          voteType: 0,
+          positive: 1,
+          negative: 0,
+        });
+
+        const unverify = geo.responses.unverify(params);
+        const unverified = await sendTransactionAndWait(context, {
+          label: 'E2E clear entity veracity',
+          to: unverify.to,
+          calldata: unverify.calldata,
+        });
+        await waitForIndexerBlock(unverified.receipt.blockNumber);
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 2, {
+          voteType: null,
+          positive: 0,
+          negative: 0,
+        });
+        await waitForEntityResponse(entity.id, context.authorSpaceId, context.spaceId, 0, {
+          voteType: 0,
+          positive: 1,
+          negative: 0,
+        });
+      },
+      TEST_TIMEOUT_MS,
+    );
+  });
 
   it(
     'geo.daoSpaces.create creates an indexed DAO space',
