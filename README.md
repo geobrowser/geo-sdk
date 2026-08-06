@@ -864,24 +864,53 @@ await walletClient.sendTransaction({
 });
 ```
 
-### `geo.entityVotes`
+### `geo.responses`
 
-Upvote, downvote, or withdraw a vote on an entity:
+Respond to an entity on three independent axes:
+
+- Curation: `upvote`, `downvote`, and `unvote`
+- Stance: `agree`, `disagree`, and `unagree`
+- Veracity: `verify`, `dispute`, and `unverify`
+
+Each clear method removes only its matching response kind. For example,
+`unverify` does not remove an upvote or agreement from the same user.
+
+Create curation response calldata:
 
 ```ts
-const upvote = geo.entityVotes.upvote({
+const upvote = geo.responses.upvote({
   authorSpaceId,
   spaceId,
   entityId,
 });
 
-const downvote = geo.entityVotes.downvote({
+const downvote = geo.responses.downvote({
   authorSpaceId,
   spaceId,
   entityId,
 });
 
-const withdraw = geo.entityVotes.withdraw({
+const unvote = geo.responses.unvote({
+  authorSpaceId,
+  spaceId,
+  entityId,
+});
+```
+
+Create stance response calldata:
+
+```ts
+const agree = geo.responses.agree({ authorSpaceId, spaceId, entityId });
+const disagree = geo.responses.disagree({ authorSpaceId, spaceId, entityId });
+const unagree = geo.responses.unagree({ authorSpaceId, spaceId, entityId });
+```
+
+Create veracity response calldata:
+
+```ts
+const verify = geo.responses.verify({ authorSpaceId, spaceId, entityId });
+const dispute = geo.responses.dispute({ authorSpaceId, spaceId, entityId });
+const unverify = geo.responses.unverify({
   authorSpaceId,
   spaceId,
   entityId,
@@ -896,6 +925,20 @@ await walletClient.sendTransaction({
   data: upvote.calldata,
 });
 ```
+
+Agree, Disagree, Verify, Dispute, and their clear actions require an environment
+running the kind-aware gaia schema and a `SpaceRegistry` whose owner has enabled
+the six corresponding permissionless action hashes. SDK consumers submit the
+returned calldata; they do not need registry-owner authority.
+
+#### Deprecated `geo.entityVotes`
+
+`geo.entityVotes` remains functional for compatibility but is deprecated. Use
+these replacements in new code:
+
+- `geo.entityVotes.upvote` → `geo.responses.upvote`
+- `geo.entityVotes.downvote` → `geo.responses.downvote`
+- `geo.entityVotes.withdraw` → `geo.responses.unvote`
 
 ## Full Publishing Flow With A Sponsored Wallet
 
