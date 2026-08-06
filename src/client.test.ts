@@ -1,4 +1,7 @@
+import { decodeFunctionData } from 'viem';
 import { describe, expect, it, vi } from 'vitest';
+import { SpaceRegistryAbi } from './abis/index.js';
+import { RESPONSE_ACTIONS } from './client/responses.js';
 import { createGeoClient } from './client.js';
 import { defineGeoNetworkConfig, GeoTestnetConfig } from './networks.js';
 import * as Ops from './ops/index.js';
@@ -148,5 +151,59 @@ describe('createGeoClient', () => {
 
     expect(result.to).toBe('0x0000000000000000000000000000000000000001');
     expect(result.calldata).toMatch(/^0x/);
+  });
+
+  it('exposes canonical response helpers without fetch', () => {
+    const originalFetch = globalThis.fetch;
+    vi.stubGlobal('fetch', undefined);
+
+    try {
+      const geo = createGeoClient({ network: customNetwork() });
+      const params = {
+        authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
+        spaceId: 'abcdef12345678901234567890abcdef',
+        entityId: '11111111111111111111111111111111',
+      };
+
+      expect(Object.keys(geo.responses)).toEqual([
+        'upvote',
+        'downvote',
+        'unvote',
+        'agree',
+        'disagree',
+        'unagree',
+        'verify',
+        'dispute',
+        'unverify',
+      ]);
+
+      for (const method of Object.keys(geo.responses) as (keyof typeof geo.responses)[]) {
+        const result = geo.responses[method](params);
+        const decoded = decodeFunctionData({
+          abi: SpaceRegistryAbi,
+          data: result.calldata,
+        });
+        const [, , action] = decoded.args as readonly `0x${string}`[];
+
+        expect(result.to).toBe('0x0000000000000000000000000000000000000001');
+        expect(decoded.functionName).toBe('enter');
+        expect(action).toBe(RESPONSE_ACTIONS[method].hash);
+      }
+    } finally {
+      vi.stubGlobal('fetch', originalFetch);
+    }
+  });
+
+  it('keeps entityVotes as byte-for-byte compatible response aliases', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+    const params = {
+      authorSpaceId: '0eed5491b917cf58b33ac81255fe7ae9',
+      spaceId: 'abcdef12345678901234567890abcdef',
+      entityId: '11111111111111111111111111111111',
+    };
+
+    expect(geo.entityVotes.upvote(params)).toEqual(geo.responses.upvote(params));
+    expect(geo.entityVotes.downvote(params)).toEqual(geo.responses.downvote(params));
+    expect(geo.entityVotes.withdraw(params)).toEqual(geo.responses.unvote(params));
   });
 });

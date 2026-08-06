@@ -9,6 +9,7 @@ import * as EntityVotes from './client/entity-votes.js';
 import * as PersonalSpaces from './client/personal-spaces.js';
 import type { UpdateRankClientParams } from './client/ranks.js';
 import * as Ranks from './client/ranks.js';
+import * as Responses from './client/responses.js';
 import type { VotingSettingsInput } from './encodings/get-create-dao-space-calldata.js';
 import type { Id } from './id.js';
 import { defineGeoNetworkConfig } from './networks.js';
@@ -230,11 +231,10 @@ export type ProposeUpdateVotingSettingsParams = Omit<DaoSpaceRoleProposalBasePar
   votingSettings: VotingSettingsInput;
 };
 
-export type EntityVoteParams = {
-  authorSpaceId: Id | string;
-  spaceId: Id | string;
-  entityId: Id | string;
-};
+export type ResponseParams = Responses.ClientResponseParams;
+
+/** @deprecated Use `ResponseParams`. */
+export type EntityVoteParams = ResponseParams;
 
 export type Client = {
   network: GeoNetworkConfig;
@@ -277,9 +277,24 @@ export type Client = {
     voteProposal(params: VoteProposalParams): CalldataResult;
     executeProposal(params: ExecuteProposalParams): CalldataResult;
   };
+  responses: {
+    upvote(params: ResponseParams): CalldataResult;
+    downvote(params: ResponseParams): CalldataResult;
+    unvote(params: ResponseParams): CalldataResult;
+    agree(params: ResponseParams): CalldataResult;
+    disagree(params: ResponseParams): CalldataResult;
+    unagree(params: ResponseParams): CalldataResult;
+    verify(params: ResponseParams): CalldataResult;
+    dispute(params: ResponseParams): CalldataResult;
+    unverify(params: ResponseParams): CalldataResult;
+  };
+  /** @deprecated Use `responses`. */
   entityVotes: {
+    /** @deprecated Use `responses.upvote`. */
     upvote(params: EntityVoteParams): CalldataResult;
+    /** @deprecated Use `responses.downvote`. */
     downvote(params: EntityVoteParams): CalldataResult;
+    /** @deprecated Use `responses.unvote`. */
     withdraw(params: EntityVoteParams): CalldataResult;
   };
 };
@@ -739,7 +754,28 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        */
       executeProposal: (params: ExecuteProposalParams) => DaoSpaces.executeProposal(context, params),
     },
-    /** Entity vote transaction helpers. */
+    /** Entity response transaction helpers. */
+    responses: {
+      /** Builds calldata for upvoting an entity. */
+      upvote: (params: ResponseParams) => Responses.upvote(context, params),
+      /** Builds calldata for downvoting an entity. */
+      downvote: (params: ResponseParams) => Responses.downvote(context, params),
+      /** Builds calldata for clearing an entity vote. */
+      unvote: (params: ResponseParams) => Responses.unvote(context, params),
+      /** Builds calldata for agreeing with an entity. */
+      agree: (params: ResponseParams) => Responses.agree(context, params),
+      /** Builds calldata for disagreeing with an entity. */
+      disagree: (params: ResponseParams) => Responses.disagree(context, params),
+      /** Builds calldata for clearing an entity agreement. */
+      unagree: (params: ResponseParams) => Responses.unagree(context, params),
+      /** Builds calldata for verifying an entity. */
+      verify: (params: ResponseParams) => Responses.verify(context, params),
+      /** Builds calldata for disputing an entity. */
+      dispute: (params: ResponseParams) => Responses.dispute(context, params),
+      /** Builds calldata for clearing an entity verification response. */
+      unverify: (params: ResponseParams) => Responses.unverify(context, params),
+    },
+    /** @deprecated Use `responses`. */
     entityVotes: {
       /**
        * Builds calldata for upvoting an entity.

@@ -30,38 +30,38 @@ function validateEntityVoteId(id: Id | string, sourceHint: string) {
 /**
  * Creates calldata for upvoting an entity.
  *
- * @deprecated Use `createGeoClient({ network }).entityVotes.upvote(...)`.
+ * @deprecated Use `createGeoClient({ network }).responses.upvote(...)`.
  */
 export function upvoteEntity(params: EntityVoteParams): EntityVoteResult {
   const { network = 'TESTNET', ...args } = params;
   validateEntityVoteId(args.authorSpaceId, '`authorSpaceId` in entity vote');
   validateEntityVoteId(args.spaceId, '`spaceId` in entity vote');
   validateEntityVoteId(args.entityId, '`entityId` in entity vote');
-  return createGeoClient({ network: resolveGeoNetwork(network) }).entityVotes.upvote(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).responses.upvote(args);
 }
 
 /**
  * Creates calldata for downvoting an entity.
  *
- * @deprecated Use `createGeoClient({ network }).entityVotes.downvote(...)`.
+ * @deprecated Use `createGeoClient({ network }).responses.downvote(...)`.
  */
 export function downvoteEntity(params: EntityVoteParams): EntityVoteResult {
   const { network = 'TESTNET', ...args } = params;
   validateEntityVoteId(args.authorSpaceId, '`authorSpaceId` in entity vote');
   validateEntityVoteId(args.spaceId, '`spaceId` in entity vote');
   validateEntityVoteId(args.entityId, '`entityId` in entity vote');
-  return createGeoClient({ network: resolveGeoNetwork(network) }).entityVotes.downvote(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).responses.downvote(args);
 }
 
 /**
  * Creates calldata for withdrawing the author's vote on an entity.
  *
- * @deprecated Use `createGeoClient({ network }).entityVotes.withdraw(...)`.
+ * @deprecated Use `createGeoClient({ network }).responses.unvote(...)`.
  */
 export function withdrawEntityVote(params: EntityVoteParams): EntityVoteResult {
   const { network = 'TESTNET', ...args } = params;
   validateEntityVoteId(args.authorSpaceId, '`authorSpaceId` in entity vote');
   validateEntityVoteId(args.spaceId, '`spaceId` in entity vote');
   validateEntityVoteId(args.entityId, '`entityId` in entity vote');
-  return createGeoClient({ network: resolveGeoNetwork(network) }).entityVotes.withdraw(args);
+  return createGeoClient({ network: resolveGeoNetwork(network) }).responses.unvote(args);
 }
