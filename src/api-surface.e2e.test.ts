@@ -13,6 +13,7 @@ import { generate, toGrcId } from './id-utils.js';
 
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Hex;
 const EMPTY_SPACE_ID = '0x00000000000000000000000000000000' as Hex;
+const RESPONSE_SCHEMA_PROBE_ENTITY_ID = '00000000000000000000000000000000';
 const INDEXER_TIMEOUT_MS = 120_000;
 const TEST_TIMEOUT_MS = 600_000;
 const replyToGrcId = toGrcId(REPLY_TO_PROPERTY);
@@ -321,18 +322,6 @@ function responseStateQuery(entityId: string, userId: string, spaceId: string, v
   }`;
 }
 
-const RESPONSE_SCHEMA_READINESS_QUERY = `query responseSchemaReadiness {
-  userVotes(first: 1) {
-    voteKind
-    voteType
-  }
-  votesCounts(first: 1) {
-    voteKind
-    positive
-    negative
-  }
-}`;
-
 function spaceTopicQuery(spaceId: string) {
   const normalizedSpaceId = spaceId.replaceAll('-', '').toLowerCase();
 
@@ -634,13 +623,15 @@ async function ensureResponseEnvironmentReady(context: TestContext) {
     }
 
     try {
-      await queryGraph<ResponseStateQueryResponse>(RESPONSE_SCHEMA_READINESS_QUERY);
+      await queryGraph<ResponseStateQueryResponse>(
+        responseStateQuery(RESPONSE_SCHEMA_PROBE_ENTITY_ID, context.authorSpaceId, context.spaceId, 0),
+      );
     } catch (error) {
       if (error instanceof GraphQlRequestError && error.hasValidationError()) {
         throw new Error(
           [
             `Response e2e prerequisites are missing from API ${e2e.apiOrigin}.`,
-            'The gaia GraphQL schema must expose userVotes.voteKind, userVotes.voteType, votesCounts.voteKind, votesCounts.positive, and votesCounts.negative from PR #872.',
+            'The gaia GraphQL schema must expose kind-filtered userVotes and votesCounts, including voteKind, voteType, positive, and negative from PR #872.',
             `GraphQL validation error: ${String(error)}`,
           ].join(' '),
         );
@@ -1403,18 +1394,34 @@ describe.sequential('new API e2e surface', () => {
     }, TEST_TIMEOUT_MS);
 
     it(
-      'submits and indexes a canonical curation response',
+      'transitions and clears canonical curation responses',
       async () => {
         const context = await getTestContext();
         const entity = await createIndexedEntity(context, uniqueName('E2E New Upvoted Entity'));
-        const upvote = geo.responses.upvote({
+        const params = {
           authorSpaceId: context.authorSpaceId,
           spaceId: context.spaceId,
           entityId: entity.id,
-        });
+        };
+
+        const upvote = geo.responses.upvote(params);
         await sendResponseAndWait(context, 'E2E canonical upvote entity', upvote, entity.id, 0, {
           voteType: 0,
           positive: 1,
+          negative: 0,
+        });
+
+        const downvote = geo.responses.downvote(params);
+        await sendResponseAndWait(context, 'E2E canonical downvote entity', downvote, entity.id, 0, {
+          voteType: 1,
+          positive: 0,
+          negative: 1,
+        });
+
+        const unvote = geo.responses.unvote(params);
+        await sendResponseAndWait(context, 'E2E clear canonical entity vote', unvote, entity.id, 0, {
+          voteType: null,
+          positive: 0,
           negative: 0,
         });
       },

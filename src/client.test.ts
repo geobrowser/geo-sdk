@@ -1,4 +1,7 @@
+import { decodeFunctionData } from 'viem';
 import { describe, expect, it, vi } from 'vitest';
+import { SpaceRegistryAbi } from './abis/index.js';
+import { RESPONSE_ACTIONS } from './client/responses.js';
 import { createGeoClient } from './client.js';
 import { defineGeoNetworkConfig, GeoTestnetConfig } from './networks.js';
 import * as Ops from './ops/index.js';
@@ -175,7 +178,16 @@ describe('createGeoClient', () => {
       ]);
 
       for (const method of Object.keys(geo.responses) as (keyof typeof geo.responses)[]) {
-        expect(geo.responses[method](params).to).toBe('0x0000000000000000000000000000000000000001');
+        const result = geo.responses[method](params);
+        const decoded = decodeFunctionData({
+          abi: SpaceRegistryAbi,
+          data: result.calldata,
+        });
+        const [, , action] = decoded.args as readonly `0x${string}`[];
+
+        expect(result.to).toBe('0x0000000000000000000000000000000000000001');
+        expect(decoded.functionName).toBe('enter');
+        expect(action).toBe(RESPONSE_ACTIONS[method].hash);
       }
     } finally {
       vi.stubGlobal('fetch', originalFetch);
