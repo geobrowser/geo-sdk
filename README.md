@@ -926,20 +926,6 @@ await walletClient.sendTransaction({
 });
 ```
 
-Agree, Disagree, Verify, Dispute, and their clear actions require an environment
-running the kind-aware gaia schema and a `SpaceRegistry` whose owner has enabled
-the six corresponding permissionless action hashes. SDK consumers submit the
-returned calldata; they do not need registry-owner authority.
-
-#### Deprecated `geo.entityVotes`
-
-`geo.entityVotes` remains functional for compatibility but is deprecated. Use
-these replacements in new code:
-
-- `geo.entityVotes.upvote` → `geo.responses.upvote`
-- `geo.entityVotes.downvote` → `geo.responses.downvote`
-- `geo.entityVotes.withdraw` → `geo.responses.unvote`
-
 ## Full Publishing Flow With A Sponsored Wallet
 
 This example publishes an edit to an existing personal space using a sponsored
