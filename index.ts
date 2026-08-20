@@ -6,6 +6,18 @@
  */
 export { Account } from './src/account.js';
 export { DataBlock, TextBlock } from './src/blocks.js';
+/**
+ * Guard that keeps the entities anchoring a space's identity — its home entity,
+ * avatar and cover — out of the ordinary delete path.
+ */
+export {
+  ANCHOR_RELATION_PROPERTIES,
+  type AnchorReason,
+  anchoredEntityIds,
+  ProtectedEntityError,
+  type SpaceAnchorsResponse,
+  spaceAnchorsQueryField,
+} from './src/client/protected-entities.js';
 export { createGeoClient } from './src/client.js';
 /**
  * This module provides utility functions for working with base58 ids

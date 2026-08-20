@@ -216,6 +216,16 @@ export type DeleteEntityParams = {
   id: Id | string;
   spaceId: Id | string;
   network?: Network;
+  /**
+   * Allows deleting an entity that anchors the space's identity — its
+   * `page`/home entity, or the Avatar or Cover image that entity points at.
+   *
+   * Those deletes are refused by default: they remove the space itself rather
+   * than content in it. Set this only for a delete that is meant to do that.
+   *
+   * @default false
+   */
+  deleteAnchored?: boolean;
 };
 
 export type CreateTypeParams = DefaultProperties & {

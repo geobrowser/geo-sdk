@@ -9,6 +9,7 @@ import { assertValid, toGrcId } from '../id-utils.js';
 import type { CreateResult, DeleteEntityParams } from '../types.js';
 import { graphqlData } from './api.js';
 import type { GeoClientContext } from './context.js';
+import { assertNotAnchored, type SpaceAnchorsResponse, spaceAnchorsQueryField } from './protected-entities.js';
 
 class DeleteEntityError extends Error {
   readonly _tag = 'DeleteEntityError';
@@ -19,6 +20,7 @@ type EntityGraphQLResponse = {
     valuesList: Array<{ propertyId: string; spaceId: string }>;
     relationsList: Array<{ id: string; spaceId: string }>;
   } | null;
+  space?: SpaceAnchorsResponse;
 };
 
 type DeleteEntityOpsParams = Omit<DeleteEntityParams, 'network'> & {
@@ -64,6 +66,12 @@ function createDeleteEntityOps({ id, spaceId, values, relations }: DeleteEntityO
  * Entity deletion requires current graph context so the SDK can unset existing
  * values and delete existing relations in the target space.
  *
+ * Entities that anchor the space's identity — its `page`/home entity and the
+ * Avatar and Cover images that entity points at — are refused unless
+ * `deleteAnchored: true` is passed. Deleting one of those removes the space
+ * itself rather than content in it, and callers that iterate a space's entities
+ * have no other way to tell them apart from ordinary content.
+ *
  * @example
  * ```ts
  * const { ops } = await geo.entities.delete({
@@ -73,11 +81,15 @@ function createDeleteEntityOps({ id, spaceId, values, relations }: DeleteEntityO
  * ```
  *
  * @param context Client context containing API origin and fetch configuration.
- * @param params Entity ID and space ID to delete within.
+ * @param params Entity ID and space ID to delete within, and whether anchored entities may be deleted.
  * @returns Entity ID and deletion ops, or no ops when the entity is not found.
+ * @throws {ProtectedEntityError} When the entity anchors the space and `deleteAnchored` is not set.
  * @throws When IDs are invalid, fetch is unavailable, GraphQL fails, or the response is malformed.
  */
-export async function deleteEntity(context: GeoClientContext, { id, spaceId }: Omit<DeleteEntityParams, 'network'>) {
+export async function deleteEntity(
+  context: GeoClientContext,
+  { id, spaceId, deleteAnchored }: Omit<DeleteEntityParams, 'network'>,
+) {
   assertValid(id, '`id` in `deleteEntity`');
   assertValid(spaceId, '`spaceId` in `deleteEntity`');
 
@@ -93,6 +105,7 @@ export async function deleteEntity(context: GeoClientContext, { id, spaceId }: O
         spaceId
       }
     }
+    ${spaceAnchorsQueryField(normalizedSpaceId)}
   }`;
 
   let response: EntityGraphQLResponse;
@@ -105,6 +118,8 @@ export async function deleteEntity(context: GeoClientContext, { id, spaceId }: O
     }
     throw new DeleteEntityError(`Could not fetch entity data for ${id}: ${error}`);
   }
+
+  assertNotAnchored({ id: String(id), spaceId: normalizedSpaceId, space: response.space, deleteAnchored });
 
   if (!response.entity) {
     return { id: Id(id), ops: [] };

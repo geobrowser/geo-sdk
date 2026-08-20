@@ -559,6 +559,51 @@ const { ops } = await geo.entities.delete({
 
 Entity deletion queries the configured API for current values and relations in the target space, then builds ops to unset those values and delete those relations. The entity transitions to an empty state in that space; it is not globally destroyed.
 
+The same request also resolves the space's **anchored** entities — its `page`/home entity, and the Avatar and Cover images that entity points at — and refuses to delete one of them:
+
+```ts
+await geo.entities.delete({ id: spacePageId, spaceId });
+// ProtectedEntityError: Refusing to delete <id>: it is the home entity of
+// space <spaceId>, which holds the space's name, description and identity.
+// Pass `deleteAnchored: true` to delete it anyway.
+```
+
+Those entities carry the space's identity rather than content in it, and a caller iterating a space's entities has no way to tell them apart from anything else it is deleting — so one stray loop takes the space's name, description and profile image with it. Deleting them intentionally is still possible:
+
+```ts
+const { ops } = await geo.entities.delete({
+  id: spaceAvatarId,
+  spaceId,
+  deleteAnchored: true,
+});
+```
+
+`ProtectedEntityError` carries `entityId`, `spaceId`, and a `reason` of `'page' | 'avatar' | 'cover'`, so a bulk caller can skip anchored entities and keep going rather than aborting:
+
+```ts
+import { ProtectedEntityError } from '@geoprotocol/geo-sdk';
+
+for (const id of entityIds) {
+  try {
+    ops.push(...(await geo.entities.delete({ id, spaceId })).ops);
+  } catch (error) {
+    if (!(error instanceof ProtectedEntityError)) throw error;
+    console.warn(`skipped ${error.entityId} (${error.reason})`);
+  }
+}
+```
+
+To resolve the anchored set up front — to filter a work list before deleting anything — query it with the same selection the guard uses:
+
+```ts
+import { anchoredEntityIds, spaceAnchorsQueryField } from '@geoprotocol/geo-sdk';
+
+const { data } = await geo.api.graphql(`query { ${spaceAnchorsQueryField(spaceId)} }`);
+const anchors = anchoredEntityIds(data?.space); // Map<entityId, 'page' | 'avatar' | 'cover'>
+
+const deletable = entityIds.filter(id => !anchors.has(id));
+```
+
 ### `geo.comments`
 
 Create a comment while preserving reply-to chains:

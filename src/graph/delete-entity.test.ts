@@ -1,4 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ProtectedEntityError, type SpaceAnchorsResponse } from '../client/protected-entities.js';
+import { AVATAR_PROPERTY } from '../core/ids/content.js';
+import { COVER_PROPERTY } from '../core/ids/system.js';
 import { Id } from '../id.js';
 import { toGrcId } from '../id-utils.js';
 import { deleteEntity } from './delete-entity.js';
@@ -8,10 +11,11 @@ function mockGraphQLResponse(
     valuesList: Array<{ propertyId: string; spaceId: string }>;
     relationsList: Array<{ id: string; spaceId: string }>;
   } | null,
+  space?: SpaceAnchorsResponse,
 ) {
   return {
     ok: true,
-    json: async () => ({ data: { entity } }),
+    json: async () => ({ data: { entity, space } }),
   };
 }
 
@@ -195,5 +199,65 @@ describe('deleteEntity', () => {
     });
 
     await expect(deleteEntity({ id: entityId, spaceId })).rejects.toThrow(/GraphQL request returned errors/);
+  });
+
+  describe('anchored entities', () => {
+    const pageId = Id('ba886bf1e1b84703be7f99d57cfc35e6');
+    const avatarId = Id('b00b403b8afb46dead3c3860b5c647e7');
+    const values = [{ propertyId: propertyId, spaceId }];
+    const relations = [{ id: relationId, spaceId }];
+    const spaceAnchors: SpaceAnchorsResponse = {
+      page: {
+        id: pageId,
+        relationsList: [
+          { typeId: String(AVATAR_PROPERTY), toEntityId: String(avatarId) },
+          { typeId: String(COVER_PROPERTY), toEntityId: String(relationId2) },
+        ],
+      },
+    };
+
+    it('should refuse to delete the space home entity', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockGraphQLResponse({ valuesList: values, relationsList: relations }, spaceAnchors),
+      );
+
+      await expect(deleteEntity({ id: pageId, spaceId })).rejects.toThrow(ProtectedEntityError);
+    });
+
+    it('should refuse to delete the space avatar image', async () => {
+      mockFetch.mockResolvedValueOnce(mockGraphQLResponse({ valuesList: values, relationsList: [] }, spaceAnchors));
+
+      await expect(deleteEntity({ id: avatarId, spaceId })).rejects.toThrow(/avatar image of space/);
+    });
+
+    it('should still delete ordinary entities in a space that has anchors', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockGraphQLResponse({ valuesList: values, relationsList: relations }, spaceAnchors),
+      );
+
+      const result = await deleteEntity({ id: entityId, spaceId });
+
+      expect(result.ops).toHaveLength(2);
+    });
+
+    it('should delete an anchored entity when deleteAnchored is set', async () => {
+      mockFetch.mockResolvedValueOnce(
+        mockGraphQLResponse({ valuesList: values, relationsList: relations }, spaceAnchors),
+      );
+
+      const result = await deleteEntity({ id: pageId, spaceId, deleteAnchored: true });
+
+      expect(result.ops).toHaveLength(2);
+    });
+
+    it('should resolve anchors in the same request as the entity', async () => {
+      mockFetch.mockResolvedValueOnce(mockGraphQLResponse(null, spaceAnchors));
+
+      await deleteEntity({ id: entityId, spaceId });
+
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      const request = mockFetch.mock.calls[0]?.[1];
+      expect(JSON.parse(request.body).query).toContain(`space(id: "${spaceId}")`);
+    });
   });
 });
