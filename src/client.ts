@@ -733,6 +733,8 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
       /**
        * Builds calldata for a SLOW DAO proposal that lifts a space's fast-path restriction.
        *
+       * Execution reverts with `InvalidSpaceIdForRole` if the space is not restricted.
+       *
        * @example
        * ```ts
        * const tx = geo.daoSpaces.proposeUnrestrictMember({
@@ -746,6 +748,11 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
         DaoSpaces.proposeUnrestrictMember(context, params),
       /**
        * Builds calldata for a SLOW DAO proposal that adds a member, then lifts their fast-path restriction.
+       *
+       * Only use this for a space that is not already a member or editor and will hold the
+       * restriction once added (the DAO restricts new members, or the space is already
+       * restricted). Otherwise the proposal reverts at execution, after its vote; use
+       * `proposeAddMember` instead.
        *
        * @example
        * ```ts

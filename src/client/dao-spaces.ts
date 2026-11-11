@@ -604,7 +604,11 @@ export async function proposeEdit(context: GeoClientContext, params: ProposeEdit
  * ```
  */
 export function proposeAddMember(context: GeoClientContext, params: ProposeAddMemberParams) {
-  return createRoleProposal(context, params, actions.addMember(params.spaceId, params.newMemberSpaceId));
+  return createRoleProposal(
+    context,
+    params,
+    actions.addMember(params.spaceId, params.newMemberSpaceId, 'newMemberSpaceId'),
+  );
 }
 
 /**
@@ -620,7 +624,11 @@ export function proposeAddMember(context: GeoClientContext, params: ProposeAddMe
  * ```
  */
 export function proposeRemoveMember(context: GeoClientContext, params: ProposeRemoveMemberParams) {
-  return createRoleProposal(context, params, actions.removeMember(params.spaceId, params.memberToRemoveSpaceId));
+  return createRoleProposal(
+    context,
+    params,
+    actions.removeMember(params.spaceId, params.memberToRemoveSpaceId, 'memberToRemoveSpaceId'),
+  );
 }
 
 /**
@@ -642,7 +650,7 @@ export function proposeAddEditor(context: GeoClientContext, params: ProposeAddEd
     context,
     params,
     'proposeAddEditor',
-    actions.addEditor(params.spaceId, params.newEditorSpaceId),
+    actions.addEditor(params.spaceId, params.newEditorSpaceId, 'newEditorSpaceId'),
   );
 }
 
@@ -665,7 +673,7 @@ export function proposeRemoveEditor(context: GeoClientContext, params: ProposeRe
     context,
     params,
     'proposeRemoveEditor',
-    actions.removeEditor(params.spaceId, params.editorToRemoveSpaceId),
+    actions.removeEditor(params.spaceId, params.editorToRemoveSpaceId, 'editorToRemoveSpaceId'),
   );
 }
 
@@ -942,11 +950,14 @@ export function executeProposal(context: GeoClientContext, params: ExecutePropos
  */
 export const actions = {
   publishEdit: encodePublishEditProposalAction,
-  addEditor: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'addEditor', spaceId),
-  removeEditor: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeEditor', spaceId),
+  addEditor: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'addEditor', spaceId, spaceIdName),
+  removeEditor: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'removeEditor', spaceId, spaceIdName),
   addMember: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
     encodeDaoRoleAction(daoSpaceId, 'addMember', spaceId, spaceIdName),
-  removeMember: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeMember', spaceId),
+  removeMember: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'removeMember', spaceId, spaceIdName),
   unrestrictSpace: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
     encodeDaoRoleAction(daoSpaceId, 'unrestrictSpace', spaceId, spaceIdName),
   updateVotingSettings: encodeUpdateVotingSettingsAction,

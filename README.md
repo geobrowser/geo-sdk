@@ -831,7 +831,7 @@ const unrestrict = geo.daoSpaces.proposeUnrestrictMember({
 });
 
 // Adds a space and lifts its restriction in one SLOW proposal (addMember, then unrestrictSpace).
-// The way back in for a space that left while restricted: a restricted space can't request membership.
+// The way back to fast-path access for a space that left while restricted: a restricted space can't request membership itself.
 const addBack = geo.daoSpaces.proposeAddMemberWithFastPath({
   authorSpaceId,
   spaceId: daoSpaceId,

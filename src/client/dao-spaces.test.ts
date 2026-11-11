@@ -558,6 +558,40 @@ describe('geo DAO proposal client', () => {
         votingMode: 'FAST' as never,
       }),
     ).toThrow('proposeAddEditor only supports SLOW voting mode');
+    expect(() =>
+      geo.daoSpaces.proposeRemoveEditor({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        editorToRemoveSpaceId: MEMBER_SPACE_ID,
+        votingMode: 'FAST' as never,
+      }),
+    ).toThrow('proposeRemoveEditor only supports SLOW voting mode');
+    expect(() =>
+      geo.daoSpaces.proposeUpdateVotingSettings({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        votingSettings: VALID_VOTING_SETTINGS,
+        votingMode: 'FAST' as never,
+      }),
+    ).toThrow('proposeUpdateVotingSettings only supports SLOW voting mode');
+  });
+
+  it('names the caller-facing field when a role proposal target is malformed', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+    const base = { authorSpaceId: CALLER_SPACE_ID, spaceId: DAO_SPACE_ID };
+
+    expect(() => geo.daoSpaces.proposeAddMember({ ...base, newMemberSpaceId: '0x12' })).toThrow(
+      'newMemberSpaceId must be bytes16 hex',
+    );
+    expect(() => geo.daoSpaces.proposeRemoveMember({ ...base, memberToRemoveSpaceId: '0x12' })).toThrow(
+      'memberToRemoveSpaceId must be bytes16 hex',
+    );
+    expect(() => geo.daoSpaces.proposeAddEditor({ ...base, newEditorSpaceId: '0x12' })).toThrow(
+      'newEditorSpaceId must be bytes16 hex',
+    );
+    expect(() => geo.daoSpaces.proposeRemoveEditor({ ...base, editorToRemoveSpaceId: '0x12' })).toThrow(
+      'editorToRemoveSpaceId must be bytes16 hex',
+    );
   });
 
   it('creates DAO role proposal actions targeted by space ID', () => {
