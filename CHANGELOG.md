@@ -1,5 +1,11 @@
 # @geoprotocol/geo-sdk
 
+## 0.20.6
+
+### Patch Changes
+
+- de7445e: Document that `restrictMemberFastPath` can restrict any space, including another editor.
+
 ## 0.20.5
 
 ### Patch Changes
