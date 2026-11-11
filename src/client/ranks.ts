@@ -5,16 +5,72 @@ import type { RankType, UpdateRankResult, Vote } from '../ranks/types.js';
 import { updateRank } from '../ranks/update-rank.js';
 import { graphqlData } from './api.js';
 import type { GeoClientContext } from './context.js';
+import { type ConnectionPage, collectPages, PAGE_INFO_FIELDS, pageArgs } from './paginate.js';
 
 class UpdateRankError extends Error {
   readonly _tag = 'UpdateRankError';
 }
 
-type RankRelationsResponse = {
-  entity: {
-    relationsList: Array<{ id: string; entityId: string }>;
-  } | null;
+type VoteNode = { id: string; entityId: string };
+
+type RankVotesResponse = {
+  entity?: { id: string } | null;
+  relationsConnection: ConnectionPage<VoteNode> | null;
 };
+
+function rankVotesQuery(rankId: string, after: string | null): string {
+  // The first page also checks the rank exists; later pages only need the votes.
+  const rankCheck = after === null ? `entity(id: "${rankId}") { id }` : '';
+  return `query rankVotes {
+    ${rankCheck}
+    relationsConnection(
+      ${pageArgs(after)}
+      filter: { fromEntityId: { is: "${rankId}" }, typeId: { is: "${RANK_VOTES_RELATION_TYPE}" } }
+    ) {
+      nodes {
+        id
+        entityId
+      }
+      ${PAGE_INFO_FIELDS}
+    }
+  }`;
+}
+
+/**
+ * Reads every `RANK_VOTES` relation on the rank, following cursors until the
+ * last page, so ranks with more than 100 votes are fully superseded.
+ */
+async function fetchExistingVotes(
+  context: GeoClientContext,
+  rankId: string,
+): Promise<Array<{ relationId: string; voteEntityId: string }>> {
+  const fetchPage = async (after: string | null): Promise<RankVotesResponse> => {
+    try {
+      return await graphqlData<RankVotesResponse>(context, rankVotesQuery(rankId, after));
+    } catch (error) {
+      throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: ${error}`);
+    }
+  };
+  const votesOf = (response: RankVotesResponse): ConnectionPage<VoteNode> => {
+    if (!response.relationsConnection) {
+      throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: missing relationsConnection`);
+    }
+    return response.relationsConnection;
+  };
+
+  const first = await fetchPage(null);
+  if (!first.entity) {
+    throw new UpdateRankError(`Rank ${rankId} not found`);
+  }
+
+  const nodes = await collectPages(
+    votesOf(first),
+    async after => votesOf(await fetchPage(after)),
+    reason => new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: ${reason}`),
+  );
+
+  return nodes.map(relation => ({ relationId: relation.id, voteEntityId: relation.entityId }));
+}
 
 export type UpdateRankClientParams = {
   /** The `Rank` entity to update. */
@@ -26,7 +82,8 @@ export type UpdateRankClientParams = {
 };
 
 /**
- * Fetches the rank's current `RANK_VOTES` relations from the configured Geo API,
+ * Fetches all of the rank's current `RANK_VOTES` relations from the configured Geo API
+ * (paging through them, so ranks with more than 100 votes are fully replaced),
  * then builds ops that delete them (and their reified vote entities) and re-emit
  * the new ordered votes.
  *
@@ -54,30 +111,7 @@ export async function update(
 ): Promise<UpdateRankResult> {
   assertValid(rankId, '`rankId` in `updateRank`');
 
-  const query = `query entity {
-    entity(id: "${rankId}") {
-      relationsList(filter: { typeId: { in: ["${RANK_VOTES_RELATION_TYPE}"] } }) {
-        id
-        entityId
-      }
-    }
-  }`;
-
-  let response: RankRelationsResponse;
-  try {
-    response = await graphqlData<RankRelationsResponse>(context, query);
-  } catch (error) {
-    throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: ${error}`);
-  }
-
-  if (!response.entity) {
-    throw new UpdateRankError(`Rank ${rankId} not found`);
-  }
-
-  const existingVotes = response.entity.relationsList.map(relation => ({
-    relationId: relation.id,
-    voteEntityId: relation.entityId,
-  }));
+  const existingVotes = await fetchExistingVotes(context, rankId);
 
   return updateRank({ rankId, rankType, votes, existingVotes });
 }

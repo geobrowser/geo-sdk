@@ -9,16 +9,19 @@ import { assertValid, toGrcId } from '../id-utils.js';
 import type { CreateResult, DeleteEntityParams } from '../types.js';
 import { graphqlData } from './api.js';
 import type { GeoClientContext } from './context.js';
+import { type ConnectionPage, collectPages, PAGE_INFO_FIELDS, pageArgs } from './paginate.js';
 
 class DeleteEntityError extends Error {
   readonly _tag = 'DeleteEntityError';
 }
 
+type ValueNode = { propertyId: string; spaceId: string };
+type RelationNode = { id: string; spaceId: string };
+
 type EntityGraphQLResponse = {
-  entity: {
-    valuesList: Array<{ propertyId: string; spaceId: string }>;
-    relationsList: Array<{ id: string; spaceId: string }>;
-  } | null;
+  entity?: { id: string } | null;
+  values?: ConnectionPage<ValueNode> | null;
+  relations?: ConnectionPage<RelationNode> | null;
 };
 
 type DeleteEntityOpsParams = Omit<DeleteEntityParams, 'network'> & {
@@ -82,38 +85,69 @@ export async function deleteEntity(context: GeoClientContext, { id, spaceId }: O
   assertValid(spaceId, '`spaceId` in `deleteEntity`');
 
   const normalizedSpaceId = String(spaceId).replaceAll('-', '');
-  const query = `query entity {
-    entity(id: "${id}") {
-      valuesList(filter: { spaceId: { in: [${JSON.stringify(normalizedSpaceId)}] } }) {
+  const valuesField = (after: string | null) => `values: valuesConnection(
+      ${pageArgs(after)}
+      filter: { entityId: { is: "${id}" }, spaceId: { is: ${JSON.stringify(normalizedSpaceId)} } }
+    ) {
+      nodes {
         propertyId
         spaceId
       }
-      relationsList(filter: { spaceId: { in: [${JSON.stringify(normalizedSpaceId)}] } }) {
+      ${PAGE_INFO_FIELDS}
+    }`;
+  const relationsField = (after: string | null) => `relations: relationsConnection(
+      ${pageArgs(after)}
+      filter: { fromEntityId: { is: "${id}" }, spaceId: { is: ${JSON.stringify(normalizedSpaceId)} } }
+    ) {
+      nodes {
         id
         spaceId
       }
-    }
-  }`;
+      ${PAGE_INFO_FIELDS}
+    }`;
 
-  let response: EntityGraphQLResponse;
-  try {
-    response = await graphqlData<EntityGraphQLResponse>(context, query);
-  } catch (error) {
-    const message = String(error);
-    if (message.includes('Could not parse GraphQL response')) {
-      throw new DeleteEntityError(`Could not parse GraphQL response for entity ${id}: ${error}`);
+  const fetchPage = async (fields: string): Promise<EntityGraphQLResponse> => {
+    try {
+      return await graphqlData<EntityGraphQLResponse>(context, `query entity {\n    ${fields}\n  }`);
+    } catch (error) {
+      const message = String(error);
+      if (message.includes('Could not parse GraphQL response')) {
+        throw new DeleteEntityError(`Could not parse GraphQL response for entity ${id}: ${error}`);
+      }
+      throw new DeleteEntityError(`Could not fetch entity data for ${id}: ${error}`);
     }
-    throw new DeleteEntityError(`Could not fetch entity data for ${id}: ${error}`);
-  }
+  };
+  const pageOf = <T>(page: ConnectionPage<T> | null | undefined, name: string): ConnectionPage<T> => {
+    if (!page) {
+      throw new DeleteEntityError(`Could not fetch entity data for ${id}: missing ${name}`);
+    }
+    return page;
+  };
+  const fail = (reason: string) => new DeleteEntityError(`Could not fetch entity data for ${id}: ${reason}`);
 
-  if (!response.entity) {
+  // One request for the existence check and the first page of each list; more only when a list
+  // has over 1000 rows in this space.
+  const first = await fetchPage(`entity(id: "${id}") { id }\n    ${valuesField(null)}\n    ${relationsField(null)}`);
+
+  if (!first.entity) {
     return { id: Id(id), ops: [] };
   }
+
+  const values = await collectPages(
+    pageOf(first.values, 'values'),
+    async after => pageOf((await fetchPage(valuesField(after))).values, 'values'),
+    fail,
+  );
+  const relations = await collectPages(
+    pageOf(first.relations, 'relations'),
+    async after => pageOf((await fetchPage(relationsField(after))).relations, 'relations'),
+    fail,
+  );
 
   return createDeleteEntityOps({
     id,
     spaceId,
-    values: response.entity.valuesList,
-    relations: response.entity.relationsList,
+    values,
+    relations,
   });
 }
