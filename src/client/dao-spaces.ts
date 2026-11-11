@@ -122,7 +122,7 @@ export type ProposeUnrestrictMemberParams = SlowDaoSpaceRoleProposalBaseParams &
 };
 
 export type ProposeAddMemberWithFastPathParams = SlowDaoSpaceRoleProposalBaseParams & {
-  memberSpaceId: string;
+  newMemberSpaceId: string;
 };
 
 export type RestrictMemberFastPathParams = {
@@ -150,14 +150,36 @@ function bytes16Id(value: string, name: string): `0x${string}` {
   return normalized;
 }
 
-function createRoleProposal(context: GeoClientContext, params: DaoSpaceRoleProposalBaseParams, action: ProposalAction) {
+function createRoleProposal(
+  context: GeoClientContext,
+  params: DaoSpaceRoleProposalBaseParams,
+  ...proposalActions: ProposalAction[]
+) {
   return createProposal(context, {
     fromSpaceId: params.authorSpaceId,
     daoSpaceId: params.spaceId,
     proposalId: params.proposalId,
     votingMode: params.votingMode ?? 'SLOW',
-    actions: [action],
+    actions: proposalActions,
   });
+}
+
+/**
+ * Role proposal for actions the DAO only accepts on the SLOW path. Rejects an
+ * explicit FAST at runtime, since callers can bypass the `'SLOW'` param type.
+ */
+function createSlowRoleProposal(
+  context: GeoClientContext,
+  params: SlowDaoSpaceRoleProposalBaseParams,
+  helperName: string,
+  ...proposalActions: ProposalAction[]
+) {
+  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
+  if (votingMode !== 'SLOW') {
+    throw new Error(`${helperName} only supports SLOW voting mode`);
+  }
+
+  return createRoleProposal(context, { ...params, votingMode: 'SLOW' }, ...proposalActions);
 }
 
 function isZeroAddress(address: `0x${string}`): boolean {
@@ -340,6 +362,7 @@ function encodeDaoRoleAction(
   daoSpaceId: string,
   functionName: 'addEditor' | 'removeEditor' | 'addMember' | 'removeMember' | 'unrestrictSpace',
   spaceId: string,
+  spaceIdName = 'spaceId',
 ): ProposalAction {
   return {
     toAddress: ZERO_ADDRESS,
@@ -348,7 +371,7 @@ function encodeDaoRoleAction(
     data: encodeFunctionData({
       abi: DaoSpaceAbi,
       functionName,
-      args: [bytes16Id(spaceId, 'spaceId')],
+      args: [bytes16Id(spaceId, spaceIdName)],
     }),
   };
 }
@@ -615,12 +638,12 @@ export function proposeRemoveMember(context: GeoClientContext, params: ProposeRe
  * ```
  */
 export function proposeAddEditor(context: GeoClientContext, params: ProposeAddEditorParams) {
-  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
-  if (votingMode !== 'SLOW') {
-    throw new Error('proposeAddEditor only supports SLOW voting mode');
-  }
-
-  return createRoleProposal(context, params, actions.addEditor(params.spaceId, params.newEditorSpaceId));
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeAddEditor',
+    actions.addEditor(params.spaceId, params.newEditorSpaceId),
+  );
 }
 
 /**
@@ -638,19 +661,12 @@ export function proposeAddEditor(context: GeoClientContext, params: ProposeAddEd
  * ```
  */
 export function proposeRemoveEditor(context: GeoClientContext, params: ProposeRemoveEditorParams) {
-  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
-  if (votingMode !== 'SLOW') {
-    throw new Error('proposeRemoveEditor only supports SLOW voting mode');
-  }
-
-  return createRoleProposal(context, params, actions.removeEditor(params.spaceId, params.editorToRemoveSpaceId));
-}
-
-function assertSlowVotingMode(params: { votingMode?: string }, helperName: string) {
-  const votingMode = params.votingMode ?? 'SLOW';
-  if (votingMode !== 'SLOW') {
-    throw new Error(`${helperName} only supports SLOW voting mode`);
-  }
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeRemoveEditor',
+    actions.removeEditor(params.spaceId, params.editorToRemoveSpaceId),
+  );
 }
 
 /**
@@ -671,9 +687,12 @@ function assertSlowVotingMode(params: { votingMode?: string }, helperName: strin
  * ```
  */
 export function proposeUnrestrictMember(context: GeoClientContext, params: ProposeUnrestrictMemberParams) {
-  assertSlowVotingMode(params, 'proposeUnrestrictMember');
-
-  return createRoleProposal(context, params, actions.unrestrictSpace(params.spaceId, params.restrictedMemberSpaceId));
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeUnrestrictMember',
+    actions.unrestrictSpace(params.spaceId, params.restrictedMemberSpaceId, 'restrictedMemberSpaceId'),
+  );
 }
 
 /**
@@ -686,33 +705,29 @@ export function proposeUnrestrictMember(context: GeoClientContext, params: Propo
  * while restricted, because leaving keeps the restriction and a restricted
  * space cannot request membership.
  *
- * Only use this when the space will hold the restriction once added: either
- * the DAO restricts new members, or the space is already restricted.
- * Otherwise `unrestrictSpace` reverts with `InvalidSpaceIdForRole` and the
- * whole proposal fails to execute; use `proposeAddMember` instead.
+ * Only use this when the space is not already a member or editor, and will
+ * hold the restriction once added: either the DAO restricts new members, or
+ * the space is already restricted. Otherwise `addMember` or `unrestrictSpace`
+ * reverts with `InvalidSpaceIdForRole` and the whole proposal fails to
+ * execute; use `proposeAddMember` instead.
  *
  * @example
  * ```ts
  * const tx = geo.daoSpaces.proposeAddMemberWithFastPath({
  *   authorSpaceId,
  *   spaceId: daoSpaceId,
- *   memberSpaceId,
+ *   newMemberSpaceId,
  * });
  * ```
  */
 export function proposeAddMemberWithFastPath(context: GeoClientContext, params: ProposeAddMemberWithFastPathParams) {
-  assertSlowVotingMode(params, 'proposeAddMemberWithFastPath');
-
-  return createProposal(context, {
-    fromSpaceId: params.authorSpaceId,
-    daoSpaceId: params.spaceId,
-    proposalId: params.proposalId,
-    votingMode: 'SLOW',
-    actions: [
-      actions.addMember(params.spaceId, params.memberSpaceId),
-      actions.unrestrictSpace(params.spaceId, params.memberSpaceId),
-    ],
-  });
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeAddMemberWithFastPath',
+    actions.addMember(params.spaceId, params.newMemberSpaceId, 'newMemberSpaceId'),
+    actions.unrestrictSpace(params.spaceId, params.newMemberSpaceId, 'newMemberSpaceId'),
+  );
 }
 
 /**
@@ -784,12 +799,12 @@ export function restrictMemberFastPath(context: GeoClientContext, params: Restri
  * ```
  */
 export function proposeUpdateVotingSettings(context: GeoClientContext, params: ProposeUpdateVotingSettingsParams) {
-  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
-  if (votingMode !== 'SLOW') {
-    throw new Error('proposeUpdateVotingSettings only supports SLOW voting mode');
-  }
-
-  return createRoleProposal(context, params, actions.updateVotingSettings(params.spaceId, params.votingSettings));
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeUpdateVotingSettings',
+    actions.updateVotingSettings(params.spaceId, params.votingSettings),
+  );
 }
 
 /**
@@ -929,8 +944,10 @@ export const actions = {
   publishEdit: encodePublishEditProposalAction,
   addEditor: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'addEditor', spaceId),
   removeEditor: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeEditor', spaceId),
-  addMember: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'addMember', spaceId),
+  addMember: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'addMember', spaceId, spaceIdName),
   removeMember: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeMember', spaceId),
-  unrestrictSpace: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'unrestrictSpace', spaceId),
+  unrestrictSpace: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'unrestrictSpace', spaceId, spaceIdName),
   updateVotingSettings: encodeUpdateVotingSettingsAction,
 };

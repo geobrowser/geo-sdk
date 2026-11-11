@@ -643,7 +643,7 @@ describe('geo DAO proposal client', () => {
     const result = geo.daoSpaces.proposeAddMemberWithFastPath({
       authorSpaceId: CALLER_SPACE_ID,
       spaceId: DAO_SPACE_ID,
-      memberSpaceId: MEMBER_SPACE_ID,
+      newMemberSpaceId: MEMBER_SPACE_ID,
       proposalId: PROPOSAL_ID,
     });
     const { votingMode, actions } = decodeProposalPayload(decodeEnter(result.calldata).data);
@@ -653,6 +653,7 @@ describe('geo DAO proposal client', () => {
     expect(calls.map(call => call.functionName)).toEqual(['addMember', 'unrestrictSpace']);
     expect(calls.map(call => call.args?.[0])).toEqual([MEMBER_SPACE_ID, MEMBER_SPACE_ID]);
     expect(actions.every(action => action.toSpaceId === DAO_SPACE_ID)).toBe(true);
+    expect(actions.every(action => action.toAddress === ZERO_ADDRESS)).toBe(true);
   });
 
   it('restricts fast-path helpers that lift a restriction to SLOW voting', () => {
@@ -670,7 +671,7 @@ describe('geo DAO proposal client', () => {
       geo.daoSpaces.proposeAddMemberWithFastPath({
         authorSpaceId: CALLER_SPACE_ID,
         spaceId: DAO_SPACE_ID,
-        memberSpaceId: MEMBER_SPACE_ID,
+        newMemberSpaceId: MEMBER_SPACE_ID,
         votingMode: 'FAST' as never,
       }),
     ).toThrow('proposeAddMemberWithFastPath only supports SLOW voting mode');
@@ -695,6 +696,38 @@ describe('geo DAO proposal client', () => {
     expect(decoded.topic).toBe(bytes16ToBytes32LeftAligned(MEMBER_SPACE_ID));
     expect(decoded.signature).toBe(EMPTY_SIGNATURE);
     expect(restrictedSpaceId).toBe(MEMBER_SPACE_ID);
+  });
+
+  it('names the caller-facing field when a fast-path proposal target is malformed', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    expect(() =>
+      geo.daoSpaces.proposeUnrestrictMember({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        restrictedMemberSpaceId: '0x1234',
+      }),
+    ).toThrow('restrictedMemberSpaceId must be bytes16 hex');
+    expect(() =>
+      geo.daoSpaces.proposeAddMemberWithFastPath({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        newMemberSpaceId: '0x1234',
+      }),
+    ).toThrow('newMemberSpaceId must be bytes16 hex');
+  });
+
+  it('generates a proposal ID for fast-path proposals when none is given', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    const result = geo.daoSpaces.proposeAddMemberWithFastPath({
+      authorSpaceId: CALLER_SPACE_ID,
+      spaceId: DAO_SPACE_ID,
+      newMemberSpaceId: MEMBER_SPACE_ID,
+    });
+
+    expect(result.proposalId).toMatch(/^0x[0-9a-f]{32}$/);
+    expect(decodeProposalPayload(decodeEnter(result.calldata).data).proposalId).toBe(result.proposalId);
   });
 
   it('rejects malformed space IDs for direct fast-path restriction', () => {

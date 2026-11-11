@@ -188,6 +188,10 @@ export type DaoSpaceRoleProposalBaseParams = {
   proposalId?: string;
 };
 
+export type SlowDaoSpaceRoleProposalBaseParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
+  votingMode?: 'SLOW';
+};
+
 export type ProposeAddMemberParams = DaoSpaceRoleProposalBaseParams & {
   newMemberSpaceId: string;
 };
@@ -196,24 +200,20 @@ export type ProposeRemoveMemberParams = DaoSpaceRoleProposalBaseParams & {
   memberToRemoveSpaceId: string;
 };
 
-export type ProposeAddEditorParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
-  votingMode?: 'SLOW';
+export type ProposeAddEditorParams = SlowDaoSpaceRoleProposalBaseParams & {
   newEditorSpaceId: string;
 };
 
-export type ProposeRemoveEditorParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
-  votingMode?: 'SLOW';
+export type ProposeRemoveEditorParams = SlowDaoSpaceRoleProposalBaseParams & {
   editorToRemoveSpaceId: string;
 };
 
-export type ProposeUnrestrictMemberParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
-  votingMode?: 'SLOW';
+export type ProposeUnrestrictMemberParams = SlowDaoSpaceRoleProposalBaseParams & {
   restrictedMemberSpaceId: string;
 };
 
-export type ProposeAddMemberWithFastPathParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
-  votingMode?: 'SLOW';
-  memberSpaceId: string;
+export type ProposeAddMemberWithFastPathParams = SlowDaoSpaceRoleProposalBaseParams & {
+  newMemberSpaceId: string;
 };
 
 export type RestrictMemberFastPathParams = {
@@ -242,8 +242,7 @@ export type ExecuteProposalParams = {
   proposalId: string;
 };
 
-export type ProposeUpdateVotingSettingsParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
-  votingMode?: 'SLOW';
+export type ProposeUpdateVotingSettingsParams = SlowDaoSpaceRoleProposalBaseParams & {
   votingSettings: VotingSettingsInput;
 };
 
@@ -753,7 +752,7 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        * const tx = geo.daoSpaces.proposeAddMemberWithFastPath({
        *   authorSpaceId,
        *   spaceId: daoSpaceId,
-       *   memberSpaceId,
+       *   newMemberSpaceId,
        * });
        * ```
        */
