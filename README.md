@@ -817,6 +817,7 @@ Manage fast-path access for one space:
 
 ```ts
 // Editor-only, takes effect immediately. Not a proposal, so there is no proposalId.
+// Any space can be restricted, including another editor, and lifting it takes a SLOW vote.
 const restrict = geo.daoSpaces.restrictMemberFastPath({
   authorSpaceId: editorSpaceId,
   spaceId: daoSpaceId,
