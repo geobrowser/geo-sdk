@@ -15,6 +15,7 @@ import {
   PROPOSAL_EXECUTED_ACTION,
   PROPOSAL_UPDATED_ACTION,
   PROPOSAL_VOTED_ACTION,
+  SPACE_FAST_PATH_RESTRICTED_ACTION,
   VOTE_OPTION_VALUES,
   ZERO_ADDRESS,
   ZERO_SPACE_ID,
@@ -116,6 +117,20 @@ export type ProposeRemoveEditorParams = SlowDaoSpaceRoleProposalBaseParams & {
   editorToRemoveSpaceId: string;
 };
 
+export type ProposeUnrestrictMemberParams = SlowDaoSpaceRoleProposalBaseParams & {
+  restrictedMemberSpaceId: string;
+};
+
+export type ProposeAddMemberWithFastPathParams = SlowDaoSpaceRoleProposalBaseParams & {
+  newMemberSpaceId: string;
+};
+
+export type RestrictMemberFastPathParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  memberSpaceId: string;
+};
+
 export type ProposeRequestMembershipParams = {
   authorSpaceId: string;
   spaceId: string;
@@ -135,14 +150,36 @@ function bytes16Id(value: string, name: string): `0x${string}` {
   return normalized;
 }
 
-function createRoleProposal(context: GeoClientContext, params: DaoSpaceRoleProposalBaseParams, action: ProposalAction) {
+function createRoleProposal(
+  context: GeoClientContext,
+  params: DaoSpaceRoleProposalBaseParams,
+  ...proposalActions: ProposalAction[]
+) {
   return createProposal(context, {
     fromSpaceId: params.authorSpaceId,
     daoSpaceId: params.spaceId,
     proposalId: params.proposalId,
     votingMode: params.votingMode ?? 'SLOW',
-    actions: [action],
+    actions: proposalActions,
   });
+}
+
+/**
+ * Role proposal for actions the DAO only accepts on the SLOW path. Rejects an
+ * explicit FAST at runtime, since callers can bypass the `'SLOW'` param type.
+ */
+function createSlowRoleProposal(
+  context: GeoClientContext,
+  params: SlowDaoSpaceRoleProposalBaseParams,
+  helperName: string,
+  ...proposalActions: ProposalAction[]
+) {
+  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
+  if (votingMode !== 'SLOW') {
+    throw new Error(`${helperName} only supports SLOW voting mode`);
+  }
+
+  return createRoleProposal(context, { ...params, votingMode: 'SLOW' }, ...proposalActions);
 }
 
 function isZeroAddress(address: `0x${string}`): boolean {
@@ -323,8 +360,9 @@ function encodePublishEditProposalAction(daoSpaceId: string, cid: string): Propo
 
 function encodeDaoRoleAction(
   daoSpaceId: string,
-  functionName: 'addEditor' | 'removeEditor' | 'addMember' | 'removeMember',
+  functionName: 'addEditor' | 'removeEditor' | 'addMember' | 'removeMember' | 'unrestrictSpace',
   spaceId: string,
+  spaceIdName = 'spaceId',
 ): ProposalAction {
   return {
     toAddress: ZERO_ADDRESS,
@@ -333,7 +371,7 @@ function encodeDaoRoleAction(
     data: encodeFunctionData({
       abi: DaoSpaceAbi,
       functionName,
-      args: [bytes16Id(spaceId, 'spaceId')],
+      args: [bytes16Id(spaceId, spaceIdName)],
     }),
   };
 }
@@ -566,7 +604,11 @@ export async function proposeEdit(context: GeoClientContext, params: ProposeEdit
  * ```
  */
 export function proposeAddMember(context: GeoClientContext, params: ProposeAddMemberParams) {
-  return createRoleProposal(context, params, actions.addMember(params.spaceId, params.newMemberSpaceId));
+  return createRoleProposal(
+    context,
+    params,
+    actions.addMember(params.spaceId, params.newMemberSpaceId, 'newMemberSpaceId'),
+  );
 }
 
 /**
@@ -582,7 +624,11 @@ export function proposeAddMember(context: GeoClientContext, params: ProposeAddMe
  * ```
  */
 export function proposeRemoveMember(context: GeoClientContext, params: ProposeRemoveMemberParams) {
-  return createRoleProposal(context, params, actions.removeMember(params.spaceId, params.memberToRemoveSpaceId));
+  return createRoleProposal(
+    context,
+    params,
+    actions.removeMember(params.spaceId, params.memberToRemoveSpaceId, 'memberToRemoveSpaceId'),
+  );
 }
 
 /**
@@ -600,12 +646,12 @@ export function proposeRemoveMember(context: GeoClientContext, params: ProposeRe
  * ```
  */
 export function proposeAddEditor(context: GeoClientContext, params: ProposeAddEditorParams) {
-  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
-  if (votingMode !== 'SLOW') {
-    throw new Error('proposeAddEditor only supports SLOW voting mode');
-  }
-
-  return createRoleProposal(context, params, actions.addEditor(params.spaceId, params.newEditorSpaceId));
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeAddEditor',
+    actions.addEditor(params.spaceId, params.newEditorSpaceId, 'newEditorSpaceId'),
+  );
 }
 
 /**
@@ -623,12 +669,116 @@ export function proposeAddEditor(context: GeoClientContext, params: ProposeAddEd
  * ```
  */
 export function proposeRemoveEditor(context: GeoClientContext, params: ProposeRemoveEditorParams) {
-  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
-  if (votingMode !== 'SLOW') {
-    throw new Error('proposeRemoveEditor only supports SLOW voting mode');
-  }
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeRemoveEditor',
+    actions.removeEditor(params.spaceId, params.editorToRemoveSpaceId, 'editorToRemoveSpaceId'),
+  );
+}
 
-  return createRoleProposal(context, params, actions.removeEditor(params.spaceId, params.editorToRemoveSpaceId));
+/**
+ * Builds calldata for a DAO proposal that lifts a space's fast-path restriction.
+ *
+ * Spaces holding the DAO's `FAST_PATH_RESTRICTED` role can only create SLOW
+ * proposals, and cannot request membership. `unrestrictSpace` is not a valid
+ * fast-path action, so this proposal only supports SLOW voting. Execution
+ * reverts with `InvalidSpaceIdForRole` if the space is not restricted.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.daoSpaces.proposeUnrestrictMember({
+ *   authorSpaceId,
+ *   spaceId: daoSpaceId,
+ *   restrictedMemberSpaceId,
+ * });
+ * ```
+ */
+export function proposeUnrestrictMember(context: GeoClientContext, params: ProposeUnrestrictMemberParams) {
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeUnrestrictMember',
+    actions.unrestrictSpace(params.spaceId, params.restrictedMemberSpaceId, 'restrictedMemberSpaceId'),
+  );
+}
+
+/**
+ * Builds calldata for a DAO proposal that adds a member and gives them fast-path access.
+ *
+ * The proposal runs `addMember` and then `unrestrictSpace` in that order.
+ * The order matters: when `disableFastPathAccessForNewMembers` is on,
+ * `addMember` grants `FAST_PATH_RESTRICTED`, so lifting the restriction must
+ * come after it. This is also the way back in for a space that left a DAO
+ * while restricted, because leaving keeps the restriction and a restricted
+ * space cannot request membership.
+ *
+ * Only use this when the space is not already a member or editor, and will
+ * hold the restriction once added: either the DAO restricts new members, or
+ * the space is already restricted. Otherwise `addMember` or `unrestrictSpace`
+ * reverts with `InvalidSpaceIdForRole` and the whole proposal fails to
+ * execute; use `proposeAddMember` instead.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.daoSpaces.proposeAddMemberWithFastPath({
+ *   authorSpaceId,
+ *   spaceId: daoSpaceId,
+ *   newMemberSpaceId,
+ * });
+ * ```
+ */
+export function proposeAddMemberWithFastPath(context: GeoClientContext, params: ProposeAddMemberWithFastPathParams) {
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeAddMemberWithFastPath',
+    actions.addMember(params.spaceId, params.newMemberSpaceId, 'newMemberSpaceId'),
+    actions.unrestrictSpace(params.spaceId, params.newMemberSpaceId, 'newMemberSpaceId'),
+  );
+}
+
+/**
+ * Builds calldata that restricts a space from the DAO's fast path, immediately.
+ *
+ * This is not a proposal. The DAO lets any editor restrict another space
+ * directly through `SpaceRegistry.enter` with
+ * `GOVERNANCE.SPACE_FAST_PATH_RESTRICTED`. It reverts with `InvalidFromSpace`
+ * when the author is not an editor, and `InvalidSpaceIdForRole` when the
+ * target is already restricted. Lifting the restriction again takes a SLOW
+ * proposal: see `proposeUnrestrictMember`.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.daoSpaces.restrictMemberFastPath({
+ *   authorSpaceId: editorSpaceId,
+ *   spaceId: daoSpaceId,
+ *   memberSpaceId,
+ * });
+ * ```
+ */
+export function restrictMemberFastPath(context: GeoClientContext, params: RestrictMemberFastPathParams) {
+  const authorSpaceId = bytes16Id(params.authorSpaceId, 'authorSpaceId');
+  const spaceId = bytes16Id(params.spaceId, 'spaceId');
+  const memberSpaceId = bytes16Id(params.memberSpaceId, 'memberSpaceId');
+  const data = encodeAbiParameters([{ type: 'bytes16', name: 'spaceId' }], [memberSpaceId]);
+  const calldata = encodeFunctionData({
+    abi: SpaceRegistryAbi,
+    functionName: 'enter',
+    args: [
+      authorSpaceId,
+      spaceId,
+      SPACE_FAST_PATH_RESTRICTED_ACTION,
+      bytes16ToBytes32LeftAligned(memberSpaceId),
+      data,
+      EMPTY_SIGNATURE,
+    ],
+  });
+
+  return {
+    to: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
+    calldata,
+  };
 }
 
 /**
@@ -657,12 +807,12 @@ export function proposeRemoveEditor(context: GeoClientContext, params: ProposeRe
  * ```
  */
 export function proposeUpdateVotingSettings(context: GeoClientContext, params: ProposeUpdateVotingSettingsParams) {
-  const votingMode = (params as { votingMode?: string }).votingMode ?? 'SLOW';
-  if (votingMode !== 'SLOW') {
-    throw new Error('proposeUpdateVotingSettings only supports SLOW voting mode');
-  }
-
-  return createRoleProposal(context, params, actions.updateVotingSettings(params.spaceId, params.votingSettings));
+  return createSlowRoleProposal(
+    context,
+    params,
+    'proposeUpdateVotingSettings',
+    actions.updateVotingSettings(params.spaceId, params.votingSettings),
+  );
 }
 
 /**
@@ -800,9 +950,15 @@ export function executeProposal(context: GeoClientContext, params: ExecutePropos
  */
 export const actions = {
   publishEdit: encodePublishEditProposalAction,
-  addEditor: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'addEditor', spaceId),
-  removeEditor: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeEditor', spaceId),
-  addMember: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'addMember', spaceId),
-  removeMember: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeMember', spaceId),
+  addEditor: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'addEditor', spaceId, spaceIdName),
+  removeEditor: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'removeEditor', spaceId, spaceIdName),
+  addMember: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'addMember', spaceId, spaceIdName),
+  removeMember: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'removeMember', spaceId, spaceIdName),
+  unrestrictSpace: (daoSpaceId: string, spaceId: string, spaceIdName?: string) =>
+    encodeDaoRoleAction(daoSpaceId, 'unrestrictSpace', spaceId, spaceIdName),
   updateVotingSettings: encodeUpdateVotingSettingsAction,
 };

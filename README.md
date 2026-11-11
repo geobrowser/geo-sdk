@@ -813,6 +813,34 @@ const updateVoting = geo.daoSpaces.proposeUpdateVotingSettings({
 
 Updating voting settings only supports `SLOW` voting.
 
+Manage fast-path access for one space:
+
+```ts
+// Editor-only, takes effect immediately. Not a proposal, so there is no proposalId.
+const restrict = geo.daoSpaces.restrictMemberFastPath({
+  authorSpaceId: editorSpaceId,
+  spaceId: daoSpaceId,
+  memberSpaceId,
+});
+
+// Lifting a restriction is a governance action: SLOW proposal only.
+const unrestrict = geo.daoSpaces.proposeUnrestrictMember({
+  authorSpaceId,
+  spaceId: daoSpaceId,
+  restrictedMemberSpaceId: memberSpaceId,
+});
+
+// Adds a space and lifts its restriction in one SLOW proposal (addMember, then unrestrictSpace).
+// The way back to fast-path access for a space that left while restricted: a restricted space can't request membership itself.
+const addBack = geo.daoSpaces.proposeAddMemberWithFastPath({
+  authorSpaceId,
+  spaceId: daoSpaceId,
+  newMemberSpaceId: memberSpaceId,
+});
+```
+
+Only use `proposeAddMemberWithFastPath` for a space that isn't already a member or editor and will hold the restriction once added (the DAO restricts new members, or the space is already restricted). Otherwise the proposal fails to execute.
+
 Request membership in a DAO space:
 
 ```ts

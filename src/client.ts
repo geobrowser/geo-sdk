@@ -188,6 +188,10 @@ export type DaoSpaceRoleProposalBaseParams = {
   proposalId?: string;
 };
 
+export type SlowDaoSpaceRoleProposalBaseParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
+  votingMode?: 'SLOW';
+};
+
 export type ProposeAddMemberParams = DaoSpaceRoleProposalBaseParams & {
   newMemberSpaceId: string;
 };
@@ -196,14 +200,26 @@ export type ProposeRemoveMemberParams = DaoSpaceRoleProposalBaseParams & {
   memberToRemoveSpaceId: string;
 };
 
-export type ProposeAddEditorParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
-  votingMode?: 'SLOW';
+export type ProposeAddEditorParams = SlowDaoSpaceRoleProposalBaseParams & {
   newEditorSpaceId: string;
 };
 
-export type ProposeRemoveEditorParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
-  votingMode?: 'SLOW';
+export type ProposeRemoveEditorParams = SlowDaoSpaceRoleProposalBaseParams & {
   editorToRemoveSpaceId: string;
+};
+
+export type ProposeUnrestrictMemberParams = SlowDaoSpaceRoleProposalBaseParams & {
+  restrictedMemberSpaceId: string;
+};
+
+export type ProposeAddMemberWithFastPathParams = SlowDaoSpaceRoleProposalBaseParams & {
+  newMemberSpaceId: string;
+};
+
+export type RestrictMemberFastPathParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  memberSpaceId: string;
 };
 
 export type ProposeRequestMembershipParams = {
@@ -226,8 +242,7 @@ export type ExecuteProposalParams = {
   proposalId: string;
 };
 
-export type ProposeUpdateVotingSettingsParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
-  votingMode?: 'SLOW';
+export type ProposeUpdateVotingSettingsParams = SlowDaoSpaceRoleProposalBaseParams & {
   votingSettings: VotingSettingsInput;
 };
 
@@ -273,6 +288,9 @@ export type Client = {
     proposeAddEditor(params: ProposeAddEditorParams): ProposalResult;
     proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposalResult;
     proposeUpdateVotingSettings(params: ProposeUpdateVotingSettingsParams): ProposalResult;
+    proposeUnrestrictMember(params: ProposeUnrestrictMemberParams): ProposalResult;
+    proposeAddMemberWithFastPath(params: ProposeAddMemberWithFastPathParams): ProposalResult;
+    restrictMemberFastPath(params: RestrictMemberFastPathParams): CalldataResult;
     proposeRequestMembership(params: ProposeRequestMembershipParams): ProposalResult;
     voteProposal(params: VoteProposalParams): CalldataResult;
     executeProposal(params: ExecuteProposalParams): CalldataResult;
@@ -712,6 +730,55 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        */
       proposeUpdateVotingSettings: (params: ProposeUpdateVotingSettingsParams) =>
         DaoSpaces.proposeUpdateVotingSettings(context, params),
+      /**
+       * Builds calldata for a SLOW DAO proposal that lifts a space's fast-path restriction.
+       *
+       * Execution reverts with `InvalidSpaceIdForRole` if the space is not restricted.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.proposeUnrestrictMember({
+       *   authorSpaceId,
+       *   spaceId: daoSpaceId,
+       *   restrictedMemberSpaceId,
+       * });
+       * ```
+       */
+      proposeUnrestrictMember: (params: ProposeUnrestrictMemberParams) =>
+        DaoSpaces.proposeUnrestrictMember(context, params),
+      /**
+       * Builds calldata for a SLOW DAO proposal that adds a member, then lifts their fast-path restriction.
+       *
+       * Only use this for a space that is not already a member or editor and will hold the
+       * restriction once added (the DAO restricts new members, or the space is already
+       * restricted). Otherwise the proposal reverts at execution, after its vote; use
+       * `proposeAddMember` instead.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.proposeAddMemberWithFastPath({
+       *   authorSpaceId,
+       *   spaceId: daoSpaceId,
+       *   newMemberSpaceId,
+       * });
+       * ```
+       */
+      proposeAddMemberWithFastPath: (params: ProposeAddMemberWithFastPathParams) =>
+        DaoSpaces.proposeAddMemberWithFastPath(context, params),
+      /**
+       * Builds calldata for an editor to restrict a space from the fast path immediately, without a proposal.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.restrictMemberFastPath({
+       *   authorSpaceId: editorSpaceId,
+       *   spaceId: daoSpaceId,
+       *   memberSpaceId,
+       * });
+       * ```
+       */
+      restrictMemberFastPath: (params: RestrictMemberFastPathParams) =>
+        DaoSpaces.restrictMemberFastPath(context, params),
       /**
        * Builds calldata for requesting membership in a DAO space.
        *
