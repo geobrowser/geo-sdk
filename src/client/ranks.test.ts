@@ -30,21 +30,48 @@ function voteRelations(ops: Array<{ type: string }>) {
   );
 }
 
+type VoteNode = { id: string; entityId: string };
+
+/** A GraphQL response for one page of a rank's votes, as `geo.ranks.update` reads them. */
+function votesPage(
+  nodes: VoteNode[],
+  { rankExists, endCursor = null }: { rankExists?: boolean; endCursor?: string | null } = {},
+) {
+  return {
+    data: {
+      ...(rankExists === undefined ? {} : { entity: rankExists ? { id: RANK_ID } : null }),
+      relationsConnection: { nodes, pageInfo: { hasNextPage: endCursor !== null, endCursor } },
+    },
+  };
+}
+
+/** `count` distinct, valid relation/vote id pairs. */
+function existingVotes(count: number, offset = 0): VoteNode[] {
+  return Array.from({ length: count }, (_, i) => {
+    const n = (offset + i).toString(16).padStart(8, '0');
+    return { id: `${n}11114111811aaaaaaaaaaaaa`, entityId: `${n}22224222822bbbbbbbbbbbbb` };
+  });
+}
+
+function requestBody(fetch: ReturnType<typeof vi.fn>, call: number): string {
+  const init = fetch.mock.calls[call]?.[1] as RequestInit | undefined;
+  return JSON.parse(String(init?.body)).query as string;
+}
+
 describe('geo.ranks', () => {
   describe('update', () => {
     it('fetches existing vote relations then supersedes them with new votes', async () => {
       const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
         new Response(
-          JSON.stringify({
-            data: {
-              entity: {
-                relationsList: [
-                  { id: EXISTING_REL_1, entityId: EXISTING_VOTE_1 },
-                  { id: EXISTING_REL_2, entityId: EXISTING_VOTE_2 },
-                ],
-              },
-            },
-          }),
+          JSON.stringify(
+            votesPage(
+              [
+                { id: EXISTING_REL_1, entityId: EXISTING_VOTE_1 },
+                { id: EXISTING_REL_2, entityId: EXISTING_VOTE_2 },
+              ],
+              { rankExists: true },
+            ),
+          ),
         ),
       );
       const geo = createGeoClient({ network: customNetwork(), fetch });
@@ -79,7 +106,7 @@ describe('geo.ranks', () => {
     it('emits only new votes when the rank has no existing votes', async () => {
       const fetch = vi
         .fn<typeof globalThis.fetch>()
-        .mockResolvedValue(new Response(JSON.stringify({ data: { entity: { relationsList: [] } } })));
+        .mockResolvedValue(new Response(JSON.stringify(votesPage([], { rankExists: true }))));
       const geo = createGeoClient({ network: customNetwork(), fetch });
 
       const result = await geo.ranks.update({
@@ -92,10 +119,58 @@ describe('geo.ranks', () => {
       expect(voteRelations(result.ops)).toHaveLength(1);
     });
 
+    it('pages through every existing vote, so ranks with more than 100 votes are fully replaced', async () => {
+      const firstPage = existingVotes(1000);
+      const secondPage = existingVotes(250, 1000);
+      const fetch = vi
+        .fn<typeof globalThis.fetch>()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify(votesPage(firstPage, { rankExists: true, endCursor: 'cursor-1' }))),
+        )
+        .mockResolvedValueOnce(new Response(JSON.stringify(votesPage(secondPage))));
+      const geo = createGeoClient({ network: customNetwork(), fetch });
+
+      const result = await geo.ranks.update({
+        rankId: RANK_ID,
+        rankType: 'ORDINAL',
+        votes: [{ entityId: MOVIE_1, spaceId: SPACE_ID }],
+      });
+
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(requestBody(fetch, 0)).toContain('first: 1000');
+      expect(requestBody(fetch, 0)).not.toContain('after:');
+      expect(requestBody(fetch, 1)).toContain('after: "cursor-1"');
+
+      const deletes = result.ops.filter((op): op is DeleteRelation => op.type === 'deleteRelation');
+      expect(deletes).toHaveLength(1250);
+      expect(deletes[1249]?.id).toEqual(toGrcId(secondPage[249]?.id ?? ''));
+      expect(result.ops.filter(op => op.type === 'deleteEntity')).toHaveLength(1250);
+      expect(voteRelations(result.ops)).toHaveLength(1);
+    });
+
+    it('throws instead of looping when the pagination cursor does not advance', async () => {
+      const fetch = vi
+        .fn<typeof globalThis.fetch>()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify(votesPage(existingVotes(1), { rankExists: true, endCursor: 'stuck' }))),
+        )
+        .mockResolvedValue(new Response(JSON.stringify(votesPage(existingVotes(1, 1), { endCursor: 'stuck' }))));
+      const geo = createGeoClient({ network: customNetwork(), fetch });
+
+      await expect(
+        geo.ranks.update({
+          rankId: RANK_ID,
+          rankType: 'ORDINAL',
+          votes: [{ entityId: MOVIE_1, spaceId: SPACE_ID }],
+        }),
+      ).rejects.toThrow('pagination cursor did not advance');
+      expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
     it('throws when the rank is not found', async () => {
       const fetch = vi
         .fn<typeof globalThis.fetch>()
-        .mockResolvedValue(new Response(JSON.stringify({ data: { entity: null } })));
+        .mockResolvedValue(new Response(JSON.stringify(votesPage([], { rankExists: false }))));
       const geo = createGeoClient({ network: customNetwork(), fetch });
 
       await expect(

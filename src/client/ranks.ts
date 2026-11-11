@@ -10,11 +10,87 @@ class UpdateRankError extends Error {
   readonly _tag = 'UpdateRankError';
 }
 
-type RankRelationsResponse = {
-  entity: {
-    relationsList: Array<{ id: string; entityId: string }>;
-  } | null;
+/**
+ * Page size for reading a rank's existing votes. The Geo API rejects `first`
+ * above 1000 and injects a default of 100 when `first` is omitted, so an
+ * unpaginated read silently drops every vote past the 100th.
+ */
+const VOTE_PAGE_SIZE = 1000;
+
+type RankVotesPage = {
+  nodes: Array<{ id: string; entityId: string }>;
+  pageInfo: { hasNextPage: boolean; endCursor: string | null };
 };
+
+type RankVotesResponse = {
+  entity?: { id: string } | null;
+  relationsConnection: RankVotesPage | null;
+};
+
+function rankVotesQuery(rankId: string, after: string | null): string {
+  // The first page also checks the rank exists; later pages only need the votes.
+  const rankCheck = after === null ? `entity(id: "${rankId}") { id }` : '';
+  const afterArg = after === null ? '' : `, after: ${JSON.stringify(after)}`;
+  return `query rankVotes {
+    ${rankCheck}
+    relationsConnection(
+      first: ${VOTE_PAGE_SIZE}${afterArg}
+      filter: { fromEntityId: { is: "${rankId}" }, typeId: { is: "${RANK_VOTES_RELATION_TYPE}" } }
+    ) {
+      nodes {
+        id
+        entityId
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }`;
+}
+
+/**
+ * Reads every `RANK_VOTES` relation on the rank, following cursors until the
+ * last page. Cursor paging rather than `offset`, because the API also caps
+ * `offset` at 1000.
+ */
+async function fetchExistingVotes(
+  context: GeoClientContext,
+  rankId: string,
+): Promise<Array<{ relationId: string; voteEntityId: string }>> {
+  const votes: Array<{ relationId: string; voteEntityId: string }> = [];
+  let after: string | null = null;
+
+  while (true) {
+    let response: RankVotesResponse;
+    try {
+      response = await graphqlData<RankVotesResponse>(context, rankVotesQuery(rankId, after));
+    } catch (error) {
+      throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: ${error}`);
+    }
+
+    if (after === null && !response.entity) {
+      throw new UpdateRankError(`Rank ${rankId} not found`);
+    }
+
+    const page = response.relationsConnection;
+    if (!page) {
+      throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: missing relationsConnection`);
+    }
+
+    for (const relation of page.nodes) {
+      votes.push({ relationId: relation.id, voteEntityId: relation.entityId });
+    }
+
+    if (!page.pageInfo.hasNextPage) return votes;
+
+    const next = page.pageInfo.endCursor;
+    if (!next || next === after) {
+      throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: pagination cursor did not advance`);
+    }
+    after = next;
+  }
+}
 
 export type UpdateRankClientParams = {
   /** The `Rank` entity to update. */
@@ -26,7 +102,8 @@ export type UpdateRankClientParams = {
 };
 
 /**
- * Fetches the rank's current `RANK_VOTES` relations from the configured Geo API,
+ * Fetches all of the rank's current `RANK_VOTES` relations from the configured Geo API
+ * (paging through them, so ranks with more than 100 votes are fully replaced),
  * then builds ops that delete them (and their reified vote entities) and re-emit
  * the new ordered votes.
  *
@@ -54,30 +131,7 @@ export async function update(
 ): Promise<UpdateRankResult> {
   assertValid(rankId, '`rankId` in `updateRank`');
 
-  const query = `query entity {
-    entity(id: "${rankId}") {
-      relationsList(filter: { typeId: { in: ["${RANK_VOTES_RELATION_TYPE}"] } }) {
-        id
-        entityId
-      }
-    }
-  }`;
-
-  let response: RankRelationsResponse;
-  try {
-    response = await graphqlData<RankRelationsResponse>(context, query);
-  } catch (error) {
-    throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: ${error}`);
-  }
-
-  if (!response.entity) {
-    throw new UpdateRankError(`Rank ${rankId} not found`);
-  }
-
-  const existingVotes = response.entity.relationsList.map(relation => ({
-    relationId: relation.id,
-    voteEntityId: relation.entityId,
-  }));
+  const existingVotes = await fetchExistingVotes(context, rankId);
 
   return updateRank({ rankId, rankType, votes, existingVotes });
 }
