@@ -768,6 +768,9 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
       /**
        * Builds calldata for an editor to restrict a space from the fast path immediately, without a proposal.
        *
+       * The contract lets an editor restrict any space, including another editor (it only
+       * exempts editors from the automatic new-member restriction). Lifting it takes a SLOW vote.
+       *
        * @example
        * ```ts
        * const tx = geo.daoSpaces.restrictMemberFastPath({

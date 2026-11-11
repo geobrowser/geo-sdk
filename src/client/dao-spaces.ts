@@ -748,6 +748,9 @@ export function proposeAddMemberWithFastPath(context: GeoClientContext, params: 
  * target is already restricted. Lifting the restriction again takes a SLOW
  * proposal: see `proposeUnrestrictMember`.
  *
+ * Any space can be restricted, including another editor: the contract only
+ * exempts editors from the automatic new-member restriction in `addMember`.
+ *
  * @example
  * ```ts
  * const tx = geo.daoSpaces.restrictMemberFastPath({
