@@ -2,4 +2,4 @@
 "@geoprotocol/geo-sdk": patch
 ---
 
-`geo.ranks.update` now replaces every existing vote on a rank. It previously read only the first 100 (the API's default page size), so ranks with more than 100 votes kept stale vote relations and vote entities after an update.
+`geo.ranks.update` and `geo.entities.delete` now read every row they need instead of only the first 100 (the API's default page size). Before, updating a rank with more than 100 votes left stale vote relations and vote entities behind, and deleting an entity with more than 100 values or relations in a space left the rest in place.

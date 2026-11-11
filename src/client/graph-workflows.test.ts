@@ -76,16 +76,21 @@ describe('geo graph workflow clients', () => {
       new Response(
         JSON.stringify({
           data: {
-            entity: {
-              valuesList: [
+            entity: { id: ENTITY_ID },
+            values: {
+              nodes: [
                 { propertyId: PROPERTY_ID, spaceId: SPACE_ID },
                 { propertyId: PROPERTY_ID, spaceId: SPACE_ID },
                 { propertyId: ROOT_ENTITY_ID, spaceId: ROOT_SPACE_ID },
               ],
-              relationsList: [
+              pageInfo: { hasNextPage: false, endCursor: null },
+            },
+            relations: {
+              nodes: [
                 { id: RELATION_ID, spaceId: SPACE_ID },
                 { id: COMMENT_A_ID, spaceId: ROOT_SPACE_ID },
               ],
+              pageInfo: { hasNextPage: false, endCursor: null },
             },
           },
         }),

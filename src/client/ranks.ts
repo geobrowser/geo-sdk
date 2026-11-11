@@ -5,91 +5,71 @@ import type { RankType, UpdateRankResult, Vote } from '../ranks/types.js';
 import { updateRank } from '../ranks/update-rank.js';
 import { graphqlData } from './api.js';
 import type { GeoClientContext } from './context.js';
+import { type ConnectionPage, collectPages, PAGE_INFO_FIELDS, pageArgs } from './paginate.js';
 
 class UpdateRankError extends Error {
   readonly _tag = 'UpdateRankError';
 }
 
-/**
- * Page size for reading a rank's existing votes. The Geo API rejects `first`
- * above 1000 and injects a default of 100 when `first` is omitted, so an
- * unpaginated read silently drops every vote past the 100th.
- */
-const VOTE_PAGE_SIZE = 1000;
-
-type RankVotesPage = {
-  nodes: Array<{ id: string; entityId: string }>;
-  pageInfo: { hasNextPage: boolean; endCursor: string | null };
-};
+type VoteNode = { id: string; entityId: string };
 
 type RankVotesResponse = {
   entity?: { id: string } | null;
-  relationsConnection: RankVotesPage | null;
+  relationsConnection: ConnectionPage<VoteNode> | null;
 };
 
 function rankVotesQuery(rankId: string, after: string | null): string {
   // The first page also checks the rank exists; later pages only need the votes.
   const rankCheck = after === null ? `entity(id: "${rankId}") { id }` : '';
-  const afterArg = after === null ? '' : `, after: ${JSON.stringify(after)}`;
   return `query rankVotes {
     ${rankCheck}
     relationsConnection(
-      first: ${VOTE_PAGE_SIZE}${afterArg}
+      ${pageArgs(after)}
       filter: { fromEntityId: { is: "${rankId}" }, typeId: { is: "${RANK_VOTES_RELATION_TYPE}" } }
     ) {
       nodes {
         id
         entityId
       }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
+      ${PAGE_INFO_FIELDS}
     }
   }`;
 }
 
 /**
  * Reads every `RANK_VOTES` relation on the rank, following cursors until the
- * last page. Cursor paging rather than `offset`, because the API also caps
- * `offset` at 1000.
+ * last page, so ranks with more than 100 votes are fully superseded.
  */
 async function fetchExistingVotes(
   context: GeoClientContext,
   rankId: string,
 ): Promise<Array<{ relationId: string; voteEntityId: string }>> {
-  const votes: Array<{ relationId: string; voteEntityId: string }> = [];
-  let after: string | null = null;
-
-  while (true) {
-    let response: RankVotesResponse;
+  const fetchPage = async (after: string | null): Promise<RankVotesResponse> => {
     try {
-      response = await graphqlData<RankVotesResponse>(context, rankVotesQuery(rankId, after));
+      return await graphqlData<RankVotesResponse>(context, rankVotesQuery(rankId, after));
     } catch (error) {
       throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: ${error}`);
     }
-
-    if (after === null && !response.entity) {
-      throw new UpdateRankError(`Rank ${rankId} not found`);
-    }
-
-    const page = response.relationsConnection;
-    if (!page) {
+  };
+  const votesOf = (response: RankVotesResponse): ConnectionPage<VoteNode> => {
+    if (!response.relationsConnection) {
       throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: missing relationsConnection`);
     }
+    return response.relationsConnection;
+  };
 
-    for (const relation of page.nodes) {
-      votes.push({ relationId: relation.id, voteEntityId: relation.entityId });
-    }
-
-    if (!page.pageInfo.hasNextPage) return votes;
-
-    const next = page.pageInfo.endCursor;
-    if (!next || next === after) {
-      throw new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: pagination cursor did not advance`);
-    }
-    after = next;
+  const first = await fetchPage(null);
+  if (!first.entity) {
+    throw new UpdateRankError(`Rank ${rankId} not found`);
   }
+
+  const nodes = await collectPages(
+    votesOf(first),
+    async after => votesOf(await fetchPage(after)),
+    reason => new UpdateRankError(`Could not fetch existing votes for rank ${rankId}: ${reason}`),
+  );
+
+  return nodes.map(relation => ({ relationId: relation.id, voteEntityId: relation.entityId }));
 }
 
 export type UpdateRankClientParams = {

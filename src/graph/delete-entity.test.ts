@@ -3,16 +3,32 @@ import { Id } from '../id.js';
 import { toGrcId } from '../id-utils.js';
 import { deleteEntity } from './delete-entity.js';
 
+function connection<T>(nodes: T[], endCursor: string | null = null) {
+  return { nodes, pageInfo: { hasNextPage: endCursor !== null, endCursor } };
+}
+
+/** The first-page response `deleteEntity` reads: the existence check plus the first page of each list. */
 function mockGraphQLResponse(
   entity: {
     valuesList: Array<{ propertyId: string; spaceId: string }>;
     relationsList: Array<{ id: string; spaceId: string }>;
   } | null,
+  cursors: { values?: string; relations?: string } = {},
 ) {
   return {
     ok: true,
-    json: async () => ({ data: { entity } }),
+    json: async () => ({
+      data: {
+        entity: entity ? { id: 'entity' } : null,
+        values: connection(entity?.valuesList ?? [], cursors.values ?? null),
+        relations: connection(entity?.relationsList ?? [], cursors.relations ?? null),
+      },
+    }),
   };
+}
+
+function mockPage(field: 'values' | 'relations', nodes: unknown[], endCursor: string | null = null) {
+  return { ok: true, json: async () => ({ data: { [field]: connection(nodes, endCursor) } }) };
 }
 
 describe('deleteEntity', () => {
@@ -129,6 +145,47 @@ describe('deleteEntity', () => {
     expect(result.ops).toHaveLength(2);
     expect(result.ops[0]).toMatchObject({ type: 'updateEntity' });
     expect(result.ops[1]).toMatchObject({ type: 'deleteRelation', id: toGrcId(relationId) });
+  });
+
+  it('should delete every relation and unset every value when there are more than 1000 in the space', async () => {
+    const ids = (count: number, offset: number, tail: string) =>
+      Array.from({ length: count }, (_, i) => `${(offset + i).toString(16).padStart(8, '0')}${tail}`);
+    const relationIds = ids(1300, 0, 'aaaa4aaa8aaaaaaaaaaaaaaa');
+    const propertyIds = ids(1100, 0, 'bbbb4bbb8bbbbbbbbbbbbbbb');
+
+    mockFetch
+      .mockResolvedValueOnce(
+        mockGraphQLResponse(
+          {
+            valuesList: propertyIds.slice(0, 1000).map(propertyId => ({ propertyId, spaceId })),
+            relationsList: relationIds.slice(0, 1000).map(id => ({ id, spaceId })),
+          },
+          { values: 'values-1', relations: 'relations-1' },
+        ),
+      )
+      .mockResolvedValueOnce(
+        mockPage(
+          'values',
+          propertyIds.slice(1000).map(propertyId => ({ propertyId, spaceId })),
+        ),
+      )
+      .mockResolvedValueOnce(
+        mockPage(
+          'relations',
+          relationIds.slice(1000).map(id => ({ id, spaceId })),
+        ),
+      );
+
+    const result = await deleteEntity({ id: entityId, spaceId });
+
+    expect(mockFetch).toHaveBeenCalledTimes(3);
+    const bodies = mockFetch.mock.calls.map(call => JSON.parse(String(call[1]?.body)).query as string);
+    expect(bodies[1]).toContain('after: "values-1"');
+    expect(bodies[2]).toContain('after: "relations-1"');
+
+    const unset = result.ops.find(op => op.type === 'updateEntity') as { unset: unknown[] } | undefined;
+    expect(unset?.unset).toHaveLength(1100);
+    expect(result.ops.filter(op => op.type === 'deleteRelation')).toHaveLength(1300);
   });
 
   it('should return empty ops when entity is not found', async () => {

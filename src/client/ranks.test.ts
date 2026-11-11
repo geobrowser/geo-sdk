@@ -167,6 +167,29 @@ describe('geo.ranks', () => {
       expect(fetch).toHaveBeenCalledTimes(2);
     });
 
+    it('throws when a page says there is more but gives no cursor', async () => {
+      const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            data: {
+              entity: { id: RANK_ID },
+              relationsConnection: { nodes: existingVotes(1), pageInfo: { hasNextPage: true, endCursor: null } },
+            },
+          }),
+        ),
+      );
+      const geo = createGeoClient({ network: customNetwork(), fetch });
+
+      await expect(
+        geo.ranks.update({
+          rankId: RANK_ID,
+          rankType: 'ORDINAL',
+          votes: [{ entityId: MOVIE_1, spaceId: SPACE_ID }],
+        }),
+      ).rejects.toThrow('pagination cursor did not advance');
+      expect(fetch).toHaveBeenCalledTimes(1);
+    });
+
     it('throws when the rank is not found', async () => {
       const fetch = vi
         .fn<typeof globalThis.fetch>()
