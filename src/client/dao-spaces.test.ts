@@ -12,6 +12,7 @@ import {
   PROPOSAL_EXECUTED_ACTION,
   PROPOSAL_UPDATED_ACTION,
   PROPOSAL_VOTED_ACTION,
+  SPACE_FAST_PATH_RESTRICTED_ACTION,
   VOTE_OPTION_VALUES,
   ZERO_ADDRESS,
   ZERO_SPACE_ID,
@@ -611,5 +612,100 @@ describe('geo DAO proposal client', () => {
     expect(decoded.topic).toBe(EMPTY_TOPIC);
     expect(proposalId).toBe(PROPOSAL_ID);
     expect(newMemberSpaceId).toBe(CALLER_SPACE_ID);
+  });
+  it('creates a SLOW unrestrict proposal for a restricted member', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    const result = geo.daoSpaces.proposeUnrestrictMember({
+      authorSpaceId: CALLER_SPACE_ID,
+      spaceId: DAO_SPACE_ID,
+      restrictedMemberSpaceId: MEMBER_SPACE_ID,
+      proposalId: PROPOSAL_ID,
+    });
+    const decoded = decodeEnter(result.calldata);
+    const { votingMode, actions } = decodeProposalPayload(decoded.data);
+    const call = decodeFunctionData({ abi: DaoSpaceAbi, data: actions[0]?.data ?? '0x' });
+
+    expect(result.to).toBe(SPACE_REGISTRY_ADDRESS);
+    expect(result.proposalId).toBe(PROPOSAL_ID);
+    expect(decoded.action).toBe(PROPOSAL_CREATED_ACTION);
+    expect(votingMode).toBe(0);
+    expect(actions).toHaveLength(1);
+    expect(actions[0]?.toAddress).toBe(ZERO_ADDRESS);
+    expect(actions[0]?.toSpaceId).toBe(DAO_SPACE_ID);
+    expect(call.functionName).toBe('unrestrictSpace');
+    expect(call.args?.[0]).toBe(MEMBER_SPACE_ID);
+  });
+
+  it('adds a member and then lifts their restriction in one SLOW proposal', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    const result = geo.daoSpaces.proposeAddMemberWithFastPath({
+      authorSpaceId: CALLER_SPACE_ID,
+      spaceId: DAO_SPACE_ID,
+      memberSpaceId: MEMBER_SPACE_ID,
+      proposalId: PROPOSAL_ID,
+    });
+    const { votingMode, actions } = decodeProposalPayload(decodeEnter(result.calldata).data);
+    const calls = actions.map(action => decodeFunctionData({ abi: DaoSpaceAbi, data: action.data }));
+
+    expect(votingMode).toBe(0);
+    expect(calls.map(call => call.functionName)).toEqual(['addMember', 'unrestrictSpace']);
+    expect(calls.map(call => call.args?.[0])).toEqual([MEMBER_SPACE_ID, MEMBER_SPACE_ID]);
+    expect(actions.every(action => action.toSpaceId === DAO_SPACE_ID)).toBe(true);
+  });
+
+  it('restricts fast-path helpers that lift a restriction to SLOW voting', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    expect(() =>
+      geo.daoSpaces.proposeUnrestrictMember({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        restrictedMemberSpaceId: MEMBER_SPACE_ID,
+        votingMode: 'FAST' as never,
+      }),
+    ).toThrow('proposeUnrestrictMember only supports SLOW voting mode');
+    expect(() =>
+      geo.daoSpaces.proposeAddMemberWithFastPath({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        memberSpaceId: MEMBER_SPACE_ID,
+        votingMode: 'FAST' as never,
+      }),
+    ).toThrow('proposeAddMemberWithFastPath only supports SLOW voting mode');
+  });
+
+  it('creates direct fast-path restriction calldata for an editor', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    const result = geo.daoSpaces.restrictMemberFastPath({
+      authorSpaceId: CALLER_SPACE_ID,
+      spaceId: DAO_SPACE_ID,
+      memberSpaceId: MEMBER_SPACE_ID,
+    });
+    const decoded = decodeEnter(result.calldata);
+    const [restrictedSpaceId] = decodeAbiParameters([{ type: 'bytes16', name: 'spaceId' }], decoded.data);
+
+    expect(result.to).toBe(SPACE_REGISTRY_ADDRESS);
+    expect('proposalId' in result).toBe(false);
+    expect(decoded.fromSpaceId).toBe(CALLER_SPACE_ID);
+    expect(decoded.toSpaceId).toBe(DAO_SPACE_ID);
+    expect(decoded.action).toBe(SPACE_FAST_PATH_RESTRICTED_ACTION);
+    expect(decoded.topic).toBe(bytes16ToBytes32LeftAligned(MEMBER_SPACE_ID));
+    expect(decoded.signature).toBe(EMPTY_SIGNATURE);
+    expect(restrictedSpaceId).toBe(MEMBER_SPACE_ID);
+  });
+
+  it('rejects malformed space IDs for direct fast-path restriction', () => {
+    const geo = createGeoClient({ network: customNetwork() });
+
+    expect(() =>
+      geo.daoSpaces.restrictMemberFastPath({
+        authorSpaceId: CALLER_SPACE_ID,
+        spaceId: DAO_SPACE_ID,
+        memberSpaceId: '0x1234',
+      }),
+    ).toThrow('memberSpaceId must be bytes16 hex');
   });
 });

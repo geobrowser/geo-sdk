@@ -27,6 +27,12 @@ export const PROPOSAL_VOTED_ACTION = keccak256(toHex('GOVERNANCE.PROPOSAL_VOTED'
 export const MEMBERSHIP_REQUESTED_ACTION = keccak256(toHex('GOVERNANCE.MEMBERSHIP_REQUESTED'));
 
 /**
+ * Action hash for GOVERNANCE.SPACE_FAST_PATH_RESTRICTED
+ * Used by a DAO editor to restrict a space from the fast path via SpaceRegistry.enter()
+ */
+export const SPACE_FAST_PATH_RESTRICTED_ACTION = keccak256(toHex('GOVERNANCE.SPACE_FAST_PATH_RESTRICTED'));
+
+/**
  * Action hash for GOVERNANCE.PROPOSAL_EXECUTED
  * Used when executing a passed proposal via SpaceRegistry.enter()
  */

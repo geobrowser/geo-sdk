@@ -206,6 +206,22 @@ export type ProposeRemoveEditorParams = Omit<DaoSpaceRoleProposalBaseParams, 'vo
   editorToRemoveSpaceId: string;
 };
 
+export type ProposeUnrestrictMemberParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
+  votingMode?: 'SLOW';
+  restrictedMemberSpaceId: string;
+};
+
+export type ProposeAddMemberWithFastPathParams = Omit<DaoSpaceRoleProposalBaseParams, 'votingMode'> & {
+  votingMode?: 'SLOW';
+  memberSpaceId: string;
+};
+
+export type RestrictMemberFastPathParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  memberSpaceId: string;
+};
+
 export type ProposeRequestMembershipParams = {
   authorSpaceId: string;
   spaceId: string;
@@ -273,6 +289,9 @@ export type Client = {
     proposeAddEditor(params: ProposeAddEditorParams): ProposalResult;
     proposeRemoveEditor(params: ProposeRemoveEditorParams): ProposalResult;
     proposeUpdateVotingSettings(params: ProposeUpdateVotingSettingsParams): ProposalResult;
+    proposeUnrestrictMember(params: ProposeUnrestrictMemberParams): ProposalResult;
+    proposeAddMemberWithFastPath(params: ProposeAddMemberWithFastPathParams): ProposalResult;
+    restrictMemberFastPath(params: RestrictMemberFastPathParams): CalldataResult;
     proposeRequestMembership(params: ProposeRequestMembershipParams): ProposalResult;
     voteProposal(params: VoteProposalParams): CalldataResult;
     executeProposal(params: ExecuteProposalParams): CalldataResult;
@@ -712,6 +731,48 @@ export function createGeoClient(params: CreateGeoClientParams): Client {
        */
       proposeUpdateVotingSettings: (params: ProposeUpdateVotingSettingsParams) =>
         DaoSpaces.proposeUpdateVotingSettings(context, params),
+      /**
+       * Builds calldata for a SLOW DAO proposal that lifts a space's fast-path restriction.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.proposeUnrestrictMember({
+       *   authorSpaceId,
+       *   spaceId: daoSpaceId,
+       *   restrictedMemberSpaceId,
+       * });
+       * ```
+       */
+      proposeUnrestrictMember: (params: ProposeUnrestrictMemberParams) =>
+        DaoSpaces.proposeUnrestrictMember(context, params),
+      /**
+       * Builds calldata for a SLOW DAO proposal that adds a member, then lifts their fast-path restriction.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.proposeAddMemberWithFastPath({
+       *   authorSpaceId,
+       *   spaceId: daoSpaceId,
+       *   memberSpaceId,
+       * });
+       * ```
+       */
+      proposeAddMemberWithFastPath: (params: ProposeAddMemberWithFastPathParams) =>
+        DaoSpaces.proposeAddMemberWithFastPath(context, params),
+      /**
+       * Builds calldata for an editor to restrict a space from the fast path immediately, without a proposal.
+       *
+       * @example
+       * ```ts
+       * const tx = geo.daoSpaces.restrictMemberFastPath({
+       *   authorSpaceId: editorSpaceId,
+       *   spaceId: daoSpaceId,
+       *   memberSpaceId,
+       * });
+       * ```
+       */
+      restrictMemberFastPath: (params: RestrictMemberFastPathParams) =>
+        DaoSpaces.restrictMemberFastPath(context, params),
       /**
        * Builds calldata for requesting membership in a DAO space.
        *

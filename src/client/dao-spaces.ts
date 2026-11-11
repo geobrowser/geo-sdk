@@ -15,6 +15,7 @@ import {
   PROPOSAL_EXECUTED_ACTION,
   PROPOSAL_UPDATED_ACTION,
   PROPOSAL_VOTED_ACTION,
+  SPACE_FAST_PATH_RESTRICTED_ACTION,
   VOTE_OPTION_VALUES,
   ZERO_ADDRESS,
   ZERO_SPACE_ID,
@@ -114,6 +115,20 @@ export type ProposeAddEditorParams = SlowDaoSpaceRoleProposalBaseParams & {
 
 export type ProposeRemoveEditorParams = SlowDaoSpaceRoleProposalBaseParams & {
   editorToRemoveSpaceId: string;
+};
+
+export type ProposeUnrestrictMemberParams = SlowDaoSpaceRoleProposalBaseParams & {
+  restrictedMemberSpaceId: string;
+};
+
+export type ProposeAddMemberWithFastPathParams = SlowDaoSpaceRoleProposalBaseParams & {
+  memberSpaceId: string;
+};
+
+export type RestrictMemberFastPathParams = {
+  authorSpaceId: string;
+  spaceId: string;
+  memberSpaceId: string;
 };
 
 export type ProposeRequestMembershipParams = {
@@ -323,7 +338,7 @@ function encodePublishEditProposalAction(daoSpaceId: string, cid: string): Propo
 
 function encodeDaoRoleAction(
   daoSpaceId: string,
-  functionName: 'addEditor' | 'removeEditor' | 'addMember' | 'removeMember',
+  functionName: 'addEditor' | 'removeEditor' | 'addMember' | 'removeMember' | 'unrestrictSpace',
   spaceId: string,
 ): ProposalAction {
   return {
@@ -631,6 +646,118 @@ export function proposeRemoveEditor(context: GeoClientContext, params: ProposeRe
   return createRoleProposal(context, params, actions.removeEditor(params.spaceId, params.editorToRemoveSpaceId));
 }
 
+function assertSlowVotingMode(params: { votingMode?: string }, helperName: string) {
+  const votingMode = params.votingMode ?? 'SLOW';
+  if (votingMode !== 'SLOW') {
+    throw new Error(`${helperName} only supports SLOW voting mode`);
+  }
+}
+
+/**
+ * Builds calldata for a DAO proposal that lifts a space's fast-path restriction.
+ *
+ * Spaces holding the DAO's `FAST_PATH_RESTRICTED` role can only create SLOW
+ * proposals, and cannot request membership. `unrestrictSpace` is not a valid
+ * fast-path action, so this proposal only supports SLOW voting. Execution
+ * reverts with `InvalidSpaceIdForRole` if the space is not restricted.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.daoSpaces.proposeUnrestrictMember({
+ *   authorSpaceId,
+ *   spaceId: daoSpaceId,
+ *   restrictedMemberSpaceId,
+ * });
+ * ```
+ */
+export function proposeUnrestrictMember(context: GeoClientContext, params: ProposeUnrestrictMemberParams) {
+  assertSlowVotingMode(params, 'proposeUnrestrictMember');
+
+  return createRoleProposal(context, params, actions.unrestrictSpace(params.spaceId, params.restrictedMemberSpaceId));
+}
+
+/**
+ * Builds calldata for a DAO proposal that adds a member and gives them fast-path access.
+ *
+ * The proposal runs `addMember` and then `unrestrictSpace` in that order.
+ * The order matters: when `disableFastPathAccessForNewMembers` is on,
+ * `addMember` grants `FAST_PATH_RESTRICTED`, so lifting the restriction must
+ * come after it. This is also the way back in for a space that left a DAO
+ * while restricted, because leaving keeps the restriction and a restricted
+ * space cannot request membership.
+ *
+ * Only use this when the space will hold the restriction once added: either
+ * the DAO restricts new members, or the space is already restricted.
+ * Otherwise `unrestrictSpace` reverts with `InvalidSpaceIdForRole` and the
+ * whole proposal fails to execute; use `proposeAddMember` instead.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.daoSpaces.proposeAddMemberWithFastPath({
+ *   authorSpaceId,
+ *   spaceId: daoSpaceId,
+ *   memberSpaceId,
+ * });
+ * ```
+ */
+export function proposeAddMemberWithFastPath(context: GeoClientContext, params: ProposeAddMemberWithFastPathParams) {
+  assertSlowVotingMode(params, 'proposeAddMemberWithFastPath');
+
+  return createProposal(context, {
+    fromSpaceId: params.authorSpaceId,
+    daoSpaceId: params.spaceId,
+    proposalId: params.proposalId,
+    votingMode: 'SLOW',
+    actions: [
+      actions.addMember(params.spaceId, params.memberSpaceId),
+      actions.unrestrictSpace(params.spaceId, params.memberSpaceId),
+    ],
+  });
+}
+
+/**
+ * Builds calldata that restricts a space from the DAO's fast path, immediately.
+ *
+ * This is not a proposal. The DAO lets any editor restrict another space
+ * directly through `SpaceRegistry.enter` with
+ * `GOVERNANCE.SPACE_FAST_PATH_RESTRICTED`. It reverts with `InvalidFromSpace`
+ * when the author is not an editor, and `InvalidSpaceIdForRole` when the
+ * target is already restricted. Lifting the restriction again takes a SLOW
+ * proposal: see `proposeUnrestrictMember`.
+ *
+ * @example
+ * ```ts
+ * const tx = geo.daoSpaces.restrictMemberFastPath({
+ *   authorSpaceId: editorSpaceId,
+ *   spaceId: daoSpaceId,
+ *   memberSpaceId,
+ * });
+ * ```
+ */
+export function restrictMemberFastPath(context: GeoClientContext, params: RestrictMemberFastPathParams) {
+  const authorSpaceId = bytes16Id(params.authorSpaceId, 'authorSpaceId');
+  const spaceId = bytes16Id(params.spaceId, 'spaceId');
+  const memberSpaceId = bytes16Id(params.memberSpaceId, 'memberSpaceId');
+  const data = encodeAbiParameters([{ type: 'bytes16', name: 'spaceId' }], [memberSpaceId]);
+  const calldata = encodeFunctionData({
+    abi: SpaceRegistryAbi,
+    functionName: 'enter',
+    args: [
+      authorSpaceId,
+      spaceId,
+      SPACE_FAST_PATH_RESTRICTED_ACTION,
+      bytes16ToBytes32LeftAligned(memberSpaceId),
+      data,
+      EMPTY_SIGNATURE,
+    ],
+  });
+
+  return {
+    to: requireGeoContract(context.network, 'SPACE_REGISTRY_ADDRESS'),
+    calldata,
+  };
+}
+
 /**
  * Builds calldata for a DAO proposal that updates voting settings.
  *
@@ -804,5 +931,6 @@ export const actions = {
   removeEditor: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeEditor', spaceId),
   addMember: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'addMember', spaceId),
   removeMember: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'removeMember', spaceId),
+  unrestrictSpace: (daoSpaceId: string, spaceId: string) => encodeDaoRoleAction(daoSpaceId, 'unrestrictSpace', spaceId),
   updateVotingSettings: encodeUpdateVotingSettingsAction,
 };
